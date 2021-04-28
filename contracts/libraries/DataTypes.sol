@@ -32,8 +32,7 @@ library DataTypes {
         uint32 accountId;
         uint32 assetId;
         uint256 amount;
-        uint256 maxFee; // in units of asset; signed by the user
-        uint256 fee; // in units of asset; actual fee payment
+        uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
     }
@@ -45,8 +44,7 @@ library DataTypes {
         uint32 strategyId;
         uint256 amount;
         uint256 minShares;
-        uint256 maxFee; // in units of asset; signed by the user
-        uint256 fee; // in units of asset; actual fee payment
+        uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
     }
@@ -58,34 +56,31 @@ library DataTypes {
         uint32 strategyId;
         uint256 shares;
         uint256 minAmount;
-        uint256 maxFee; // in units of share; signed by the user
-        uint256 fee; // in units of share; actual fee payment
+        uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
     }
 
-    struct AssetTransferTransition {
+    struct TransferAssetTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 fromAccountId;
         uint32 toAccountId;
         uint32 assetId;
         uint256 amount;
-        uint256 maxFee; // in units of asset; signed by the user
-        uint256 fee; // in units of asset; actual fee payment
+        uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
     }
 
-    struct ShareTransferTransition {
+    struct TransferShareTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 fromAccountId;
         uint32 toAccountId;
         uint32 strategyId;
         uint256 shares;
-        uint256 maxFee; // in units of share; signed by the user
-        uint256 fee; // in units of share; actual fee payment
+        uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
     }
@@ -140,7 +135,8 @@ library DataTypes {
     // The array of PendingStrategyInfo structs is sorted by ascending rubId, and holes are ok.
     struct PendingStrategyInfo {
         int64 rubId;
-        uint256 projectedSharePrice; // TODO: do we still need this?
+        uint256 maxSharePriceForBuy;
+        uint256 minSharePriceForSell;
         uint256 buyAmount;
         uint256 sellShares;
         uint256 unsettledSharesFromBuy;
