@@ -112,6 +112,14 @@ library DataTypes {
         uint256 amountFromSell;
     }
 
+    struct UpdatePricesTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 strategyId;
+        uint256 maxBuyPrice;
+        uint256 minSellPrice;
+    }
+
     // Pending account actions (buy/sell) per account, strategy, rubId.
     // The array of PendingAccountInfo structs is sorted by ascending rubId, and holes are ok.
     struct PendingAccountInfo {
