@@ -93,7 +93,7 @@ library DataTypes {
         uint32 strategyId;
     }
 
-    struct CommitmentSyncTransition {
+    struct AggregateOrdersTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 strategyId;
@@ -156,7 +156,7 @@ library DataTypes {
         uint64 lastExecRubId;
         uint256 assetBalance;
         uint256 shareSupply;
-        PendingStrategyInfo[] pending; // array of pending records per strategy
+        PendingStrategyInfo[] pending; // array of pending records
     }
 
     struct TransitionProof {
