@@ -193,21 +193,13 @@ library Transitions {
         return transition;
     }
 
-    struct SettlementTransition {
-        uint8 transitionType;
-        bytes32 stateRoot;
-        int64 rubId;
-        uint32 accountId;
-        uint32 strategyId;
-    }
-
     function decodeSettlementTransition(bytes memory _rawBytes)
         internal
         pure
         returns (DataTypes.SettlementTransition memory)
     {
         (uint8 transitionType, bytes32 stateRoot, int64 rubId, uint32 accountId, uint32 strategyId) =
-            abi.decode((_rawBytes), (uint8, bytes32, uint64, uint32, uint32));
+            abi.decode((_rawBytes), (uint8, bytes32, int64, uint32, uint32));
         DataTypes.SettlementTransition memory transition =
             DataTypes.SettlementTransition(transitionType, stateRoot, rubId, accountId, strategyId);
         return transition;

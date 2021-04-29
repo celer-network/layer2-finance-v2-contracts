@@ -3,11 +3,11 @@
 pragma solidity >=0.6.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
@@ -88,7 +88,7 @@ contract RollupChain is Ownable, Pausable {
 
     /* Events */
     event RollupBlockCommitted(uint256 blockId);
-    event RollupBlockExecuted(uint256 blockId);
+    event RollupBlockExecuted(uint256 blockId, uint32 execLen, uint32 totalLen);
     event RollupBlockReverted(uint256 blockId, string reason);
     event AssetDeposited(address account, uint32 assetId, uint256 amount, uint256 depositId);
     event AssetWithdrawn(address account, uint32 assetId, uint256 amount);
@@ -140,8 +140,10 @@ contract RollupChain is Ownable, Pausable {
      */
     function depositETH(address _weth, uint256 _amount) external payable whenNotPaused {
         require(msg.value == _amount, "ETH amount mismatch");
+        /*
         _deposit(_weth, _amount);
         IWETH(_weth).deposit{value: _amount}();
+         */
     }
 
     /**
@@ -162,10 +164,12 @@ contract RollupChain is Ownable, Pausable {
      * @param _weth The address for WETH.
      */
     function withdrawETH(address _account, address _weth) external whenNotPaused {
+        /*
         uint256 amount = _withdraw(_account, _weth);
         IWETH(_weth).withdraw(amount);
         (bool sent, ) = _account.call{value: amount}("");
         require(sent, "Failed to withdraw ETH");
+         */
     }
 
     /**
@@ -236,7 +240,7 @@ contract RollupChain is Ownable, Pausable {
                 rootHash: root,
                 intentHash: intentHash,
                 intentExecCount: 0,
-                blockTime: uint128(block.number),
+                blockTime: uint64(block.number),
                 blockSize: uint32(_transitions.length)
             });
         blocks.push(rollupBlock);
@@ -285,7 +289,7 @@ contract RollupChain is Ownable, Pausable {
             // Delete pending deposit records finalized by this block.
             while (pendingDepositsExecuteHead < pendingDepositsCommitHead) {
                 PendingDeposit memory pend = pendingDeposits[pendingDepositsExecuteHead];
-                if (pend.status != PendingDepositStatus.Done || pend.blockId > blockId) {
+                if (pend.status != PendingDepositStatus.Done || pend.blockId > _blockId) {
                     break;
                 }
                 delete pendingDeposits[pendingDepositsExecuteHead];
@@ -294,14 +298,14 @@ contract RollupChain is Ownable, Pausable {
 
             // Aggregate the pending withdraw-commit records for this blockId into the final
             // pending withdraw records per account (for later L1 withdraw), and delete them.
-            for (uint256 i = 0; i < pendingWithdrawCommits[blockId].length; i++) {
-                PendingWithdrawCommit memory pwc = pendingWithdrawCommits[blockId][i];
+            for (uint256 i = 0; i < pendingWithdrawCommits[_blockId].length; i++) {
+                PendingWithdrawCommit memory pwc = pendingWithdrawCommits[_blockId][i];
 
                 // Find and increment this account's assetId total amount
                 pendingWithdraws[pwc.account][pwc.assetId] += pwc.amount;
             }
 
-            delete pendingWithdrawCommits[blockId];
+            delete pendingWithdrawCommits[_blockId];
         }
 
         // Decode the intent transitions and execute the strategy updates for the requested incremental batch.
@@ -330,10 +334,10 @@ contract RollupChain is Ownable, Pausable {
         if (newIntentExecCount == _intents.length) {
             blocks[_blockId].intentExecCount = BLOCK_EXEC_COUNT_DONE;
             countExecuted++;
-            emit RollupBlockExecuted(_blockId);
         } else {
             blocks[_blockId].intentExecCount = newIntentExecCount;
         }
+        emit RollupBlockExecuted(_blockId, newIntentExecCount, uint32(_intents.length));
     }
 
     /**
@@ -345,15 +349,6 @@ contract RollupChain is Ownable, Pausable {
             uint256 currentBlockId = blocks.length - 1;
             if (pendingDepositsCommitHead < pendingDepositsTail) {
                 if (currentBlockId.sub(pendingDeposits[pendingDepositsCommitHead].blockId) > maxPriorityTxDelay) {
-                    _pause();
-                    return;
-                }
-            }
-
-            if (pendingBalanceSyncsCommitHead < pendingBalanceSyncsTail) {
-                if (
-                    currentBlockId.sub(pendingBalanceSyncs[pendingBalanceSyncsCommitHead].blockId) > maxPriorityTxDelay
-                ) {
                     _pause();
                     return;
                 }
@@ -525,17 +520,6 @@ contract RollupChain is Ownable, Pausable {
                 }
                 pendingDeposits[i].blockId = uint64(_blockId);
                 pendingDeposits[i].status = PendingDepositStatus.Pending;
-            }
-        }
-        first = false;
-        for (uint256 i = pendingBalanceSyncsExecuteHead; i < pendingBalanceSyncsTail; i++) {
-            if (pendingBalanceSyncs[i].blockId >= _blockId) {
-                if (!first) {
-                    pendingBalanceSyncsCommitHead = i;
-                    first = true;
-                }
-                pendingBalanceSyncs[i].blockId = uint64(_blockId);
-                pendingBalanceSyncs[i].status = PendingBalanceSyncStatus.Pending;
             }
         }
 
