@@ -43,7 +43,7 @@ library DataTypes {
         uint32 accountId;
         uint32 strategyId;
         uint256 amount;
-        uint256 minShares;
+        uint256 maxSharePrice;
         uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
@@ -55,7 +55,7 @@ library DataTypes {
         uint32 accountId;
         uint32 strategyId;
         uint256 shares;
-        uint256 minAmount;
+        uint256 minSharePrice;
         uint256 fee; // in units of asset; signed by the user
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes signature;
@@ -85,18 +85,11 @@ library DataTypes {
         bytes signature;
     }
 
-    struct SettlementTransition {
-        uint8 transitionType;
-        bytes32 stateRoot;
-        int64 rubId;
-        uint32 accountId;
-        uint32 strategyId;
-    }
-
     struct AggregateOrdersTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 strategyId;
+        uint64 aggregateId;
         uint256 buyAmount;
         uint256 sellShares;
         uint256 minSharesFromBuy;
@@ -106,24 +99,25 @@ library DataTypes {
     struct ExecutionResultTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        int64 rubId;
         uint32 strategyId;
+        uint64 aggregateId;
+        bool success;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
     }
 
-    struct UpdatePricesTransition {
+    struct SettlementTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 strategyId;
-        uint256 maxBuyPrice;
-        uint256 minSellPrice;
+        uint64 aggregateId;
+        uint32 accountId;
     }
 
-    // Pending account actions (buy/sell) per account, strategy, rubId.
-    // The array of PendingAccountInfo structs is sorted by ascending rubId, and holes are ok.
+    // Pending account actions (buy/sell) per account, strategy, aggregateId.
+    // The array of PendingAccountInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingAccountInfo {
-        int64 rubId;
+        int64 aggregateId;
         uint256 buyAmount;
         uint256 buyFees;
         uint256 sellShares;
@@ -139,23 +133,27 @@ library DataTypes {
         uint64 timestamp; // Unix epoch (msec, UTC)
     }
 
-    // Pending strategy actions per strategy, rubId.
-    // The array of PendingStrategyInfo structs is sorted by ascending rubId, and holes are ok.
+    // Pending strategy actions per strategy, aggregateId.
+    // The array of PendingStrategyInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingStrategyInfo {
-        int64 rubId;
+        int64 aggregateId;
         uint256 maxSharePriceForBuy;
         uint256 minSharePriceForSell;
         uint256 buyAmount;
         uint256 sellShares;
-        uint256 unsettledSharesFromBuy;
-        uint256 unsettledAmountFromSell;
+        uint256 sharesFromBuy;
+        uint256 amountFromSell;
+        uint256 unsettledBuyAmount;
+        uint256 unsettledSellShares;
+        bool executionSucceed;
     }
 
     struct StrategyInfo {
         uint32 assetId;
-        uint64 lastExecRubId;
         uint256 assetBalance;
         uint256 shareSupply;
+        uint64 nextAggregateId;
+        uint64 lastExecAggregateId;
         PendingStrategyInfo[] pending; // array of pending records
     }
 
