@@ -14,10 +14,10 @@ import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import "./libraries/MerkleTree.sol";
 import "./libraries/Transitions.sol";
 import "./Registry.sol";
+import "./strategies/interfaces/IStrategy.sol";
 
 /*
 import "./TransitionDisputer.sol";
-import "./strategies/interfaces/IStrategy.sol";
 import "./libraries/Transitions.sol";
 import "./interfaces/IWETH.sol";
 */

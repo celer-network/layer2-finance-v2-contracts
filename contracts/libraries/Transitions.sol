@@ -84,7 +84,7 @@ library Transitions {
             uint32 accountId,
             uint32 strategyId,
             uint256 amount,
-            uint256 minShares,
+            uint256 maxSharePrice,
             uint256 fee,
             uint64 timestamp,
             bytes memory signature
@@ -96,7 +96,7 @@ library Transitions {
                 accountId,
                 strategyId,
                 amount,
-                minShares,
+                maxSharePrice,
                 fee,
                 timestamp,
                 signature
@@ -111,7 +111,7 @@ library Transitions {
             uint32 accountId,
             uint32 strategyId,
             uint256 shares,
-            uint256 minAmount,
+            uint256 minSharePrice,
             uint256 fee,
             uint64 timestamp,
             bytes memory signature
@@ -123,7 +123,7 @@ library Transitions {
                 accountId,
                 strategyId,
                 shares,
-                minAmount,
+                minSharePrice,
                 fee,
                 timestamp,
                 signature
@@ -198,32 +198,39 @@ library Transitions {
         pure
         returns (DataTypes.SettlementTransition memory)
     {
-        (uint8 transitionType, bytes32 stateRoot, int64 rubId, uint32 accountId, uint32 strategyId) =
-            abi.decode((_rawBytes), (uint8, bytes32, int64, uint32, uint32));
+        (
+            uint8 transitionType, 
+            bytes32 stateRoot, 
+            uint32 strategyId,
+            uint64 aggregateId,
+            uint32 accountId
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint32));
         DataTypes.SettlementTransition memory transition =
-            DataTypes.SettlementTransition(transitionType, stateRoot, rubId, accountId, strategyId);
+            DataTypes.SettlementTransition(transitionType, stateRoot, strategyId, aggregateId, accountId);
         return transition;
     }
 
-    function decodeCommitmentSyncTransition(bytes memory _rawBytes)
+    function decodeAggregateOrdersTransition(bytes memory _rawBytes)
         internal
         pure
-        returns (DataTypes.CommitmentSyncTransition memory)
+        returns (DataTypes.AggregateOrdersTransition memory)
     {
         (
             uint8 transitionType,
             bytes32 stateRoot,
             uint32 strategyId,
+            uint64 aggregateId,
             uint256 buyAmount,
             uint256 sellShares,
             uint256 minSharesFromBuy,
             uint256 minAmountFromSell
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256, uint256, uint256, uint256));
-        DataTypes.CommitmentSyncTransition memory transition =
-            DataTypes.CommitmentSyncTransition(
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint256, uint256, uint256, uint256));
+        DataTypes.AggregateOrdersTransition memory transition =
+            DataTypes.AggregateOrdersTransition(
                 transitionType,
                 stateRoot,
                 strategyId,
+                aggregateId,
                 buyAmount,
                 sellShares,
                 minSharesFromBuy,
@@ -240,32 +247,22 @@ library Transitions {
         (
             uint8 transitionType,
             bytes32 stateRoot,
-            int64 rubId,
             uint32 strategyId,
+            uint64 aggregateId,
+            bool success,
             uint256 sharesFromBuy,
             uint256 amountFromSell
-        ) = abi.decode((_rawBytes), (uint8, bytes32, int64, uint32, uint256, uint256));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, bool, uint256, uint256));
         DataTypes.ExecutionResultTransition memory transition =
             DataTypes.ExecutionResultTransition(
                 transitionType,
                 stateRoot,
-                rubId,
                 strategyId,
+                aggregateId,
+                success,
                 sharesFromBuy,
                 amountFromSell
             );
-        return transition;
-    }
-
-    function decodeUpdatePricesTransition(bytes memory _rawBytes)
-        internal
-        pure
-        returns (DataTypes.UpdatePricesTransition memory)
-    {
-        (uint8 transitionType, bytes32 stateRoot, uint32 strategyId, uint256 maxBuyPrice, uint256 minSellPrice) =
-            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256, uint256));
-        DataTypes.UpdatePricesTransition memory transition =
-            DataTypes.UpdatePricesTransition(transitionType, stateRoot, strategyId, maxBuyPrice, minSellPrice);
         return transition;
     }
 }
