@@ -92,6 +92,7 @@ contract RollupChain is Ownable, Pausable {
     event RollupBlockReverted(uint256 blockId, string reason);
     event AssetDeposited(address account, uint32 assetId, uint256 amount, uint256 depositId);
     event AssetWithdrawn(address account, uint32 assetId, uint256 amount);
+    event AggregationExecuted(uint32 strategyId, uint64 aggregateId, bool success, uint256 sharesFromBuy, uint256 amountFromSell);
     event OperatorChanged(address previousOperator, address newOperator);
 
     constructor(
@@ -201,7 +202,7 @@ contract RollupChain is Ownable, Pausable {
                 transitionType == Transitions.TRANSITION_TYPE_BUY || transitionType == Transitions.TRANSITION_TYPE_SELL
             ) {
                 continue;
-            } else if (transitionType == Transitions.TRANSITION_TYPE_SYNC_COMMITMENT) {
+            } else if (transitionType == Transitions.TRANSITION_TYPE_AGGREGATE_ORDER) {
                 intentIndexes[numIntents++] = i;
             } else if (transitionType == Transitions.TRANSITION_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
@@ -310,25 +311,29 @@ contract RollupChain is Ownable, Pausable {
 
         // Decode the intent transitions and execute the strategy updates for the requested incremental batch.
         for (uint256 i = intentExecCount; i < newIntentExecCount; i++) {
-            dt.CommitmentSyncTransition memory cs = Transitions.decodeCommitmentSyncTransition(_intents[i]);
+            dt.AggregateOrdersTransition memory aggregation = Transitions.decodeAggregateOrdersTransition(_intents[i]);
 
-            address stAddr = registry.strategyIndexToAddress(cs.strategyId);
+            address stAddr = registry.strategyIndexToAddress(aggregation.strategyId);
             require(stAddr != address(0), "Unknown strategy ID");
 
-            /* TODO: new execution code
             IStrategy strategy = IStrategy(stAddr);
-
-            if (cs.pendingCommitAmount > cs.pendingUncommitAmount) {
-                uint256 commitAmount = cs.pendingCommitAmount.sub(cs.pendingUncommitAmount);
-                IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(stAddr, commitAmount);
-                strategy.aggregateCommit(commitAmount);
-                strategyAssetBalances[cs.strategyId] = strategyAssetBalances[cs.strategyId].add(commitAmount);
-            } else if (cs.pendingCommitAmount < cs.pendingUncommitAmount) {
-                uint256 uncommitAmount = cs.pendingUncommitAmount.sub(cs.pendingCommitAmount);
-                strategy.aggregateUncommit(uncommitAmount);
-                strategyAssetBalances[cs.strategyId] = strategyAssetBalances[cs.strategyId].sub(uncommitAmount);
+            IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(stAddr, aggregation.buyAmount);
+            (bool success, bytes memory returnData) = stAddr.call(
+                abi.encodeWithSelector(
+                    IStrategy.aggregateOrder.selector,
+                    aggregation.buyAmount,
+                    aggregation.sellShares,
+                    aggregation.minSharesFromBuy,
+                    aggregation.minAmountFromSell
+                )
+            );
+            uint256 sharesFromBuy;
+            uint256 amountFromSell;
+            if (success) {
+                (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
             }
-             */
+            // TODO: aggregation result priority queue
+            emit AggregationExecuted(aggregation.strategyId, aggregation.aggregateId, success, sharesFromBuy, amountFromSell);
         }
 
         if (newIntentExecCount == _intents.length) {

@@ -15,10 +15,9 @@ library Transitions {
     uint8 public constant TRANSITION_TYPE_SELL = 5;
     uint8 public constant TRANSITION_TYPE_XFER_ASSET = 6;
     uint8 public constant TRANSITION_TYPE_XFER_SHARE = 7;
-    uint8 public constant TRANSITION_TYPE_SETTLE = 8;
-    uint8 public constant TRANSITION_TYPE_SYNC_COMMITMENT = 9;
-    uint8 public constant TRANSITION_TYPE_EXEC_RESULT = 10;
-    uint8 public constant TRANSITION_TYPE_UPDATE_PRICES = 11;
+    uint8 public constant TRANSITION_TYPE_AGGREGATE_ORDER = 8;
+    uint8 public constant TRANSITION_TYPE_EXEC_RESULT = 9;
+    uint8 public constant TRANSITION_TYPE_SETTLE = 10;
 
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
