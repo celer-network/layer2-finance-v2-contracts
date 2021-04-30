@@ -39,22 +39,30 @@ contract RollupChain is Ownable, Pausable {
     dt.Block[] public blocks;
     uint256 public countExecuted = 0;
 
-    // Track pending deposits roundtrip status across L1->L2->L1.
-    // Each deposit record ID is a count++ (i.e. it's a queue).
-    // - L1 deposit() creates it in "pending" status
+    // Track pending L1-initiated even roundtrip status across L1->L2->L1.
+    // Each event record ID is a count++ (i.e. it's a queue).
+    // - L1 event creates it in "pending" status
     // - commitBlock() moves it to "done" status
     // - fraudulent block moves it back to "pending" status
     // - executeBlock() deletes it
-    enum PendingDepositStatus {Pending, Done}
-    struct PendingDeposit {
-        bytes32 dhash; // keccak256(abi.encodePacked(account, assetId, amount))
+    enum PendingEventStatus {Pending, Done}
+    struct PendingEvent {
+        bytes32 ehash;
         uint64 blockId; // rollup block; "pending": baseline of censorship, "done": block holding L2 transition
-        PendingDepositStatus status;
+        PendingEventStatus status;
     }
-    mapping(uint256 => PendingDeposit) public pendingDeposits;
-    uint256 public pendingDepositsExecuteHead; // moves up inside blockExecute() -- lowest
-    uint256 public pendingDepositsCommitHead; // moves up inside blockCommit() -- intermediate
-    uint256 public pendingDepositsTail; // moves up inside L1 deposit() -- highest
+    struct EventQueuePointer {
+        uint64 executeHead; // moves up inside blockExecute() -- lowest
+        uint64 commitHead; // moves up inside blockCommit() -- intermediate
+        uint64 tail; // moves up inside L1 event -- highest
+    }
+
+    // deposit queue, ehash = keccak256(abi.encodePacked(account, assetId, amount))
+    mapping(uint256 => PendingEvent) public pendingDeposits;
+    EventQueuePointer public depositQueuePointer;
+
+    // strategyId -> (aggregateId -> PendingExecResult)
+    mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResult;
 
     // Track pending withdraws arriving from L2 then done on L1 across 2 phases.
     // A separate mapping is used for each phase:
@@ -75,6 +83,7 @@ contract RollupChain is Ownable, Pausable {
 
     // Mapping of account => assetId => pendingWithdrawAmount
     mapping(address => mapping(uint32 => uint256)) public pendingWithdraws;
+    
 
     // per-asset (total deposit - total withdrawal) amount
     mapping(address => uint256) public netDeposits;
@@ -213,16 +222,18 @@ contract RollupChain is Ownable, Pausable {
             } else if (transitionType == Transitions.TRANSITION_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
                 dt.DepositTransition memory dp = Transitions.decodeDepositTransition(_transitions[i]);
-                uint256 depositId = pendingDepositsCommitHead;
-                require(depositId < pendingDepositsTail, "invalid deposit transition, no pending deposits");
+                EventQueuePointer memory queuePointer = depositQueuePointer;
+                uint256 depositId = queuePointer.commitHead;
+                require(depositId < queuePointer.tail, "invalid deposit transition, no pending deposits");
 
-                PendingDeposit memory pend = pendingDeposits[depositId];
-                bytes32 dhash = keccak256(abi.encodePacked(dp.account, dp.assetId, dp.amount));
-                require(pend.dhash == dhash, "invalid deposit transition, mismatch or wrong ordering");
+                PendingEvent memory pend = pendingDeposits[depositId];
+                bytes32 ehash = keccak256(abi.encodePacked(dp.account, dp.assetId, dp.amount));
+                require(pend.ehash == ehash, "invalid deposit transition, mismatch or wrong ordering");
 
-                pendingDeposits[depositId].status = PendingDepositStatus.Done;
+                pendingDeposits[depositId].status = PendingEventStatus.Done;
                 pendingDeposits[depositId].blockId = uint64(_blockId); // "done": block holding the transition
-                pendingDepositsCommitHead++;
+                queuePointer.commitHead++;
+                depositQueuePointer = queuePointer;
             } else if (transitionType == Transitions.TRANSITION_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = Transitions.decodeWithdrawTransition(_transitions[i]);
@@ -294,14 +305,16 @@ contract RollupChain is Ownable, Pausable {
         // In the first execution of any parts of this block, handle the pending deposit & withdraw records.
         if (intentExecCount == 0) {
             // Delete pending deposit records finalized by this block.
-            while (pendingDepositsExecuteHead < pendingDepositsCommitHead) {
-                PendingDeposit memory pend = pendingDeposits[pendingDepositsExecuteHead];
-                if (pend.status != PendingDepositStatus.Done || pend.blockId > _blockId) {
+            EventQueuePointer memory queuePointer = depositQueuePointer;
+            while (queuePointer.executeHead < queuePointer.commitHead) {
+                PendingEvent memory pend = pendingDeposits[queuePointer.executeHead];
+                if (pend.status != PendingEventStatus.Done || pend.blockId > _blockId) {
                     break;
                 }
-                delete pendingDeposits[pendingDepositsExecuteHead];
-                pendingDepositsExecuteHead++;
+                delete pendingDeposits[queuePointer.executeHead];
+                queuePointer.executeHead++;
             }
+            depositQueuePointer = queuePointer;
 
             // Aggregate the pending withdraw-commit records for this blockId into the final
             // pending withdraw records per account (for later L1 withdraw), and delete them.
@@ -365,8 +378,8 @@ contract RollupChain is Ownable, Pausable {
     function disputePriorityTxDelay() external {
         if (blocks.length > 0) {
             uint256 currentBlockId = blocks.length - 1;
-            if (pendingDepositsCommitHead < pendingDepositsTail) {
-                if (currentBlockId.sub(pendingDeposits[pendingDepositsCommitHead].blockId) > maxPriorityTxDelay) {
+            if (depositQueuePointer.commitHead < depositQueuePointer.tail) {
+                if (currentBlockId.sub(pendingDeposits[depositQueuePointer.commitHead].blockId) > maxPriorityTxDelay) {
                     _pause();
                     return;
                 }
@@ -478,12 +491,12 @@ contract RollupChain is Ownable, Pausable {
         netDeposits[_asset] = netDeposit;
 
         // Add a pending deposit record.
-        uint256 depositId = pendingDepositsTail++;
-        bytes32 dhash = keccak256(abi.encodePacked(account, assetId, _amount));
-        pendingDeposits[depositId] = PendingDeposit({
-            dhash: dhash,
+        uint256 depositId = depositQueuePointer.tail++;
+        bytes32 ehash = keccak256(abi.encodePacked(account, assetId, _amount));
+        pendingDeposits[depositId] = PendingEvent({
+            ehash: ehash,
             blockId: uint64(blocks.length), // "pending": baseline of censorship delay
-            status: PendingDepositStatus.Pending
+            status: PendingEventStatus.Pending
         });
 
         emit AssetDeposited(account, assetId, _amount, depositId);
@@ -530,14 +543,14 @@ contract RollupChain is Ownable, Pausable {
             blocks.pop();
         }
         bool first;
-        for (uint256 i = pendingDepositsExecuteHead; i < pendingDepositsTail; i++) {
+        for (uint64 i = depositQueuePointer.executeHead; i < depositQueuePointer.tail; i++) {
             if (pendingDeposits[i].blockId >= _blockId) {
                 if (!first) {
-                    pendingDepositsCommitHead = i;
+                    depositQueuePointer.commitHead = i;
                     first = true;
                 }
                 pendingDeposits[i].blockId = uint64(_blockId);
-                pendingDeposits[i].status = PendingDepositStatus.Pending;
+                pendingDeposits[i].status = PendingEventStatus.Pending;
             }
         }
 
