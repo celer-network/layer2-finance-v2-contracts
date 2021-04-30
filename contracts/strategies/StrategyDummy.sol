@@ -79,6 +79,7 @@ contract StrategyDummy is IStrategy, Ownable {
         return (sharesFromBuy, amountFromSell);
     }
 
+    // TODO: improve price precision
     function syncPrice() external view override returns (uint256) {
         return assetAmount.div(shares);
     }
