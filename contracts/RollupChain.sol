@@ -100,7 +100,7 @@ contract RollupChain is Ownable, Pausable {
     event RollupBlockCommitted(uint256 blockId);
     event RollupBlockExecuted(uint256 blockId, uint32 execLen, uint32 totalLen);
     event RollupBlockReverted(uint256 blockId, string reason);
-    event AssetDeposited(address account, uint32 assetId, uint256 amount, uint256 depositId);
+    event AssetDeposited(address account, uint32 assetId, uint256 amount, uint64 depositId);
     event AssetWithdrawn(address account, uint32 assetId, uint256 amount);
     event AggregationExecuted(
         uint32 strategyId,
@@ -228,7 +228,7 @@ contract RollupChain is Ownable, Pausable {
                 // Update the pending deposit record.
                 dt.DepositTransition memory dp = tn.decodeDepositTransition(_transitions[i]);
                 EventQueuePointer memory queuePointer = depositQueuePointer;
-                uint256 depositId = queuePointer.commitHead;
+                uint64 depositId = queuePointer.commitHead;
                 require(depositId < queuePointer.tail, "invalid deposit transition, no pending deposits");
 
                 PendingEvent memory pend = pendingDeposits[depositId];
@@ -500,7 +500,7 @@ contract RollupChain is Ownable, Pausable {
         netDeposits[_asset] = netDeposit;
 
         // Add a pending deposit record.
-        uint256 depositId = depositQueuePointer.tail++;
+        uint64 depositId = depositQueuePointer.tail++;
         bytes32 ehash = keccak256(abi.encodePacked(account, assetId, _amount));
         pendingDeposits[depositId] = PendingEvent({
             ehash: ehash,
