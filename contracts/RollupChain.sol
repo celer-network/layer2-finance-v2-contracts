@@ -92,7 +92,13 @@ contract RollupChain is Ownable, Pausable {
     event RollupBlockReverted(uint256 blockId, string reason);
     event AssetDeposited(address account, uint32 assetId, uint256 amount, uint256 depositId);
     event AssetWithdrawn(address account, uint32 assetId, uint256 amount);
-    event AggregationExecuted(uint32 strategyId, uint64 aggregateId, bool success, uint256 sharesFromBuy, uint256 amountFromSell);
+    event AggregationExecuted(
+        uint32 strategyId,
+        uint64 aggregateId,
+        bool success,
+        uint256 sharesFromBuy,
+        uint256 amountFromSell
+    );
     event OperatorChanged(address previousOperator, address newOperator);
 
     constructor(
@@ -318,22 +324,29 @@ contract RollupChain is Ownable, Pausable {
 
             IStrategy strategy = IStrategy(stAddr);
             IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(stAddr, aggregation.buyAmount);
-            (bool success, bytes memory returnData) = stAddr.call(
-                abi.encodeWithSelector(
-                    IStrategy.aggregateOrder.selector,
-                    aggregation.buyAmount,
-                    aggregation.sellShares,
-                    aggregation.minSharesFromBuy,
-                    aggregation.minAmountFromSell
-                )
-            );
+            (bool success, bytes memory returnData) =
+                stAddr.call(
+                    abi.encodeWithSelector(
+                        IStrategy.aggregateOrder.selector,
+                        aggregation.buyAmount,
+                        aggregation.sellShares,
+                        aggregation.minSharesFromBuy,
+                        aggregation.minAmountFromSell
+                    )
+                );
             uint256 sharesFromBuy;
             uint256 amountFromSell;
             if (success) {
                 (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
             }
             // TODO: aggregation result priority queue
-            emit AggregationExecuted(aggregation.strategyId, aggregation.aggregateId, success, sharesFromBuy, amountFromSell);
+            emit AggregationExecuted(
+                aggregation.strategyId,
+                aggregation.aggregateId,
+                success,
+                sharesFromBuy,
+                amountFromSell
+            );
         }
 
         if (newIntentExecCount == _intents.length) {

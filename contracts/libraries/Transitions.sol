@@ -197,13 +197,8 @@ library Transitions {
         pure
         returns (DataTypes.SettlementTransition memory)
     {
-        (
-            uint8 transitionType, 
-            bytes32 stateRoot, 
-            uint32 strategyId,
-            uint64 aggregateId,
-            uint32 accountId
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint32));
+        (uint8 transitionType, bytes32 stateRoot, uint32 strategyId, uint64 aggregateId, uint32 accountId) =
+            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint32));
         DataTypes.SettlementTransition memory transition =
             DataTypes.SettlementTransition(transitionType, stateRoot, strategyId, aggregateId, accountId);
         return transition;

@@ -41,10 +41,11 @@ interface IStrategy is IERC20 {
      * @return (sharesFromBuy, amountFromSell)
      */
     function aggregateOrder(
-        uint256 buyAmount, 
+        uint256 buyAmount,
         uint256 minSharesFromBuy,
         uint256 sellShares,
-        uint256 minAmountFromSell) external returns (uint256, uint256);
+        uint256 minAmountFromSell
+    ) external returns (uint256, uint256);
 
     /**
      * @notice Redeem shares, used by force sell.
