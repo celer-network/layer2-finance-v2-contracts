@@ -45,7 +45,7 @@ contract RollupChain is Ownable, Pausable {
     // - commitBlock() moves it to "done" status
     // - fraudulent block moves it back to "pending" status
     // - executeBlock() deletes it
-    enum PendingEventStatus {Pending, Done}
+    enum PendingEventStatus {Init, Pending, Done}
     struct PendingEvent {
         bytes32 ehash;
         uint64 blockId; // rollup block; "pending": baseline of censorship, "done": block holding L2 transition
@@ -57,12 +57,15 @@ contract RollupChain is Ownable, Pausable {
         uint64 tail; // moves up inside L1 event -- highest
     }
 
-    // deposit queue, ehash = keccak256(abi.encodePacked(account, assetId, amount))
+    // pending deposit queue
+    // ehash = keccak256(abi.encodePacked(account, assetId, amount))
     mapping(uint256 => PendingEvent) public pendingDeposits;
     EventQueuePointer public depositQueuePointer;
 
     // strategyId -> (aggregateId -> PendingExecResult)
+    // ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell))
     mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResult;
+    mapping(uint32 => EventQueuePointer) public execResultQueuePointer;
 
     // Track pending withdraws arriving from L2 then done on L1 across 2 phases.
     // A separate mapping is used for each phase:
@@ -83,7 +86,6 @@ contract RollupChain is Ownable, Pausable {
 
     // Mapping of account => assetId => pendingWithdrawAmount
     mapping(address => mapping(uint32 => uint256)) public pendingWithdraws;
-    
 
     // per-asset (total deposit - total withdrawal) amount
     mapping(address => uint256) public netDeposits;
@@ -320,7 +322,6 @@ contract RollupChain is Ownable, Pausable {
             // pending withdraw records per account (for later L1 withdraw), and delete them.
             for (uint256 i = 0; i < pendingWithdrawCommits[_blockId].length; i++) {
                 PendingWithdrawCommit memory pwc = pendingWithdrawCommits[_blockId][i];
-
                 // Find and increment this account's assetId total amount
                 pendingWithdraws[pwc.account][pwc.assetId] += pwc.amount;
             }
@@ -352,10 +353,19 @@ contract RollupChain is Ownable, Pausable {
             if (success) {
                 (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
             }
-            // TODO: aggregation result priority queue
+            uint64 aggregateId = execResultQueuePointer[aggregation.strategyId].tail++;
+            bytes32 ehash =
+                keccak256(
+                    abi.encodePacked(aggregation.strategyId, aggregateId, success, sharesFromBuy, amountFromSell)
+                );
+            pendingExecResult[aggregation.strategyId][aggregateId] = PendingEvent({
+                ehash: ehash,
+                blockId: uint64(blocks.length), // "pending": baseline of censorship delay
+                status: PendingEventStatus.Pending
+            });
             emit AggregationExecuted(
                 aggregation.strategyId,
-                aggregation.aggregateId,
+                aggregateId,
                 success,
                 sharesFromBuy,
                 amountFromSell

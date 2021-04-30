@@ -213,18 +213,16 @@ library Transitions {
             uint8 transitionType,
             bytes32 stateRoot,
             uint32 strategyId,
-            uint64 aggregateId,
             uint256 buyAmount,
             uint256 sellShares,
             uint256 minSharesFromBuy,
             uint256 minAmountFromSell
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint256, uint256, uint256, uint256));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256, uint256, uint256, uint256));
         DataTypes.AggregateOrdersTransition memory transition =
             DataTypes.AggregateOrdersTransition(
                 transitionType,
                 stateRoot,
                 strategyId,
-                aggregateId,
                 buyAmount,
                 sellShares,
                 minSharesFromBuy,
