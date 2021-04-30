@@ -97,6 +97,7 @@ contract RollupChain is Ownable, Pausable {
     address public operator;
 
     /* Events */
+    // TODO: do we need indexed event fields?
     event RollupBlockCommitted(uint256 blockId);
     event RollupBlockExecuted(uint256 blockId, uint32 execLen, uint32 totalLen);
     event RollupBlockReverted(uint256 blockId, string reason);
