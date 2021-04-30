@@ -343,6 +343,7 @@ contract RollupChain is Ownable, Pausable {
             require(stAddr != address(0), "Unknown strategy ID");
 
             IStrategy strategy = IStrategy(stAddr);
+            // TODO: reset allowance to zero after strategy interaction?
             IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(stAddr, aggregation.buyAmount);
             (bool success, bytes memory returnData) =
                 stAddr.call(
