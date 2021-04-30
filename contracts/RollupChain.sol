@@ -11,14 +11,13 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
+import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/MerkleTree.sol";
-import "./libraries/Transitions.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
 
 /*
 import "./TransitionDisputer.sol";
-import "./libraries/Transitions.sol";
 import "./interfaces/IWETH.sol";
 */
 
@@ -214,16 +213,20 @@ contract RollupChain is Ownable, Pausable {
         uint32 numIntents = 0;
 
         for (uint256 i = 0; i < _transitions.length; i++) {
-            uint8 transitionType = Transitions.extractTransitionType(_transitions[i]);
+            uint8 tnType = tn.extractTransitionType(_transitions[i]);
             if (
-                transitionType == Transitions.TRANSITION_TYPE_BUY || transitionType == Transitions.TRANSITION_TYPE_SELL
+                tnType == tn.TN_TYPE_BUY ||
+                tnType == tn.TN_TYPE_SELL ||
+                tnType == tn.TN_TYPE_XFER_ASSET ||
+                tnType == tn.TN_TYPE_XFER_SHARE ||
+                tnType == tn.TN_TYPE_SETTLE
             ) {
                 continue;
-            } else if (transitionType == Transitions.TRANSITION_TYPE_AGGREGATE_ORDER) {
+            } else if (tnType == tn.TN_TYPE_AGGREGATE_ORDER) {
                 intentIndexes[numIntents++] = i;
-            } else if (transitionType == Transitions.TRANSITION_TYPE_DEPOSIT) {
+            } else if (tnType == tn.TN_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
-                dt.DepositTransition memory dp = Transitions.decodeDepositTransition(_transitions[i]);
+                dt.DepositTransition memory dp = tn.decodeDepositTransition(_transitions[i]);
                 EventQueuePointer memory queuePointer = depositQueuePointer;
                 uint256 depositId = queuePointer.commitHead;
                 require(depositId < queuePointer.tail, "invalid deposit transition, no pending deposits");
@@ -236,12 +239,14 @@ contract RollupChain is Ownable, Pausable {
                 pendingDeposits[depositId].blockId = uint64(_blockId); // "done": block holding the transition
                 queuePointer.commitHead++;
                 depositQueuePointer = queuePointer;
-            } else if (transitionType == Transitions.TRANSITION_TYPE_WITHDRAW) {
+            } else if (tnType == tn.TN_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
-                dt.WithdrawTransition memory wd = Transitions.decodeWithdrawTransition(_transitions[i]);
+                dt.WithdrawTransition memory wd = tn.decodeWithdrawTransition(_transitions[i]);
                 pendingWithdrawCommits[_blockId].push(
                     PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount - wd.fee})
                 );
+            } else if (tnType == tn.TN_TYPE_EXEC_RESULT) {
+                // TODO
             }
         }
 
@@ -331,7 +336,7 @@ contract RollupChain is Ownable, Pausable {
 
         // Decode the intent transitions and execute the strategy updates for the requested incremental batch.
         for (uint256 i = intentExecCount; i < newIntentExecCount; i++) {
-            dt.AggregateOrdersTransition memory aggregation = Transitions.decodeAggregateOrdersTransition(_intents[i]);
+            dt.AggregateOrdersTransition memory aggregation = tn.decodeAggregateOrdersTransition(_intents[i]);
 
             address stAddr = registry.strategyIndexToAddress(aggregation.strategyId);
             require(stAddr != address(0), "Unknown strategy ID");
@@ -363,13 +368,7 @@ contract RollupChain is Ownable, Pausable {
                 blockId: uint64(blocks.length), // "pending": baseline of censorship delay
                 status: PendingEventStatus.Pending
             });
-            emit AggregationExecuted(
-                aggregation.strategyId,
-                aggregateId,
-                success,
-                sharesFromBuy,
-                amountFromSell
-            );
+            emit AggregationExecuted(aggregation.strategyId, aggregateId, success, sharesFromBuy, amountFromSell);
         }
 
         if (newIntentExecCount == _intents.length) {

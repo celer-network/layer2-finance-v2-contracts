@@ -7,17 +7,17 @@ import "../libraries/DataTypes.sol";
 
 library Transitions {
     // Transition Types
-    uint8 public constant TRANSITION_TYPE_INVALID = 0;
-    uint8 public constant TRANSITION_TYPE_INIT = 1;
-    uint8 public constant TRANSITION_TYPE_DEPOSIT = 2;
-    uint8 public constant TRANSITION_TYPE_WITHDRAW = 3;
-    uint8 public constant TRANSITION_TYPE_BUY = 4;
-    uint8 public constant TRANSITION_TYPE_SELL = 5;
-    uint8 public constant TRANSITION_TYPE_XFER_ASSET = 6;
-    uint8 public constant TRANSITION_TYPE_XFER_SHARE = 7;
-    uint8 public constant TRANSITION_TYPE_AGGREGATE_ORDER = 8;
-    uint8 public constant TRANSITION_TYPE_EXEC_RESULT = 9;
-    uint8 public constant TRANSITION_TYPE_SETTLE = 10;
+    uint8 public constant TN_TYPE_INVALID = 0;
+    uint8 public constant TN_TYPE_INIT = 1;
+    uint8 public constant TN_TYPE_DEPOSIT = 2;
+    uint8 public constant TN_TYPE_WITHDRAW = 3;
+    uint8 public constant TN_TYPE_BUY = 4;
+    uint8 public constant TN_TYPE_SELL = 5;
+    uint8 public constant TN_TYPE_XFER_ASSET = 6;
+    uint8 public constant TN_TYPE_XFER_SHARE = 7;
+    uint8 public constant TN_TYPE_AGGREGATE_ORDER = 8;
+    uint8 public constant TN_TYPE_EXEC_RESULT = 9;
+    uint8 public constant TN_TYPE_SETTLE = 10;
 
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
