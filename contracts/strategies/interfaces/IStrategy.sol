@@ -6,10 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title Interface for DeFi strategies
- *
  * @notice Strategy provides abstraction for a DeFi strategy.
  */
-interface IStrategy is IERC20 {
+interface IStrategy {
     event Buy(uint256 amount, uint256 sharesFromBuy);
 
     event Sell(uint256 shares, uint256 amountFromSell);
@@ -22,9 +21,20 @@ interface IStrategy is IERC20 {
     function getAssetAddress() external view returns (address);
 
     /**
-     * @notice Compounding of extra yields
+     * @notice aggregate orders to strategy per instructions from L2.
+     *
+     * @param _buyAmount The aggregated asset amount to buy.
+     * @param _minSharesFromBuy Minimal shares from buy.
+     * @param _sellShares The aggregated shares to sell.
+     * @param _minAmountFromSell Minimal asset amount from sell.
+     * @return (sharesFromBuy, amountFromSell)
      */
-    function harvest() external;
+    function aggregateOrder(
+        uint256 _buyAmount,
+        uint256 _minSharesFromBuy,
+        uint256 _sellShares,
+        uint256 _minAmountFromSell
+    ) external returns (uint256, uint256);
 
     /**
      * @notice Syncs and returns the price of each share
@@ -32,25 +42,7 @@ interface IStrategy is IERC20 {
     function syncPrice() external returns (uint256);
 
     /**
-     * @notice aggregate orders to strategy per instructions from L2.
-     *
-     * @param buyAmount The aggregated asset amount to buy.
-     * @param minSharesFromBuy Minimal shares from buy.
-     * @param sellShares The aggregated shares to sell.
-     * @param minAmountFromSell Minimal asset amount from sell.
-     * @return (sharesFromBuy, amountFromSell)
+     * @notice Compounding of extra yields
      */
-    function aggregateOrder(
-        uint256 buyAmount,
-        uint256 minSharesFromBuy,
-        uint256 sellShares,
-        uint256 minAmountFromSell
-    ) external returns (uint256, uint256);
-
-    /**
-     * @notice Redeem shares, used by force sell.
-     *
-     * @param shares Amount of shares to redeem
-     */
-    function redeemShares(uint256 shares) external;
+    function harvest() external;
 }
