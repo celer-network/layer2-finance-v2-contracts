@@ -7,17 +7,17 @@ import "../libraries/DataTypes.sol";
 
 library Transitions {
     // Transition Types
-    uint8 public constant TRANSITION_TYPE_INVALID = 0;
-    uint8 public constant TRANSITION_TYPE_INIT = 1;
-    uint8 public constant TRANSITION_TYPE_DEPOSIT = 2;
-    uint8 public constant TRANSITION_TYPE_WITHDRAW = 3;
-    uint8 public constant TRANSITION_TYPE_BUY = 4;
-    uint8 public constant TRANSITION_TYPE_SELL = 5;
-    uint8 public constant TRANSITION_TYPE_XFER_ASSET = 6;
-    uint8 public constant TRANSITION_TYPE_XFER_SHARE = 7;
-    uint8 public constant TRANSITION_TYPE_AGGREGATE_ORDER = 8;
-    uint8 public constant TRANSITION_TYPE_EXEC_RESULT = 9;
-    uint8 public constant TRANSITION_TYPE_SETTLE = 10;
+    uint8 public constant TN_TYPE_INVALID = 0;
+    uint8 public constant TN_TYPE_INIT = 1;
+    uint8 public constant TN_TYPE_DEPOSIT = 2;
+    uint8 public constant TN_TYPE_WITHDRAW = 3;
+    uint8 public constant TN_TYPE_BUY = 4;
+    uint8 public constant TN_TYPE_SELL = 5;
+    uint8 public constant TN_TYPE_XFER_ASSET = 6;
+    uint8 public constant TN_TYPE_XFER_SHARE = 7;
+    uint8 public constant TN_TYPE_AGGREGATE_ORDER = 8;
+    uint8 public constant TN_TYPE_EXEC_RESULT = 9;
+    uint8 public constant TN_TYPE_SETTLE = 10;
 
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
@@ -213,18 +213,16 @@ library Transitions {
             uint8 transitionType,
             bytes32 stateRoot,
             uint32 strategyId,
-            uint64 aggregateId,
             uint256 buyAmount,
             uint256 sellShares,
             uint256 minSharesFromBuy,
             uint256 minAmountFromSell
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint256, uint256, uint256, uint256));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256, uint256, uint256, uint256));
         DataTypes.AggregateOrdersTransition memory transition =
             DataTypes.AggregateOrdersTransition(
                 transitionType,
                 stateRoot,
                 strategyId,
-                aggregateId,
                 buyAmount,
                 sellShares,
                 minSharesFromBuy,

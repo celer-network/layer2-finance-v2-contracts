@@ -89,7 +89,6 @@ library DataTypes {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 strategyId;
-        uint64 aggregateId;
         uint256 buyAmount;
         uint256 sellShares;
         uint256 minSharesFromBuy;
