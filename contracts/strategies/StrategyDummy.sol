@@ -59,7 +59,7 @@ contract StrategyDummy is IStrategy, Ownable {
         require(shares >= _sellShares, "not enough shares to sell");
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-        if (assetAmount == 0) {
+        if (assetAmount == 0 || shares == 0) {
             shares = _buyAmount;
             assetAmount = _buyAmount;
             sharesFromBuy = shares;
