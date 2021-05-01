@@ -37,9 +37,8 @@ library DataTypes {
     struct BuyTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint128 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]
+        uint256 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]:[uint128-maxSharePrice]
         uint256 amount;
-        uint256 maxSharePrice;
         uint256 fee;
         bytes signature;
     }
@@ -47,9 +46,8 @@ library DataTypes {
     struct SellTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint128 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]
+        uint256 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]:[uint128-minSharePrice]
         uint256 shares;
-        uint256 minSharePrice;
         uint256 fee;
         bytes signature;
     }
@@ -121,8 +119,8 @@ library DataTypes {
     // The array of PendingStrategyInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingStrategyInfo {
         uint64 aggregateId;
-        uint256 maxSharePriceForBuy;
-        uint256 minSharePriceForSell;
+        uint128 maxSharePriceForBuy; // decimal in 1e9
+        uint128 minSharePriceForSell; // decimal in 1e9
         uint256 buyAmount;
         uint256 sellShares;
         uint256 sharesFromBuy;

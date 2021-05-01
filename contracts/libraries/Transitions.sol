@@ -89,12 +89,11 @@ library Transitions {
             bytes32 stateRoot,
             uint128 infoCode,
             uint256 amount,
-            uint256 maxSharePrice,
             uint256 fee,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint128, uint256, uint256, uint256, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint128, uint256, uint256, bytes));
         DataTypes.BuyTransition memory transition =
-            DataTypes.BuyTransition(transitionType, stateRoot, infoCode, amount, maxSharePrice, fee, signature);
+            DataTypes.BuyTransition(transitionType, stateRoot, infoCode, amount, fee, signature);
         return transition;
     }
 
@@ -104,27 +103,28 @@ library Transitions {
             bytes32 stateRoot,
             uint128 infoCode,
             uint256 shares,
-            uint256 minSharePrice,
             uint256 fee,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint128, uint256, uint256, uint256, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint128, uint256, uint256, bytes));
         DataTypes.SellTransition memory transition =
-            DataTypes.SellTransition(transitionType, stateRoot, infoCode, shares, minSharePrice, fee, signature);
+            DataTypes.SellTransition(transitionType, stateRoot, infoCode, shares, fee, signature);
         return transition;
     }
 
-    function decodeBuySellInfoCode(uint128 _infoCode)
+    function decodeBuySellInfoCode(uint256 _infoCode)
         internal
         pure
         returns (
             uint32, // accountId
             uint32, // strategyId
-            uint64 // timestamp
+            uint64, // timestamp
+            uint128 // maxSharePrice or minSharePrice
         )
     {
-        (uint64 high, uint64 timestamp) = splitUint128(_infoCode);
-        (uint32 accountId, uint32 strategyId) = splitUint64(high);
-        return (accountId, strategyId, timestamp);
+        (uint128 h1, uint128 priceLimit) = splitUint256(_infoCode);
+        (uint64 h2, uint64 timestamp) = splitUint128(h1);
+        (uint32 accountId, uint32 strategyId) = splitUint64(h2);
+        return (accountId, strategyId, timestamp, priceLimit);
     }
 
     function decodeTransferAssetTransition(bytes memory _rawBytes)
