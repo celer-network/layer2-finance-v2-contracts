@@ -19,7 +19,7 @@ library DataTypes {
     struct DepositTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        address account; // must provide L1 address for "pending deposit" handling
+        address account; // address for "pending deposit" handling
         uint64 infoCode; // [uint32-accountId]:[uint32-assetId]
         uint256 amount;
     }
@@ -27,10 +27,10 @@ library DataTypes {
     struct WithdrawTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        address account; // must provide L1 target address for "pending withdraw" handling
+        address account; // target address for "pending withdraw" handling
         uint128 infoCode; // [uint32-accountId]:[uint32-assetId]:[uint64-timestamp]
         uint256 amount;
-        uint256 fee; // in units of asset; signed by the user
+        uint256 fee;
         bytes signature;
     }
 
@@ -40,7 +40,7 @@ library DataTypes {
         uint128 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]
         uint256 amount;
         uint256 maxSharePrice;
-        uint256 fee; // in units of asset; signed by the user
+        uint256 fee;
         bytes signature;
     }
 
@@ -50,7 +50,7 @@ library DataTypes {
         uint128 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]
         uint256 shares;
         uint256 minSharePrice;
-        uint256 fee; // in units of asset; signed by the user
+        uint256 fee;
         bytes signature;
     }
 
@@ -59,7 +59,7 @@ library DataTypes {
         bytes32 stateRoot;
         uint256 infoCode; // [uint32-assetId]:[uint32-fromAccountId]:[uint32-toAccountId]:[uint64-timestamp]
         uint256 amount;
-        uint256 fee; // in units of asset; signed by the user
+        uint256 fee;
         bytes signature;
     }
 
@@ -68,7 +68,7 @@ library DataTypes {
         bytes32 stateRoot;
         uint256 infoCode; // [uint32-strategyId]:[uint32-fromAccountId]:[uint32-toAccountId]:[uint64-timestamp]
         uint256 shares;
-        uint256 fee; // in units of asset; signed by the user
+        uint256 fee;
         bytes signature;
     }
 
