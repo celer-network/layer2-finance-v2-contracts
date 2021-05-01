@@ -101,7 +101,7 @@ library DataTypes {
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
     // The array of PendingAccountInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingAccountInfo {
-        int64 aggregateId;
+        uint64 aggregateId;
         uint256 buyAmount;
         uint256 buyFees;
         uint256 sellShares;
