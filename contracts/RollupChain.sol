@@ -233,7 +233,8 @@ contract RollupChain is Ownable, Pausable {
                 require(depositId < queuePointer.tail, "invalid deposit transition, no pending deposits");
 
                 PendingEvent memory pend = pendingDeposits[depositId];
-                bytes32 ehash = keccak256(abi.encodePacked(dp.account, dp.assetId, dp.amount));
+                (, uint32 assetId) = tn.decodeDepositInfoCode(dp.infoCode);
+                bytes32 ehash = keccak256(abi.encodePacked(dp.account, assetId, dp.amount));
                 require(pend.ehash == ehash, "invalid deposit transition, mismatch or wrong ordering");
 
                 pendingDeposits[depositId].status = PendingEventStatus.Done;
@@ -243,8 +244,9 @@ contract RollupChain is Ownable, Pausable {
             } else if (tnType == tn.TN_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = tn.decodeWithdrawTransition(_transitions[i]);
+                (, uint32 assetId, ) = tn.decodeWithdrawInfoCode(wd.infoCode);
                 pendingWithdrawCommits[_blockId].push(
-                    PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount - wd.fee})
+                    PendingWithdrawCommit({account: wd.account, assetId: assetId, amount: wd.amount - wd.fee})
                 );
             } else if (tnType == tn.TN_TYPE_EXEC_RESULT) {
                 // TODO
@@ -341,7 +343,6 @@ contract RollupChain is Ownable, Pausable {
 
             address stAddr = registry.strategyIndexToAddress(aggregation.strategyId);
             require(stAddr != address(0), "Unknown strategy ID");
-
             IStrategy strategy = IStrategy(stAddr);
             // TODO: reset allowance to zero after strategy interaction?
             IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(stAddr, aggregation.buyAmount);
