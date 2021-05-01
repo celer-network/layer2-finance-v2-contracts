@@ -119,8 +119,8 @@ library DataTypes {
     // The array of PendingStrategyInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingStrategyInfo {
         uint64 aggregateId;
-        uint128 maxSharePriceForBuy; // decimal in 1e9
-        uint128 minSharePriceForSell; // decimal in 1e9
+        uint128 maxSharePriceForBuy; // decimal in 1e18
+        uint128 minSharePriceForSell; // decimal in 1e18
         uint256 buyAmount;
         uint256 sellShares;
         uint256 sharesFromBuy;
