@@ -19,69 +19,54 @@ library DataTypes {
     struct DepositTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        address account; // must provide L1 address for "pending deposit" handling
-        uint32 accountId; // needed for transition evaluation in case of dispute
-        uint32 assetId;
+        address account; // address for "pending deposit" handling
+        uint64 infoCode; // [uint32-accountId]:[uint32-assetId]
         uint256 amount;
     }
 
     struct WithdrawTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        address account; // must provide L1 target address for "pending withdraw" handling
-        uint32 accountId;
-        uint32 assetId;
+        address account; // target address for "pending withdraw" handling
+        uint128 infoCode; // [uint32-accountId]:[uint32-assetId]:[uint64-timestamp]
         uint256 amount;
-        uint256 fee; // in units of asset; signed by the user
-        uint64 timestamp; // Unix epoch (msec, UTC)
+        uint256 fee;
         bytes signature;
     }
 
     struct BuyTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint32 accountId;
-        uint32 strategyId;
+        uint256 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]:[uint128-maxSharePrice]
         uint256 amount;
-        uint256 maxSharePrice;
-        uint256 fee; // in units of asset; signed by the user
-        uint64 timestamp; // Unix epoch (msec, UTC)
+        uint256 fee;
         bytes signature;
     }
 
     struct SellTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint32 accountId;
-        uint32 strategyId;
+        uint256 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]:[uint128-minSharePrice]
         uint256 shares;
-        uint256 minSharePrice;
-        uint256 fee; // in units of asset; signed by the user
-        uint64 timestamp; // Unix epoch (msec, UTC)
+        uint256 fee;
         bytes signature;
     }
 
     struct TransferAssetTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint32 fromAccountId;
-        uint32 toAccountId;
-        uint32 assetId;
+        uint256 infoCode; // [uint32-assetId]:[uint32-fromAccountId]:[uint32-toAccountId]:[uint64-timestamp]
         uint256 amount;
-        uint256 fee; // in units of asset; signed by the user
-        uint64 timestamp; // Unix epoch (msec, UTC)
+        uint256 fee;
         bytes signature;
     }
 
     struct TransferShareTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint32 fromAccountId;
-        uint32 toAccountId;
-        uint32 strategyId;
+        uint256 infoCode; // [uint32-strategyId]:[uint32-fromAccountId]:[uint32-toAccountId]:[uint64-timestamp]
         uint256 shares;
-        uint256 fee; // in units of asset; signed by the user
-        uint64 timestamp; // Unix epoch (msec, UTC)
+        uint256 fee;
         bytes signature;
     }
 
@@ -108,15 +93,13 @@ library DataTypes {
     struct SettlementTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint32 strategyId;
-        uint64 aggregateId;
-        uint32 accountId;
+        uint128 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-aggregateId]
     }
 
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
     // The array of PendingAccountInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingAccountInfo {
-        int64 aggregateId;
+        uint64 aggregateId;
         uint256 buyAmount;
         uint256 buyFees;
         uint256 sellShares;
@@ -135,9 +118,9 @@ library DataTypes {
     // Pending strategy actions per strategy, aggregateId.
     // The array of PendingStrategyInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingStrategyInfo {
-        int64 aggregateId;
-        uint256 maxSharePriceForBuy;
-        uint256 minSharePriceForSell;
+        uint64 aggregateId;
+        uint128 maxSharePriceForBuy; // decimal in 1e18
+        uint128 minSharePriceForSell; // decimal in 1e18
         uint256 buyAmount;
         uint256 sellShares;
         uint256 sharesFromBuy;

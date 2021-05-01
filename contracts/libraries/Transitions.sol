@@ -38,11 +38,16 @@ library Transitions {
         pure
         returns (DataTypes.DepositTransition memory)
     {
-        (uint8 transitionType, bytes32 stateRoot, address account, uint32 accountId, uint32 assetId, uint256 amount) =
-            abi.decode((_rawBytes), (uint8, bytes32, address, uint32, uint32, uint256));
+        (uint8 transitionType, bytes32 stateRoot, address account, uint64 infoCode, uint256 amount) =
+            abi.decode((_rawBytes), (uint8, bytes32, address, uint64, uint256));
         DataTypes.DepositTransition memory transition =
-            DataTypes.DepositTransition(transitionType, stateRoot, account, accountId, assetId, amount);
+            DataTypes.DepositTransition(transitionType, stateRoot, account, infoCode, amount);
         return transition;
+    }
+
+    function decodeDepositInfoCode(uint64 _infoCode) internal pure returns (uint32, uint32) {
+        (uint32 accountId, uint32 assetId) = splitUint64(_infoCode);
+        return (accountId, assetId);
     }
 
     function decodeWithdrawTransition(bytes memory _rawBytes)
@@ -54,52 +59,41 @@ library Transitions {
             uint8 transitionType,
             bytes32 stateRoot,
             address account,
-            uint32 accountId,
-            uint32 assetId,
+            uint128 infoCode,
             uint256 amount,
             uint256 fee,
-            uint64 timestamp,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, address, uint32, uint32, uint256, uint256, uint64, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, address, uint128, uint256, uint256, bytes));
         DataTypes.WithdrawTransition memory transition =
-            DataTypes.WithdrawTransition(
-                transitionType,
-                stateRoot,
-                account,
-                accountId,
-                assetId,
-                amount,
-                fee,
-                timestamp,
-                signature
-            );
+            DataTypes.WithdrawTransition(transitionType, stateRoot, account, infoCode, amount, fee, signature);
         return transition;
+    }
+
+    function decodeWithdrawInfoCode(uint128 _infoCode)
+        internal
+        pure
+        returns (
+            uint32, // accountId
+            uint32, // assetId
+            uint64 // timestamp
+        )
+    {
+        (uint64 high, uint64 timestamp) = splitUint128(_infoCode);
+        (uint32 accountId, uint32 assetId) = splitUint64(high);
+        return (accountId, assetId, timestamp);
     }
 
     function decodeBuyTransition(bytes memory _rawBytes) internal pure returns (DataTypes.BuyTransition memory) {
         (
             uint8 transitionType,
             bytes32 stateRoot,
-            uint32 accountId,
-            uint32 strategyId,
+            uint128 infoCode,
             uint256 amount,
-            uint256 maxSharePrice,
             uint256 fee,
-            uint64 timestamp,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint256, uint256, uint256, uint64, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint128, uint256, uint256, bytes));
         DataTypes.BuyTransition memory transition =
-            DataTypes.BuyTransition(
-                transitionType,
-                stateRoot,
-                accountId,
-                strategyId,
-                amount,
-                maxSharePrice,
-                fee,
-                timestamp,
-                signature
-            );
+            DataTypes.BuyTransition(transitionType, stateRoot, infoCode, amount, fee, signature);
         return transition;
     }
 
@@ -107,27 +101,30 @@ library Transitions {
         (
             uint8 transitionType,
             bytes32 stateRoot,
-            uint32 accountId,
-            uint32 strategyId,
+            uint128 infoCode,
             uint256 shares,
-            uint256 minSharePrice,
             uint256 fee,
-            uint64 timestamp,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint256, uint256, uint256, uint64, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint128, uint256, uint256, bytes));
         DataTypes.SellTransition memory transition =
-            DataTypes.SellTransition(
-                transitionType,
-                stateRoot,
-                accountId,
-                strategyId,
-                shares,
-                minSharePrice,
-                fee,
-                timestamp,
-                signature
-            );
+            DataTypes.SellTransition(transitionType, stateRoot, infoCode, shares, fee, signature);
         return transition;
+    }
+
+    function decodeBuySellInfoCode(uint256 _infoCode)
+        internal
+        pure
+        returns (
+            uint32, // accountId
+            uint32, // strategyId
+            uint64, // timestamp
+            uint128 // maxSharePrice or minSharePrice
+        )
+    {
+        (uint128 h1, uint128 priceLimit) = splitUint256(_infoCode);
+        (uint64 h2, uint64 timestamp) = splitUint128(h1);
+        (uint32 accountId, uint32 strategyId) = splitUint64(h2);
+        return (accountId, strategyId, timestamp, priceLimit);
     }
 
     function decodeTransferAssetTransition(bytes memory _rawBytes)
@@ -138,26 +135,13 @@ library Transitions {
         (
             uint8 transitionType,
             bytes32 stateRoot,
-            uint32 fromAccountId,
-            uint32 toAccountId,
-            uint32 assetId,
+            uint256 infoCode,
             uint256 amount,
             uint256 fee,
-            uint64 timestamp,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32, uint256, uint256, uint64, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint256, uint256, uint256, bytes));
         DataTypes.TransferAssetTransition memory transition =
-            DataTypes.TransferAssetTransition(
-                transitionType,
-                stateRoot,
-                fromAccountId,
-                toAccountId,
-                assetId,
-                amount,
-                fee,
-                timestamp,
-                signature
-            );
+            DataTypes.TransferAssetTransition(transitionType, stateRoot, infoCode, amount, fee, signature);
         return transition;
     }
 
@@ -169,27 +153,31 @@ library Transitions {
         (
             uint8 transitionType,
             bytes32 stateRoot,
-            uint32 fromAccountId,
-            uint32 toAccountId,
-            uint32 strategyId,
+            uint256 infoCode,
             uint256 shares,
             uint256 fee,
-            uint64 timestamp,
             bytes memory signature
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32, uint256, uint256, uint64, bytes));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint256, uint256, uint256, bytes));
         DataTypes.TransferShareTransition memory transition =
-            DataTypes.TransferShareTransition(
-                transitionType,
-                stateRoot,
-                fromAccountId,
-                toAccountId,
-                strategyId,
-                shares,
-                fee,
-                timestamp,
-                signature
-            );
+            DataTypes.TransferShareTransition(transitionType, stateRoot, infoCode, shares, fee, signature);
         return transition;
+    }
+
+    function decodeTransferInfoCode(uint256 _infoCode)
+        internal
+        pure
+        returns (
+            uint32, // assetId or strategyId
+            uint32, // fromAccountId
+            uint32, // toAccountId
+            uint64 // timestamp
+        )
+    {
+        (uint128 high, uint128 low) = splitUint256(_infoCode);
+        (uint64 acctIds, uint64 timestamp) = splitUint128(low);
+        (uint32 fromAccountId, uint32 toAccountId) = splitUint64(acctIds);
+        uint32 assetOrStId = uint32(high);
+        return (assetOrStId, fromAccountId, toAccountId, timestamp);
     }
 
     function decodeSettlementTransition(bytes memory _rawBytes)
@@ -197,11 +185,25 @@ library Transitions {
         pure
         returns (DataTypes.SettlementTransition memory)
     {
-        (uint8 transitionType, bytes32 stateRoot, uint32 strategyId, uint64 aggregateId, uint32 accountId) =
-            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, uint32));
+        (uint8 transitionType, bytes32 stateRoot, uint128 infoCode) =
+            abi.decode((_rawBytes), (uint8, bytes32, uint128));
         DataTypes.SettlementTransition memory transition =
-            DataTypes.SettlementTransition(transitionType, stateRoot, strategyId, aggregateId, accountId);
+            DataTypes.SettlementTransition(transitionType, stateRoot, infoCode);
         return transition;
+    }
+
+    function decodeSettlementInfoCode(uint128 _infoCode)
+        internal
+        pure
+        returns (
+            uint32, // accountId
+            uint32, // strategyId
+            uint64 // aggregateId
+        )
+    {
+        (uint64 high, uint64 aggregateId) = splitUint128(_infoCode);
+        (uint32 accountId, uint32 strategyId) = splitUint64(high);
+        return (accountId, strategyId, aggregateId);
     }
 
     function decodeAggregateOrdersTransition(bytes memory _rawBytes)
@@ -256,5 +258,23 @@ library Transitions {
                 amountFromSell
             );
         return transition;
+    }
+
+    function splitUint64(uint64 _code) internal pure returns (uint32, uint32) {
+        uint32 high = uint32(_code >> 32);
+        uint32 low = uint32(_code);
+        return (high, low);
+    }
+
+    function splitUint128(uint128 _code) internal pure returns (uint64, uint64) {
+        uint64 high = uint64(_code >> 64);
+        uint64 low = uint64(_code);
+        return (high, low);
+    }
+
+    function splitUint256(uint256 _code) internal pure returns (uint128, uint128) {
+        uint128 high = uint128(_code >> 128);
+        uint128 low = uint128(_code);
+        return (high, low);
     }
 }
