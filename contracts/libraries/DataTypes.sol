@@ -16,58 +16,98 @@ library DataTypes {
         bytes32 stateRoot;
     }
 
+    // calldata submitted as PackedDepositTransition
     struct DepositTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        address account; // address for "pending deposit" handling
-        uint64 infoCode; // [uint32-accountId]:[uint32-assetId]
+        address account;
+        uint32 accountId;
+        uint32 assetId;
         uint256 amount;
     }
 
+    // calldata submitted as PackedWithdrawTransition
     struct WithdrawTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         address account; // target address for "pending withdraw" handling
-        uint128 infoCode; // [uint32-accountId]:[uint32-assetId]:[uint64-timestamp]
+        uint32 accountId;
+        uint32 assetId;
         uint256 amount;
         uint256 fee;
-        bytes signature;
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
     }
 
+    // calldata submitted as PackedBuySellTransition
     struct BuyTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint256 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]:[uint128-maxSharePrice]
+        uint32 accountId;
+        uint32 strategyId;
         uint256 amount;
+        uint128 maxSharePrice;
         uint256 fee;
-        bytes signature;
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
     }
 
+    // calldata submitted as PackedBuySellTransition
     struct SellTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint256 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-timestamp]:[uint128-minSharePrice]
+        uint32 accountId;
+        uint32 strategyId;
         uint256 shares;
+        uint128 minSharePrice;
         uint256 fee;
-        bytes signature;
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
     }
 
+    // calldata submitted as PackedTransferTransition
     struct TransferAssetTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint256 infoCode; // [uint32-assetId]:[uint32-fromAccountId]:[uint32-toAccountId]:[uint64-timestamp]
+        uint32 fromAccountId;
+        uint32 toAccountId;
+        uint32 assetId;
         uint256 amount;
         uint256 fee;
-        bytes signature;
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
     }
 
+    // calldata submitted as PackedTransferTransition
     struct TransferShareTransition {
         uint8 transitionType;
         bytes32 stateRoot;
-        uint256 infoCode; // [uint32-strategyId]:[uint32-fromAccountId]:[uint32-toAccountId]:[uint64-timestamp]
+        uint32 fromAccountId;
+        uint32 toAccountId;
+        uint32 strategyId;
         uint256 shares;
         uint256 fee;
-        bytes signature;
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
+    }
+
+    // calldata submitted as PackedSettlementTransition
+    struct SettlementTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 strategyId;
+        uint64 aggregateId;
+        uint32 accountId;
     }
 
     struct AggregateOrdersTransition {
@@ -88,12 +128,6 @@ library DataTypes {
         bool success;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-    }
-
-    struct SettlementTransition {
-        uint8 transitionType;
-        bytes32 stateRoot;
-        uint128 infoCode; // [uint32-accountId]:[uint32-strategyId]:[uint64-aggregateId]
     }
 
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
@@ -162,5 +196,81 @@ library DataTypes {
         StrategyInfo value;
         uint32 index;
         bytes32[] siblings;
+    }
+
+    // ------------------ packed transitions submitted as calldata ------------------
+
+    struct PackedDepositTransition {
+        /* infoCode packing:
+        96:127 [uint32 accountId]
+        64:95  [uint32 assetId]
+        8:63   [0]
+        0:7    [uint8 tntype] */
+        uint128 infoCode;
+        bytes32 stateRoot;
+        address account;
+        uint256 amount;
+    }
+
+    struct PackedWithdrawTransition {
+        /* infoCode packing:
+        224:255 [uint32 accountId]
+        192:223 [uint32 assetId]
+        128:191 [uint64 timestamp]
+        16:127  [0]
+        8:15    [uint8 sig-v]
+        0:7     [uint8 tntype] */
+        uint256 infoCode;
+        bytes32 stateRoot;
+        address account;
+        uint256 amount;
+        uint256 fee;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct PackedBuySellTransition {
+        /* infoCode packing:
+        224:255 [uint32 accountId]
+        192:223 [uint32 strategyId]
+        128:191 [uint64 timestamp]
+        16:127  [uint112 minSharePrice or maxSharePrice] // 112 bits are enough
+        8:15    [uint8 sig-v]
+        0:7     [uint8 tntype] */
+        uint256 infoCode;
+        bytes32 stateRoot;
+        uint256 amt; // asset or share amount
+        uint256 fee;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct PackedTransferTransition {
+        /* infoCode packing:
+        224:255 [0]
+        191:223 [uint32 assetId or strategyId]
+        160:191 [uint32 fromAccountId]
+        128:159 [uint32 toAccountId]
+        64:127  [uint64 timestamp]
+        16:63   [0]
+        8:15    [uint8 sig-v]
+        0:7     [uint8 tntype] */
+        uint256 infoCode;
+        bytes32 stateRoot;
+        uint256 amt; // asset or share amount
+        uint256 fee;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct PackedSettlementTransition {
+        /* infoCode packing:
+        224:255 [uint32 accountId]
+        192:223 [uint32 strategyId]
+        128:191 [uint64 aggregateId]
+        8:127   [0]
+        0:7     [uint8 tntype] */
+        uint256 infoCode;
+        bytes32 stateRoot;
     }
 }

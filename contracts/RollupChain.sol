@@ -227,14 +227,13 @@ contract RollupChain is Ownable, Pausable {
                 intentIndexes[numIntents++] = i;
             } else if (tnType == tn.TN_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
-                dt.DepositTransition memory dp = tn.decodeDepositTransition(_transitions[i]);
+                dt.DepositTransition memory dp = tn.decodePackedDepositTransition(_transitions[i]);
                 EventQueuePointer memory queuePointer = depositQueuePointer;
                 uint64 depositId = queuePointer.commitHead;
                 require(depositId < queuePointer.tail, "invalid deposit transition, no pending deposits");
 
                 PendingEvent memory pend = pendingDeposits[depositId];
-                (, uint32 assetId) = tn.decodeDepositInfoCode(dp.infoCode);
-                bytes32 ehash = keccak256(abi.encodePacked(dp.account, assetId, dp.amount));
+                bytes32 ehash = keccak256(abi.encodePacked(dp.account, dp.assetId, dp.amount));
                 require(pend.ehash == ehash, "invalid deposit transition, mismatch or wrong ordering");
 
                 pendingDeposits[depositId].status = PendingEventStatus.Done;
@@ -243,10 +242,9 @@ contract RollupChain is Ownable, Pausable {
                 depositQueuePointer = queuePointer;
             } else if (tnType == tn.TN_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
-                dt.WithdrawTransition memory wd = tn.decodeWithdrawTransition(_transitions[i]);
-                (, uint32 assetId, ) = tn.decodeWithdrawInfoCode(wd.infoCode);
+                dt.WithdrawTransition memory wd = tn.decodePackedWithdrawTransition(_transitions[i]);
                 pendingWithdrawCommits[_blockId].push(
-                    PendingWithdrawCommit({account: wd.account, assetId: assetId, amount: wd.amount - wd.fee})
+                    PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount - wd.fee})
                 );
             } else if (tnType == tn.TN_TYPE_EXEC_RESULT) {
                 // TODO
