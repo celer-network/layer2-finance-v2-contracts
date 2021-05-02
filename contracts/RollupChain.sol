@@ -15,10 +15,10 @@ import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/MerkleTree.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
+import "./interfaces/IWETH.sol";
 
 /*
 import "./TransitionDisputer.sol";
-import "./interfaces/IWETH.sol";
 */
 
 contract RollupChain is Ownable, Pausable {
@@ -158,10 +158,8 @@ contract RollupChain is Ownable, Pausable {
      */
     function depositETH(address _weth, uint256 _amount) external payable whenNotPaused {
         require(msg.value == _amount, "ETH amount mismatch");
-        /*
         _deposit(_weth, _amount);
         IWETH(_weth).deposit{value: _amount}();
-         */
     }
 
     /**
@@ -182,12 +180,10 @@ contract RollupChain is Ownable, Pausable {
      * @param _weth The address for WETH.
      */
     function withdrawETH(address _account, address _weth) external whenNotPaused {
-        /*
         uint256 amount = _withdraw(_account, _weth);
         IWETH(_weth).withdraw(amount);
         (bool sent, ) = _account.call{value: amount}("");
         require(sent, "Failed to withdraw ETH");
-         */
     }
 
     /**
