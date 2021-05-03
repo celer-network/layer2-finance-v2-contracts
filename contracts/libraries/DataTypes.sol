@@ -202,6 +202,7 @@ library DataTypes {
 
     // ------------------ packed transitions submitted as calldata ------------------
 
+    // calldata size: 4 x 32 bytes
     struct PackedDepositTransition {
         /* infoCode packing:
         96:127 [uint32 accountId]
@@ -214,6 +215,7 @@ library DataTypes {
         uint256 amount;
     }
 
+    // calldata size: 7 x 32 bytes
     struct PackedWithdrawTransition {
         /* infoCode packing:
         224:255 [uint32 accountId]
@@ -231,6 +233,7 @@ library DataTypes {
         bytes32 s;
     }
 
+    // calldata size: 6 x 32 bytes
     struct PackedBuySellTransition {
         /* infoCode packing:
         224:255 [uint32 accountId]
@@ -247,6 +250,7 @@ library DataTypes {
         bytes32 s;
     }
 
+    // calldata size: 6 x 32 bytes
     struct PackedTransferTransition {
         /* infoCode packing:
         224:255 [0]
@@ -265,6 +269,7 @@ library DataTypes {
         bytes32 s;
     }
 
+    // calldata size: 2 x 32 bytes
     struct PackedSettlementTransition {
         /* infoCode packing:
         224:255 [uint32 accountId]
@@ -276,6 +281,7 @@ library DataTypes {
         bytes32 stateRoot;
     }
 
+    // calldata size: 6 x 32 bytes
     struct PackedAggregateOrdersTransition {
         /* infoCode packing:
         32:63  [uint32 strategyId]
@@ -289,6 +295,7 @@ library DataTypes {
         uint256 minAmountFromSell;
     }
 
+    // calldata size: 4 x 32 bytes
     struct PackedExecutionResultTransition {
         /* infoCode packing:
         64:127 [uint64 aggregateId]

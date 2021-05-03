@@ -525,13 +525,12 @@ contract RollupChain is Ownable, Pausable {
      * @param _blockId Executed block Id.
      */
     function _executeAggregationOrder(dt.AggregateOrdersTransition memory _order, uint256 _blockId) private {
-        address stAddr = registry.strategyIndexToAddress(_order.strategyId);
-        require(stAddr != address(0), "Unknown strategy ID");
-        IStrategy strategy = IStrategy(stAddr);
+        address strategyAddr = registry.strategyIndexToAddress(_order.strategyId);
+        require(strategyAddr != address(0), "Unknown strategy ID");
         // TODO: reset allowance to zero after strategy interaction?
-        IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(stAddr, _order.buyAmount);
+        IERC20(strategyAddr).safeIncreaseAllowance(strategyAddr, _order.buyAmount);
         (bool success, bytes memory returnData) =
-            stAddr.call(
+            strategyAddr.call(
                 abi.encodeWithSelector(
                     IStrategy.aggregateOrder.selector,
                     _order.buyAmount,
