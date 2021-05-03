@@ -203,10 +203,10 @@ contract RollupChain is Ownable, Pausable {
         bytes32 root = MerkleTree.getMerkleRoot(leafs);
 
         // Loop over transition and handle these cases:
-        // 1- deposit: update the pending deposit record
-        // 2- withdraw: create a pending withdraw-commit record
-        // 3- aggregate order: fill the "intents" array for future executeBlock()
-        // 4- execution result: update the pending execution result record
+        // 1. deposit: update the pending deposit record
+        // 2. withdraw: create a pending withdraw-commit record
+        // 3. aggregate-orders: fill the "intents" array for future executeBlock()
+        // 4. execution-result: update the pending execution result record
 
         uint256[] memory intentIndexes = new uint256[](_transitions.length);
         uint32 numIntents = 0;
@@ -265,13 +265,13 @@ contract RollupChain is Ownable, Pausable {
 
     /**
      * @notice Execute a rollup block after it passes the challenge period.
-     * @dev Note: only the "intent" transitions (commitment sync) are given to executeBlock() instead of
+     * @dev Note: only the "intent" transitions (AggregateOrders) are given to executeBlock() instead of
      * re-sending the whole rollup block. This includes the case of a rollup block with zero intents.
      * @dev Note: this supports partial incremental block execution using the "_execLen" parameter.
      *
      * @param _blockId Rollup block id
-     * @param _intents List of CommitmentSync transitions of the rollup block
-     * @param _execLen The next number of CommitmentSync transitions to execute from the full list.
+     * @param _intents List of AggregateOrders transitions of the rollup block
+     * @param _execLen The next number of AggregateOrders transitions to execute from the full list.
      */
     function executeBlock(
         uint256 _blockId,
@@ -306,8 +306,8 @@ contract RollupChain is Ownable, Pausable {
 
         // Decode the intent transitions and execute the strategy updates for the requested incremental batch.
         for (uint256 i = intentExecCount; i < newIntentExecCount; i++) {
-            dt.AggregateOrdersTransition memory order = tn.decodePackedAggregateOrdersTransition(_intents[i]);
-            _executeAggregationOrder(order, _blockId);
+            dt.AggregateOrdersTransition memory aggregation = tn.decodePackedAggregateOrdersTransition(_intents[i]);
+            _executeAggregation(aggregation, _blockId);
         }
 
         if (newIntentExecCount == _intents.length) {
@@ -520,23 +520,24 @@ contract RollupChain is Ownable, Pausable {
     }
 
     /**
-     * @notice execute aggregation order.
-     * @param _order The aggregationOrder transition.
+     * @notice execute aggregated order.
+     * @param _aggregation The AggregateOrders transition.
      * @param _blockId Executed block Id.
      */
-    function _executeAggregationOrder(dt.AggregateOrdersTransition memory _order, uint256 _blockId) private {
-        address strategyAddr = registry.strategyIndexToAddress(_order.strategyId);
+    function _executeAggregation(dt.AggregateOrdersTransition memory _aggregation, uint256 _blockId) private {
+        uint32 strategyId = _aggregation.strategyId;
+        address strategyAddr = registry.strategyIndexToAddress(strategyId);
         require(strategyAddr != address(0), "Unknown strategy ID");
         // TODO: reset allowance to zero after strategy interaction?
-        IERC20(strategyAddr).safeIncreaseAllowance(strategyAddr, _order.buyAmount);
+        IERC20(strategyAddr).safeIncreaseAllowance(strategyAddr, _aggregation.buyAmount);
         (bool success, bytes memory returnData) =
             strategyAddr.call(
                 abi.encodeWithSelector(
-                    IStrategy.aggregateOrder.selector,
-                    _order.buyAmount,
-                    _order.sellShares,
-                    _order.minSharesFromBuy,
-                    _order.minAmountFromSell
+                    IStrategy.aggregateOrders.selector,
+                    _aggregation.buyAmount,
+                    _aggregation.sellShares,
+                    _aggregation.minSharesFromBuy,
+                    _aggregation.minAmountFromSell
                 )
             );
         uint256 sharesFromBuy;
@@ -545,7 +546,6 @@ contract RollupChain is Ownable, Pausable {
             (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
         }
 
-        uint32 strategyId = _order.strategyId;
         EventQueuePointer memory queuePointer = execResultQueuePointers[strategyId];
         uint64 aggregateId = queuePointer.tail++;
         bytes32 ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell));

@@ -29,7 +29,7 @@ interface IStrategy {
      * @param _minAmountFromSell Minimal asset amount from sell.
      * @return (sharesFromBuy, amountFromSell)
      */
-    function aggregateOrder(
+    function aggregateOrders(
         uint256 _buyAmount,
         uint256 _minSharesFromBuy,
         uint256 _sellShares,

@@ -50,7 +50,7 @@ contract StrategyDummy is IStrategy, Ownable {
         return asset;
     }
 
-    function aggregateOrder(
+    function aggregateOrders(
         uint256 _buyAmount,
         uint256 _minSharesFromBuy,
         uint256 _sellShares,

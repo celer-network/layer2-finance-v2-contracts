@@ -5,7 +5,7 @@ pragma solidity >=0.6.0 <0.9.0;
 library DataTypes {
     struct Block {
         bytes32 rootHash;
-        bytes32 intentHash; // hash of L2-to-L1 commitment sync transitions
+        bytes32 intentHash; // hash of L2-to-L1 aggregate-orders transitions
         uint32 intentExecCount; // count of intents executed so far (MAX_UINT32 == all done)
         uint32 blockSize; // number of transitions in the block
         uint64 blockTime; // blockNum when this rollup block is committed
