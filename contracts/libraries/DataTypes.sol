@@ -16,7 +16,7 @@ library DataTypes {
         bytes32 stateRoot;
     }
 
-    // calldata submitted as PackedDepositTransition
+    // decoded from calldata submitted as PackedDepositTransition
     struct DepositTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -26,7 +26,7 @@ library DataTypes {
         uint256 amount;
     }
 
-    // calldata submitted as PackedWithdrawTransition
+    // decoded from calldata submitted as PackedWithdrawTransition
     struct WithdrawTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -41,7 +41,7 @@ library DataTypes {
         uint8 v; // signature v
     }
 
-    // calldata submitted as PackedBuySellTransition
+    // decoded from calldata submitted as PackedBuySellTransition
     struct BuyTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -56,7 +56,7 @@ library DataTypes {
         uint8 v; // signature v
     }
 
-    // calldata submitted as PackedBuySellTransition
+    // decoded from calldata submitted as PackedBuySellTransition
     struct SellTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -71,7 +71,7 @@ library DataTypes {
         uint8 v; // signature v
     }
 
-    // calldata submitted as PackedTransferTransition
+    // decoded from calldata submitted as PackedTransferTransition
     struct TransferAssetTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -86,7 +86,7 @@ library DataTypes {
         uint8 v; // signature v
     }
 
-    // calldata submitted as PackedTransferTransition
+    // decoded from calldata submitted as PackedTransferTransition
     struct TransferShareTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -101,7 +101,7 @@ library DataTypes {
         uint8 v; // signature v
     }
 
-    // calldata submitted as PackedSettlementTransition
+    // decoded from calldata submitted as PackedSettlementTransition
     struct SettlementTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -110,7 +110,7 @@ library DataTypes {
         uint32 accountId;
     }
 
-    // calldata submitted as PackedAggregateOrdersTransition
+    // decoded from calldata submitted as PackedAggregateOrdersTransition
     struct AggregateOrdersTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -121,7 +121,7 @@ library DataTypes {
         uint256 minAmountFromSell;
     }
 
-    // calldata submitted as PackedExecutionResultTransition
+    // decoded from calldata submitted as PackedExecutionResultTransition
     struct ExecutionResultTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -254,7 +254,7 @@ library DataTypes {
     struct PackedTransferTransition {
         /* infoCode packing:
         224:255 [0]
-        191:223 [uint32 assetId or strategyId]
+        192:223 [uint32 assetId or strategyId]
         160:191 [uint32 fromAccountId]
         128:159 [uint32 toAccountId]
         64:127  [uint64 timestamp]
