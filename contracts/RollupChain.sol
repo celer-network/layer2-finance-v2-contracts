@@ -520,7 +520,7 @@ contract RollupChain is Ownable, Pausable {
     }
 
     /**
-     * @notice execute aggreation order.
+     * @notice execute aggregation order.
      * @param _order The aggregationOrder transition.
      * @param _blockId Executed block Id.
      */
