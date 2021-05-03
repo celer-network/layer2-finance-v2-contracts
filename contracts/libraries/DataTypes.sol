@@ -110,6 +110,7 @@ library DataTypes {
         uint32 accountId;
     }
 
+    // calldata submitted as PackedAggregateOrdersTransition
     struct AggregateOrdersTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -120,6 +121,7 @@ library DataTypes {
         uint256 minAmountFromSell;
     }
 
+    // calldata submitted as PackedExecutionResultTransition
     struct ExecutionResultTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -272,5 +274,31 @@ library DataTypes {
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
+    }
+
+    struct PackedAggregateOrdersTransition {
+        /* infoCode packing:
+        32:63  [uint32 strategyId]
+        8:31   [0]
+        0:7    [uint8 tntype] */
+        uint64 infoCode;
+        bytes32 stateRoot;
+        uint256 buyAmount;
+        uint256 sellShares;
+        uint256 minSharesFromBuy;
+        uint256 minAmountFromSell;
+    }
+
+    struct PackedExecutionResultTransition {
+        /* infoCode packing:
+        64:127 [uint64 aggregateId]
+        32:63  [uint32 strategyId]
+        9:31   [0]
+        8:8    [bool success]
+        0:7    [uint8 tntype] */
+        uint128 infoCode;
+        bytes32 stateRoot;
+        uint256 sharesFromBuy;
+        uint256 amountFromSell;
     }
 }
