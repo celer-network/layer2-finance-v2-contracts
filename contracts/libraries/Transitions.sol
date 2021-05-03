@@ -275,20 +275,20 @@ library Transitions {
         return (accountId, strategyId, aggregateId, transitionType);
     }
 
-    function decodeAggregateOrdersTransition(bytes memory _rawBytes)
+    function decodePackedAggregateOrdersTransition(bytes memory _rawBytes)
         internal
         pure
         returns (DataTypes.AggregateOrdersTransition memory)
     {
         (
-            uint8 transitionType,
+            uint64 infoCode,
             bytes32 stateRoot,
-            uint32 strategyId,
             uint256 buyAmount,
             uint256 sellShares,
             uint256 minSharesFromBuy,
             uint256 minAmountFromSell
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256, uint256, uint256, uint256));
+        ) = abi.decode((_rawBytes), (uint64, bytes32, uint256, uint256, uint256, uint256));
+        (uint32 strategyId, uint8 transitionType) = decodeAggregateOrdersInfoCode(infoCode);
         DataTypes.AggregateOrdersTransition memory transition =
             DataTypes.AggregateOrdersTransition(
                 transitionType,
@@ -302,20 +302,28 @@ library Transitions {
         return transition;
     }
 
-    function decodeExecutionResultTransition(bytes memory _rawBytes)
+    function decodeAggregateOrdersInfoCode(uint64 _infoCode)
+        internal
+        pure
+        returns (
+            uint32, // strategyId
+            uint8 // transitionType
+        )
+    {
+        (uint32 strategyId, uint32 low) = splitUint64(_infoCode);
+        uint8 transitionType = uint8(low);
+        return (strategyId, transitionType);
+    }
+
+    function decodePackedExecutionResultTransition(bytes memory _rawBytes)
         internal
         pure
         returns (DataTypes.ExecutionResultTransition memory)
     {
-        (
-            uint8 transitionType,
-            bytes32 stateRoot,
-            uint32 strategyId,
-            uint64 aggregateId,
-            bool success,
-            uint256 sharesFromBuy,
-            uint256 amountFromSell
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint64, bool, uint256, uint256));
+        (uint128 infoCode, bytes32 stateRoot, uint256 sharesFromBuy, uint256 amountFromSell) =
+            abi.decode((_rawBytes), (uint128, bytes32, uint256, uint256));
+        (uint64 aggregateId, uint32 strategyId, bool success, uint8 transitionType) =
+            decodeExecutionResultInfoCode(infoCode);
         DataTypes.ExecutionResultTransition memory transition =
             DataTypes.ExecutionResultTransition(
                 transitionType,
@@ -327,6 +335,23 @@ library Transitions {
                 amountFromSell
             );
         return transition;
+    }
+
+    function decodeExecutionResultInfoCode(uint128 _infoCode)
+        internal
+        pure
+        returns (
+            uint64, // aggregateId
+            uint32, // strategyId
+            bool, // success
+            uint8 // transitionType
+        )
+    {
+        (uint64 aggregateId, uint64 low) = splitUint128(_infoCode);
+        (uint32 strategyId, uint32 low2) = splitUint64(low);
+        uint8 transitionType = uint8(low2);
+        bool success = uint8(low2 >> 8) == 0;
+        return (aggregateId, strategyId, success, transitionType);
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {
