@@ -350,7 +350,7 @@ library Transitions {
         (uint64 aggregateId, uint64 low) = splitUint128(_infoCode);
         (uint32 strategyId, uint32 low2) = splitUint64(low);
         uint8 transitionType = uint8(low2);
-        bool success = uint8(low2 >> 8) == 0;
+        bool success = uint8(low2 >> 8) == 1;
         return (aggregateId, strategyId, success, transitionType);
     }
 
