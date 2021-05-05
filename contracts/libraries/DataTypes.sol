@@ -119,6 +119,10 @@ library DataTypes {
         uint256 sellShares;
         uint256 minSharesFromBuy;
         uint256 minAmountFromSell;
+        // operator suggested fee per transition in strategy asset token or in CELR
+        // actually charged fee will be min(userSigned, operatorSuggested)
+        uint256 tnFeeAsset;
+        uint256 tnFeeCelr;
     }
 
     // decoded from calldata submitted as PackedExecutionResultTransition
@@ -137,9 +141,11 @@ library DataTypes {
     struct PendingAccountInfo {
         uint64 aggregateId;
         uint256 buyAmount;
-        uint256 buyFees;
         uint256 sellShares;
-        uint256 sellFees;
+        uint256 feeAssetAmt; // reserved fee in strategy asset token
+        uint64 feeAssetTnCount; // number of transitions to be paid by strategy asset token
+        uint256 feeCelrAmt; // reserved fee in CELR
+        uint64 feeCelrTnCount; // number of transitions to be paid by CELR
     }
 
     struct AccountInfo {
@@ -163,6 +169,8 @@ library DataTypes {
         uint256 amountFromSell;
         uint256 unsettledBuyAmount;
         uint256 unsettledSellShares;
+        uint256 tnFeeAsset;
+        uint256 tnFeeCelr;
         bool executionSucceed;
     }
 
@@ -198,6 +206,11 @@ library DataTypes {
         StrategyInfo value;
         uint32 index;
         bytes32[] siblings;
+    }
+
+    struct GlobalInfo {
+        uint256[] collectedFees; // assetId -> collected fees. index 0 is CELR fee
+        // TODO: add liquidity mining global vars
     }
 
     // ------------------ packed transitions submitted as calldata ------------------
@@ -284,10 +297,12 @@ library DataTypes {
     // calldata size: 6 x 32 bytes
     struct PackedAggregateOrdersTransition {
         /* infoCode packing:
-        32:63  [uint32 strategyId]
-        8:31   [0]
-        0:7    [uint8 tntype] */
-        uint64 infoCode;
+        128:255 [uint128 tnFee in strategy asset]
+        64:127  [uint64 tnFee in CELR (9 decimal)]
+        32:63   [uint32 strategyId]
+        8:31    [0]
+        0:7     [uint8 tntype] */
+        uint256 infoCode;
         bytes32 stateRoot;
         uint256 buyAmount;
         uint256 sellShares;
