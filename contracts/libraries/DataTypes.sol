@@ -49,7 +49,7 @@ library DataTypes {
         uint32 strategyId;
         uint256 amount;
         uint128 maxSharePrice;
-        uint256 fee;
+        uint256 fee; // [128-bit operator proposed fee]:[128-bit user signed fee]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -64,7 +64,7 @@ library DataTypes {
         uint32 strategyId;
         uint256 shares;
         uint128 minSharePrice;
-        uint256 fee;
+        uint256 fee; // [128-bit operator proposed fee]:[128-bit user signed fee]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -137,9 +137,9 @@ library DataTypes {
     struct PendingAccountInfo {
         uint64 aggregateId;
         uint256 buyAmount;
-        uint256 buyFees;
         uint256 sellShares;
-        uint256 sellFees;
+        uint256 assetFees;
+        uint256 celrFees;
     }
 
     struct AccountInfo {
@@ -198,6 +198,11 @@ library DataTypes {
         StrategyInfo value;
         uint32 index;
         bytes32[] siblings;
+    }
+
+    struct GlobalInfo {
+        uint256[] collectedFees; // assetId -> collected fees. index 0 is CELR fee
+        // TODO: add liquidity mining global vars
     }
 
     // ------------------ packed transitions submitted as calldata ------------------
