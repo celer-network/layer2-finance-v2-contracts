@@ -201,7 +201,8 @@ library DataTypes {
     }
 
     struct GlobalInfo {
-        uint256[] collectedFees; // assetId -> collected fees. assetId 1 must be CELR
+        uint256[] assetFees; // assetId -> collected fees as asset amount. assetId 1 must be CELR
+        uint256[] shareFees; // strategy -> collected fees strategy shares.
         // TODO: add liquidity mining global vars
     }
 
