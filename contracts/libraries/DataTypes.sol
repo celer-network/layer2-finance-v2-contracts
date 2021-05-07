@@ -138,8 +138,9 @@ library DataTypes {
         uint64 aggregateId;
         uint256 buyAmount;
         uint256 sellShares;
-        uint256 assetFees;
-        uint256 celrFees;
+        uint256 buyFees; // fees (in asset) for buy transitions
+        uint256 sellFees; // fees (in asset) for sell transitions
+        uint256 celrFees; // fees (in celr) for buy and sell transitions
     }
 
     struct AccountInfo {
@@ -202,7 +203,8 @@ library DataTypes {
 
     struct GlobalInfo {
         uint256[] assetFees; // assetId -> collected fees as asset amount. assetId 1 must be CELR
-        uint256[] shareFees; // strategy -> collected fees strategy shares.
+        uint256[] assetFeesPending;
+        uint256[] shareFees; // strategyId -> collected fees strategy shares.
         // TODO: add liquidity mining global vars
     }
 
