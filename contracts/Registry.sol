@@ -8,12 +8,12 @@ contract Registry is Ownable {
     // Map asset addresses to indexes.
     mapping(address => uint32) public assetAddressToIndex;
     mapping(uint32 => address) public assetIndexToAddress;
-    uint32 numAssets = 0;
+    uint32 public numAssets = 0;
 
     // Valid strategies.
     mapping(address => uint32) public strategyAddressToIndex;
     mapping(uint32 => address) public strategyIndexToAddress;
-    uint32 numStrategies = 0;
+    uint32 public numStrategies = 0;
 
     event AssetRegistered(address asset, uint32 assetId);
     event StrategyRegistered(address strategy, uint32 strategyId);
