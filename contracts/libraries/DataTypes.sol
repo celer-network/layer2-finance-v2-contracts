@@ -139,15 +139,10 @@ library DataTypes {
         uint256 amount;
     }
 
-    // decoded from calldata submitted as PackedTransferOperationFeeTransition
     struct TransferOperationFeeTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 accountId; // destination account Id
-        uint32 assetId;
-        uint256 amount;
-        uint32 strategyId;
-        uint256 shares;
     }
 
     struct ProtocolFees {
@@ -342,18 +337,5 @@ library DataTypes {
         bytes32 stateRoot;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-    }
-
-    struct PackedTransferOperationFeeTransition {
-        /* infoCode packing:
-        96:127 [uint32 assetId]
-        64:95  [uint32 strategyId]
-        32:63  [uint32 accountId]
-        8:31   [0]
-        0:7    [uint8 tntype] */
-        uint128 infoCode;
-        bytes32 stateRoot;
-        uint256 amount;
-        uint256 shares;
     }
 }
