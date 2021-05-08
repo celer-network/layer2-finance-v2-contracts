@@ -229,7 +229,7 @@ contract RollupChain is Ownable, Pausable {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = tn.decodePackedWithdrawTransition(_transitions[i]);
                 pendingWithdrawCommits[_blockId].push(
-                    PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount})
+                    PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount - wd.fee})
                 );
             } else if (tnType == tn.TN_TYPE_AGGREGATE_ORDER) {
                 intentIndexes[numIntents++] = i;
