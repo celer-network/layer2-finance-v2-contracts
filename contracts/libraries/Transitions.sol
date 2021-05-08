@@ -18,6 +18,8 @@ library Transitions {
     uint8 public constant TN_TYPE_AGGREGATE_ORDER = 8;
     uint8 public constant TN_TYPE_EXEC_RESULT = 9;
     uint8 public constant TN_TYPE_SETTLE = 10;
+    uint8 public constant TN_TYPE_WITHDRAW_PROTO_FEE = 11;
+    uint8 public constant TN_TYPE_XFER_OP_FEE = 12;
 
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
@@ -352,6 +354,29 @@ library Transitions {
         uint8 transitionType = uint8(low2);
         bool success = uint8(low2 >> 8) == 1;
         return (aggregateId, strategyId, success, transitionType);
+    }
+
+    function decodeWithdrawProtocolFeeTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.WithdrawProtocolFeeTransition memory)
+    {
+        (uint8 transitionType, bytes32 stateRoot, uint32 assetId, uint256 amount) =
+            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256));
+        DataTypes.WithdrawProtocolFeeTransition memory transition =
+            DataTypes.WithdrawProtocolFeeTransition(transitionType, stateRoot, assetId, amount);
+        return transition;
+    }
+
+    function decodeTransferOperatorFeeTransitionTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.TransferOperatorFeeTransition memory)
+    {
+        (uint8 transitionType, bytes32 stateRoot, uint32 accountId) = abi.decode((_rawBytes), (uint8, bytes32, uint32));
+        DataTypes.TransferOperatorFeeTransition memory transition =
+            DataTypes.TransferOperatorFeeTransition(transitionType, stateRoot, accountId);
+        return transition;
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {
