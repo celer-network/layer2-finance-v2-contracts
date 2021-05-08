@@ -65,7 +65,7 @@ library DataTypes {
         uint32 strategyId;
         uint256 shares;
         uint128 minSharePrice;
-        uint128 uFee; // user signed [1bit-feeType]:[127bit-uAmt]
+        uint128 uFee; // user signed [1bit-type]:[127bit-uAmt]
         uint128 oFee; // operator proposed [1bit-flag]:[127bit-oAmt], actual charge is min(uAmt, oAmt)
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
