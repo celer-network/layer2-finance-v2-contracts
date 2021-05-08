@@ -132,6 +132,40 @@ library DataTypes {
         uint256 amountFromSell;
     }
 
+    struct WithdrawProtocolFeeTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 assetId;
+        uint256 amount;
+    }
+
+    // decoded from calldata submitted as PackedTransferOperationFeeTransition
+    struct TransferOperationFeeTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 accountId; // destination account Id
+        uint32 assetId;
+        uint256 amount;
+        uint32 strategyId;
+        uint256 shares;
+    }
+
+    struct ProtocolFees {
+        uint256[] received; // assetId -> collected fees as asset amount. assetId 1 must be CELR
+        uint256[] pending; // assetId -> pending collected fees
+    }
+
+    struct OperationFees {
+        uint256[] assets; // assetId -> collected fees as asset amount. assetId 1 must be CELR
+        uint256[] shares; // strategyId -> collected fees strategy shares.
+    }
+
+    struct GlobalInfo {
+        ProtocolFees protoFees; // fee collected by operator and owned by governance contract
+        OperationFees opFees; // fee collected and owned by operator
+        uint256 currEpoch; // liquidity mining epoch
+    }
+
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
     // The array of PendingAccountInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingAccountInfo {
@@ -199,13 +233,6 @@ library DataTypes {
         StrategyInfo value;
         uint32 index;
         bytes32[] siblings;
-    }
-
-    struct GlobalInfo {
-        uint256[] assetFees; // assetId -> collected fees as asset amount. assetId 1 must be CELR
-        uint256[] assetFeesPending;
-        uint256[] shareFees; // strategyId -> collected fees strategy shares.
-        // TODO: add liquidity mining global vars
     }
 
     // ------------------ packed transitions submitted as calldata ------------------
@@ -315,5 +342,18 @@ library DataTypes {
         bytes32 stateRoot;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
+    }
+
+    struct PackedTransferOperationFeeTransition {
+        /* infoCode packing:
+        96:127 [uint32 assetId]
+        64:95  [uint32 strategyId]
+        32:63  [uint32 accountId]
+        8:31   [0]
+        0:7    [uint8 tntype] */
+        uint128 infoCode;
+        bytes32 stateRoot;
+        uint256 amount;
+        uint256 shares;
     }
 }
