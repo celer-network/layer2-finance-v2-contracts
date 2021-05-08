@@ -139,25 +139,25 @@ library DataTypes {
         uint256 amount;
     }
 
-    struct TransferOperationFeeTransition {
+    struct TransferOperatorFeeTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 accountId; // destination account Id
     }
 
     struct ProtocolFees {
-        uint256[] received; // assetId -> collected fees as asset amount. assetId 1 must be CELR
-        uint256[] pending; // assetId -> pending collected fees
+        uint256[] received; // assetId -> collected asset fees. CELR has assetId 1.
+        uint256[] pending; // assetId -> pending buy/sell transition fees
     }
 
-    struct OperationFees {
-        uint256[] assets; // assetId -> collected fees as asset amount. assetId 1 must be CELR
-        uint256[] shares; // strategyId -> collected fees strategy shares.
+    struct OperatorFees {
+        uint256[] assets; // assetId -> collected asset fees. CELR has assetId 1.
+        uint256[] shares; // strategyId -> collected strategy share fees.
     }
 
     struct GlobalInfo {
-        ProtocolFees protoFees; // fee collected by operator and owned by governance contract
-        OperationFees opFees; // fee collected and owned by operator
+        ProtocolFees protoFees; // fee owned by contract owner (governance multi-sig account)
+        OperatorFees opFees; // fee owned by operator
         uint256 currEpoch; // liquidity mining epoch
     }
 

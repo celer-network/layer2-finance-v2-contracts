@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Registry is Ownable {
     // Map asset addresses to indexes.
+    // asset with index 1 is CELR as the platform token
     mapping(address => uint32) public assetAddressToIndex;
     mapping(uint32 => address) public assetIndexToAddress;
     uint32 public numAssets = 0;
