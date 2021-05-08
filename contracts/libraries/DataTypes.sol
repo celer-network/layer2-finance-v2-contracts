@@ -34,7 +34,7 @@ library DataTypes {
         uint32 accountId;
         uint32 assetId;
         uint256 amount;
-        uint256 fee;
+        uint128 fee;
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -49,7 +49,8 @@ library DataTypes {
         uint32 strategyId;
         uint256 amount;
         uint128 maxSharePrice;
-        uint256 fee; // [128-bit operator proposed fee]:[128-bit user signed fee]
+        uint128 uFee; // user signed [1bit-type]:[127bit-uAmt]
+        uint128 oFee; // operator proposed [1bit-flag]:[127bit-oAmt], actual charge is min(uAmt, oAmt)
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -64,7 +65,8 @@ library DataTypes {
         uint32 strategyId;
         uint256 shares;
         uint128 minSharePrice;
-        uint256 fee; // [128-bit operator proposed fee]:[128-bit user signed fee]
+        uint128 uFee; // user signed [1bit-feeType]:[127bit-uAmt]
+        uint128 oFee; // operator proposed [1bit-flag]:[127bit-oAmt], actual charge is min(uAmt, oAmt)
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -79,7 +81,7 @@ library DataTypes {
         uint32 toAccountId;
         uint32 assetId;
         uint256 amount;
-        uint256 fee;
+        uint128 fee; // user signed [1bit-type]:[127bit-Amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -94,7 +96,7 @@ library DataTypes {
         uint32 toAccountId;
         uint32 strategyId;
         uint256 shares;
-        uint256 fee;
+        uint128 fee; // user signed [1bit-type]:[127bit-Amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -258,7 +260,7 @@ library DataTypes {
         bytes32 stateRoot;
         address account;
         uint256 amount;
-        uint256 fee;
+        uint128 fee;
         bytes32 r;
         bytes32 s;
     }
@@ -275,7 +277,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 amt; // asset or share amount
-        uint256 fee;
+        uint256 fee; // [128bit-oFee]:[128bit-uFee]
         bytes32 r;
         bytes32 s;
     }
@@ -294,7 +296,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 amt; // asset or share amount
-        uint256 fee;
+        uint128 fee;
         bytes32 r;
         bytes32 s;
     }
