@@ -339,7 +339,6 @@ contract TransitionEvaluator {
         npend = _accountInfo.pending[stId].length;
         dt.PendingAccountInfo memory pai = _accountInfo.pending[stId][npend - 1];
         _accountInfo.pending[stId][npend - 1].buyAmount = pai.buyAmount.add(_transition.amount);
-        _accountInfo.pending[stId][npend - 1].buyFees = pai.buyFees.add(_transition.fee);
 
         return (_accountInfo, _strategyInfo);
     }
@@ -389,7 +388,7 @@ contract TransitionEvaluator {
             pends[npend].minSharePriceForSell = _transition.minSharePrice;
             npend++;
             _strategyInfo.pending = pends;
-        } else if (_strategyInfo.pending[npend - 1].minSharePriceForSell > _transition.minSharePrice) {
+        } else if (_strategyInfo.pending[npend - 1].minSharePriceForSell < _transition.minSharePrice) {
             _strategyInfo.pending[npend - 1].minSharePriceForSell = _transition.minSharePrice;
         }
 
@@ -403,7 +402,6 @@ contract TransitionEvaluator {
         npend = _accountInfo.pending[stId].length;
         dt.PendingAccountInfo memory pai = _accountInfo.pending[stId][npend - 1];
         _accountInfo.pending[stId][npend - 1].sellShares = pai.sellShares.add(_transition.shares);
-        _accountInfo.pending[stId][npend - 1].sellFees = pai.sellFees.add(_transition.fee);
 
         return (_accountInfo, _strategyInfo);
     }

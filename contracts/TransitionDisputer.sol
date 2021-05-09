@@ -80,14 +80,18 @@ contract TransitionDisputer {
 
         // ------ #3: verify transition stateRoot == hash(accountStateRoot, strategyStateRoot)
         // The account and strategy stateRoots must always be given irrespective of what is being disputed.
-        for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
+        require(
+            _checkTwoTreeStateRoot(
+                dsi.preStateRoot,
+                _inputs.accountProofs[0].stateRoot,
+                _inputs.strategyProof.stateRoot
+            ),
+            "Failed combined two-tree stateRoot verification check"
+        );
+        for (uint256 i = 1; i < _inputs.accountProofs.length; i++) {
             require(
-                _checkTwoTreeStateRoot(
-                    dsi.preStateRoot,
-                    _inputs.accountProofs[i].stateRoot,
-                    _inputs.strategyProof.stateRoot
-                ),
-                "Failed combined two-tree stateRoot verification check"
+                _inputs.accountProofs[i].stateRoot == _inputs.accountProofs[0].stateRoot,
+                "all account proof state roots not equal"
             );
         }
 

@@ -335,11 +335,10 @@ contract RollupChain is Ownable, Pausable {
         dt.AccountProof[] calldata _accountProofs,
         dt.StrategyProof calldata _strategyProof
     ) external {
-        uint256 invalidTransitionBlockId = _invalidTransitionProof.blockId;
         require(_prevTransitionProof.blockId < blocks.length, "Unknown blockId for previous transition");
-        require(invalidTransitionBlockId < blocks.length, "Unknown blockId for invalid transition");
-        require(_prevTransitionProof.blockId <= invalidTransitionBlockId, "Invalid transitions blockId order");
-        dt.Block memory invalidTransitionBlock = blocks[invalidTransitionBlockId];
+        require(_invalidTransitionProof.blockId < blocks.length, "Unknown blockId for invalid transition");
+        require(_prevTransitionProof.blockId <= _invalidTransitionProof.blockId, "Invalid transitions blockId order");
+        dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
         require(
             invalidTransitionBlock.blockTime + blockChallengePeriod > block.number,
             "Block challenge period is over"
@@ -363,7 +362,7 @@ contract RollupChain is Ownable, Pausable {
 
         if (success) {
             string memory reason = abi.decode((returnData), (string));
-            _revertBlock(invalidTransitionBlockId, reason);
+            _revertBlock(_invalidTransitionProof.blockId, reason);
         } else {
             revert("Failed to dispute");
         }
