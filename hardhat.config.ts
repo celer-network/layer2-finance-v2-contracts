@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
     version: '0.8.4',
     settings: {
       optimizer: {
-        enabled: true,
+        enabled: false,   // TODO: enable before release; solve "stack too deep" error.
         runs: 800
       }
     }
