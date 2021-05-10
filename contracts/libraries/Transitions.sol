@@ -112,7 +112,7 @@ library Transitions {
             abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 maxSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
-        (uint128 oFee, uint128 uFee) = splitUint256(fee);
+        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
         DataTypes.BuyTransition memory transition =
             DataTypes.BuyTransition(
                 transitionType,
@@ -121,8 +121,8 @@ library Transitions {
                 strategyId,
                 amount,
                 maxSharePrice,
-                uFee,
-                oFee,
+                signedFee,
+                reducedFee,
                 timestamp,
                 r,
                 s,
@@ -140,7 +140,7 @@ library Transitions {
             abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 minSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
-        (uint128 oFee, uint128 uFee) = splitUint256(fee);
+        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
         DataTypes.SellTransition memory transition =
             DataTypes.SellTransition(
                 transitionType,
@@ -149,8 +149,8 @@ library Transitions {
                 strategyId,
                 shares,
                 minSharePrice,
-                uFee,
-                oFee,
+                signedFee,
+                reducedFee,
                 timestamp,
                 r,
                 s,
