@@ -308,4 +308,13 @@ library DataTypes {
         uint256 sharesFromBuy;
         uint256 amountFromSell;
     }
+
+    struct DisputeInputs {
+        TransitionProof prevTransitionProof;
+        TransitionProof invalidTransitionProof;
+        AccountProof[] accountProofs;
+        StrategyProof strategyProof;
+        Block prevTransitionBlock;
+        Block invalidTransitionBlock;
+    }
 }

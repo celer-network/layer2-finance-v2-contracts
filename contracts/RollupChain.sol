@@ -14,12 +14,9 @@ import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/MerkleTree.sol";
 import "./Registry.sol";
+import "./TransitionDisputer.sol";
 import "./strategies/interfaces/IStrategy.sol";
 import "./interfaces/IWETH.sol";
-
-/*
-import "./TransitionDisputer.sol";
-*/
 
 contract RollupChain is Ownable, Pausable {
     using SafeMath for uint256;
@@ -30,7 +27,7 @@ contract RollupChain is Ownable, Pausable {
 
     /* Fields */
     // The state transition disputer
-    // TransitionDisputer transitionDisputer;
+    TransitionDisputer transitionDisputer;
     // Asset and strategy registry
     Registry registry;
 
@@ -122,7 +119,7 @@ contract RollupChain is Ownable, Pausable {
     ) {
         blockChallengePeriod = _blockChallengePeriod;
         maxPriorityTxDelay = _maxPriorityTxDelay;
-        // transitionDisputer = TransitionDisputer(_transitionDisputerAddress);
+        transitionDisputer = TransitionDisputer(_transitionDisputerAddress);
         registry = Registry(_registryAddress);
         operator = _operator;
     }
@@ -317,6 +314,58 @@ contract RollupChain is Ownable, Pausable {
             blocks[_blockId].intentExecCount = newIntentExecCount;
         }
         emit RollupBlockExecuted(_blockId, newIntentExecCount, uint32(_intents.length));
+    }
+
+    /**
+     * @notice Dispute a transition in a block.
+     * @dev Provide the transition proofs of the previous (valid) transition and the disputed transition,
+     * the account proof(s), and the strategy proof. The account proof(s) and the strategy proof are
+     * always needed even if the disputed transition only updates an account (or two) or only updates the
+     * strategy because the transition stateRoot = hash(accountStateRoot, strategyStateRoot).
+     * If the transition is invalid, prune the chain from that invalid block.
+     *
+     * @param _prevTransitionProof The inclusion proof of the transition immediately before the fraudulent transition.
+     * @param _invalidTransitionProof The inclusion proof of the fraudulent transition.
+     * @param _accountProofs The inclusion proofs of one or two accounts involved.
+     * @param _strategyProof The inclusion proof of the strategy involved.
+     */
+    function disputeTransition(
+        dt.TransitionProof calldata _prevTransitionProof,
+        dt.TransitionProof calldata _invalidTransitionProof,
+        dt.AccountProof[] calldata _accountProofs,
+        dt.StrategyProof calldata _strategyProof
+    ) external {
+        require(_prevTransitionProof.blockId < blocks.length, "Unknown blockId for previous transition");
+        require(_invalidTransitionProof.blockId < blocks.length, "Unknown blockId for invalid transition");
+        require(_prevTransitionProof.blockId <= _invalidTransitionProof.blockId, "Invalid transitions blockId order");
+        dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
+        require(
+            invalidTransitionBlock.blockTime + blockChallengePeriod > block.number,
+            "Block challenge period is over"
+        );
+
+        dt.DisputeInputs memory inputs =
+            dt.DisputeInputs(
+                _prevTransitionProof,
+                _invalidTransitionProof,
+                _accountProofs,
+                _strategyProof,
+                blocks[_prevTransitionProof.blockId],
+                invalidTransitionBlock
+            );
+
+        bool success;
+        bytes memory returnData;
+        (success, returnData) = address(transitionDisputer).call(
+            abi.encodeWithSelector(transitionDisputer.disputeTransition.selector, inputs, registry)
+        );
+
+        if (success) {
+            string memory reason = abi.decode((returnData), (string));
+            _revertBlock(_invalidTransitionProof.blockId, reason);
+        } else {
+            revert("Failed to dispute");
+        }
     }
 
     /**
