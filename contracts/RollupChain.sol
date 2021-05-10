@@ -226,7 +226,7 @@ contract RollupChain is Ownable, Pausable {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = tn.decodePackedWithdrawTransition(_transitions[i]);
                 pendingWithdrawCommits[_blockId].push(
-                    PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount - wd.fee})
+                    PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount.sub(wd.fee)})
                 );
             } else if (tnType == tn.TN_TYPE_AGGREGATE_ORDER) {
                 intentIndexes[numIntents++] = i;
@@ -234,6 +234,11 @@ contract RollupChain is Ownable, Pausable {
                 // Update the pending execution result record.
                 dt.ExecutionResultTransition memory er = tn.decodePackedExecutionResultTransition(_transitions[i]);
                 _checkPendingExecutionResult(er, _blockId);
+            } else if (tnType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
+                dt.WithdrawProtocolFeeTransition memory wf = tn.decodeWithdrawProtocolFeeTransition(_transitions[i]);
+                pendingWithdrawCommits[_blockId].push(
+                    PendingWithdrawCommit({account: owner(), assetId: wf.assetId, amount: wf.amount})
+                );
             }
         }
 

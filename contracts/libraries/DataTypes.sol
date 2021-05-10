@@ -34,7 +34,7 @@ library DataTypes {
         uint32 accountId;
         uint32 assetId;
         uint256 amount;
-        uint256 fee;
+        uint128 fee;
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -49,7 +49,8 @@ library DataTypes {
         uint32 strategyId;
         uint256 amount;
         uint128 maxSharePrice;
-        uint256 fee;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        uint128 reducedFee; // operator proposed [1bit-flag]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -64,7 +65,8 @@ library DataTypes {
         uint32 strategyId;
         uint256 shares;
         uint128 minSharePrice;
-        uint256 fee;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        uint128 reducedFee; // operator proposed [1bit-flag]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -79,7 +81,7 @@ library DataTypes {
         uint32 toAccountId;
         uint32 assetId;
         uint256 amount;
-        uint256 fee;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -94,7 +96,7 @@ library DataTypes {
         uint32 toAccountId;
         uint32 strategyId;
         uint256 shares;
-        uint256 fee;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -132,14 +134,44 @@ library DataTypes {
         uint256 amountFromSell;
     }
 
+    struct WithdrawProtocolFeeTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 assetId;
+        uint256 amount;
+    }
+
+    struct TransferOperatorFeeTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 accountId; // destination account Id
+    }
+
+    struct ProtocolFees {
+        uint256[] received; // assetId -> collected asset fees. CELR has assetId 1.
+        uint256[] pending; // assetId -> pending buy/sell transition fees
+    }
+
+    struct OperatorFees {
+        uint256[] assets; // assetId -> collected asset fees. CELR has assetId 1.
+        uint256[] shares; // strategyId -> collected strategy share fees.
+    }
+
+    struct GlobalInfo {
+        ProtocolFees protoFees; // fee owned by contract owner (governance multi-sig account)
+        OperatorFees opFees; // fee owned by operator
+        uint256 currEpoch; // liquidity mining epoch
+    }
+
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
     // The array of PendingAccountInfo structs is sorted by ascending aggregateId, and holes are ok.
     struct PendingAccountInfo {
         uint64 aggregateId;
         uint256 buyAmount;
-        uint256 buyFees;
         uint256 sellShares;
-        uint256 sellFees;
+        uint256 buyFees; // fees (in asset) for buy transitions
+        uint256 sellFees; // fees (in asset) for sell transitions
+        uint256 celrFees; // fees (in celr) for buy and sell transitions
     }
 
     struct AccountInfo {
@@ -237,7 +269,7 @@ library DataTypes {
         bytes32 stateRoot;
         address account;
         uint256 amount;
-        uint256 fee;
+        uint128 fee;
         bytes32 r;
         bytes32 s;
     }
@@ -254,7 +286,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 amt; // asset or share amount
-        uint256 fee;
+        uint256 fee; // [128bit-reducedFee]:[128bit-signedfee]
         bytes32 r;
         bytes32 s;
     }
@@ -273,7 +305,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 amt; // asset or share amount
-        uint256 fee;
+        uint128 fee;
         bytes32 r;
         bytes32 s;
     }

@@ -18,6 +18,8 @@ library Transitions {
     uint8 public constant TN_TYPE_AGGREGATE_ORDER = 8;
     uint8 public constant TN_TYPE_EXEC_RESULT = 9;
     uint8 public constant TN_TYPE_SETTLE = 10;
+    uint8 public constant TN_TYPE_WITHDRAW_PROTO_FEE = 11;
+    uint8 public constant TN_TYPE_XFER_OP_FEE = 12;
 
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
@@ -66,8 +68,8 @@ library Transitions {
         pure
         returns (DataTypes.WithdrawTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, address account, uint256 amount, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, address account, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint128, bytes32, bytes32));
         (uint32 accountId, uint32 assetId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeWithdrawInfoCode(infoCode);
         DataTypes.WithdrawTransition memory transition =
@@ -110,6 +112,7 @@ library Transitions {
             abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 maxSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
+        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
         DataTypes.BuyTransition memory transition =
             DataTypes.BuyTransition(
                 transitionType,
@@ -118,7 +121,8 @@ library Transitions {
                 strategyId,
                 amount,
                 maxSharePrice,
-                fee,
+                signedFee,
+                reducedFee,
                 timestamp,
                 r,
                 s,
@@ -136,6 +140,7 @@ library Transitions {
             abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 minSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
+        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
         DataTypes.SellTransition memory transition =
             DataTypes.SellTransition(
                 transitionType,
@@ -144,7 +149,8 @@ library Transitions {
                 strategyId,
                 shares,
                 minSharePrice,
-                fee,
+                signedFee,
+                reducedFee,
                 timestamp,
                 r,
                 s,
@@ -178,8 +184,8 @@ library Transitions {
         pure
         returns (DataTypes.TransferAssetTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 amount, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
         (uint32 assetId, uint32 fromAccountId, uint32 toAccountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeTransferInfoCode(infoCode);
         DataTypes.TransferAssetTransition memory transition =
@@ -204,8 +210,8 @@ library Transitions {
         pure
         returns (DataTypes.TransferShareTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
         (uint32 strategyId, uint32 fromAccountId, uint32 toAccountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeTransferInfoCode(infoCode);
         DataTypes.TransferShareTransition memory transition =
@@ -352,6 +358,29 @@ library Transitions {
         uint8 transitionType = uint8(low2);
         bool success = uint8(low2 >> 8) == 1;
         return (aggregateId, strategyId, success, transitionType);
+    }
+
+    function decodeWithdrawProtocolFeeTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.WithdrawProtocolFeeTransition memory)
+    {
+        (uint8 transitionType, bytes32 stateRoot, uint32 assetId, uint256 amount) =
+            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256));
+        DataTypes.WithdrawProtocolFeeTransition memory transition =
+            DataTypes.WithdrawProtocolFeeTransition(transitionType, stateRoot, assetId, amount);
+        return transition;
+    }
+
+    function decodeTransferOperatorFeeTransitionTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.TransferOperatorFeeTransition memory)
+    {
+        (uint8 transitionType, bytes32 stateRoot, uint32 accountId) = abi.decode((_rawBytes), (uint8, bytes32, uint32));
+        DataTypes.TransferOperatorFeeTransition memory transition =
+            DataTypes.TransferOperatorFeeTransition(transitionType, stateRoot, accountId);
+        return transition;
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {
