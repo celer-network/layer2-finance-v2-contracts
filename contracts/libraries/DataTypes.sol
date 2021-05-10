@@ -134,6 +134,43 @@ library DataTypes {
         uint256 amountFromSell;
     }
 
+    // decoded from calldata submitted as PackedStakingTransition
+    struct StakeTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 poolId;
+        uint32 accountId;
+        uint256 shares;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
+    }
+
+    // decoded from calldata submitted as PackedStakingTransition
+    struct UnstakeTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 accountId;
+        uint32 poolId;
+        uint256 shares;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        uint64 timestamp; // Unix epoch (msec, UTC)
+        bytes32 r; // signature r
+        bytes32 s; // signature s
+        uint8 v; // signature v
+    }
+
+    struct UpdatePoolInfoTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 poolId;
+        uint32 shareId;
+        uint32[] rewardAssetIds;
+        uint256[] rewardPerEpoch;
+        uint256 stakeAdjustmentFactor;
+    }
     struct WithdrawProtocolFeeTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -180,6 +217,9 @@ library DataTypes {
         uint256[] idleAssets; // indexed by assetId
         uint256[] shares; // indexed by strategyId
         PendingAccountInfo[][] pending; // indexed by [strategyId][i], i.e. array of pending records per strategy
+        uint256[] stakedShares; // poolID -> share balance
+        uint256[] stakes; // poolID -> Adjusted stake
+        uint256[][] rewardDebts; // poolID -> rewardTokenID -> Reward debt
         uint64 timestamp; // Unix epoch (msec, UTC)
     }
 
@@ -207,6 +247,17 @@ library DataTypes {
         PendingStrategyInfo[] pending; // array of pending records
     }
 
+    struct StakingPoolInfo {
+        uint32 shareId;
+        uint32[] rewardAssetIds; // reward asset index -> asset ID
+        uint256[] rewardPerEpoch; // reward asset index -> reward per epoch, must be limited in length
+        uint256 totalShares;
+        uint256 totalStakes;
+        uint256[] accumulatedRewardPerUnit; // reward asset index -> Accumulated reward per unit of stake, times 1e12 to avoid very small numbers
+        uint256 lastRewardEpoch; // Last epoch that reward distribution occurs. Initially set by the first UpdatePoolInfoTransition
+        uint256 stakeAdjustmentFactor; // A fraction to dilute whales. i.e. (0, 1) * 1e12
+    }
+
     struct TransitionProof {
         bytes transition;
         uint256 blockId;
@@ -232,14 +283,29 @@ library DataTypes {
         bytes32[] siblings;
     }
 
+    struct StakingPoolProof {
+        bytes32 stateRoot; // for the staking pool Merkle tree
+        StakingPoolInfo value;
+        uint32 index;
+        bytes32[] siblings;
+    }
+
     struct DisputeInputs {
         TransitionProof prevTransitionProof;
         TransitionProof invalidTransitionProof;
         AccountProof[] accountProofs;
         StrategyProof strategyProof;
+        StakingPoolProof stakingPoolProof;
         GlobalInfo globalInfo;
         Block prevTransitionBlock;
         Block invalidTransitionBlock;
+    }
+
+    struct EvaluateInfos {
+        AccountInfo[] accountInfos;
+        StrategyInfo strategyInfo;
+        StakingPoolInfo stakingPoolInfo;
+        GlobalInfo globalInfo;
     }
 
     // ------------------ packed transitions submitted as calldata ------------------
@@ -349,5 +415,23 @@ library DataTypes {
         bytes32 stateRoot;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
+    }
+
+    // calldata size: 6 x 32 bytes
+    struct PackedStakingTransition {
+        /* infoCode packing:
+        192:255  [0]
+        160:191  [uint32 poolId]
+        128:159  [uint32 accountId]
+        64:127  [uint64 timestamp]
+        16:63   [0]
+        8:15    [uint8 sig-v]
+        0:7    [uint8 tntype] */
+        uint256 infoCode;
+        bytes32 stateRoot;
+        uint256 shares;
+        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        bytes32 r;
+        bytes32 s;
     }
 }

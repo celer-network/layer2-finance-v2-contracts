@@ -324,11 +324,11 @@ contract RollupChain is Ownable, Pausable {
     /**
      * @notice Dispute a transition in a block.
      * @dev Provide the transition proofs of the previous (valid) transition and the disputed transition,
-     * the account proof(s), the strategy proof, and the global info. The account proof(s), strategy proof,
-     * and global info are always needed even if the disputed transition only updates an account (or two)
-     * or only updates the strategy because the transition stateRoot is computed as:
+     * the account proof(s), the strategy proof, the staking pool proof, and the global info. The account proof(s),
+     * strategy proof, strategy proof and global info are always needed even if the disputed transition only updates an
+     * account (or two) or only updates the strategy because the transition stateRoot is computed as:
      *
-     * stateRoot = hash(globalInfoHash, accountStateRoot, strategyStateRoot)
+     * stateRoot = hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
      *
      * Thus all 3 components of the hash are needed to validate the input data.
      * If the transition is invalid, prune the chain from that invalid block.
@@ -337,6 +337,7 @@ contract RollupChain is Ownable, Pausable {
      * @param _invalidTransitionProof The inclusion proof of the fraudulent transition.
      * @param _accountProofs The inclusion proofs of one or two accounts involved.
      * @param _strategyProof The inclusion proof of the strategy involved.
+     * @param _stakingPoolProof The inclusion proof of the staking pool involved.
      * @param _globalInfo The global info.
      */
     function disputeTransition(
@@ -344,6 +345,7 @@ contract RollupChain is Ownable, Pausable {
         dt.TransitionProof calldata _invalidTransitionProof,
         dt.AccountProof[] calldata _accountProofs,
         dt.StrategyProof calldata _strategyProof,
+        dt.StakingPoolProof calldata _stakingPoolProof,
         dt.GlobalInfo calldata _globalInfo
     ) external {
         require(_prevTransitionProof.blockId < blocks.length, "Unknown blockId for previous transition");
@@ -361,6 +363,7 @@ contract RollupChain is Ownable, Pausable {
                 _invalidTransitionProof,
                 _accountProofs,
                 _strategyProof,
+                _stakingPoolProof,
                 _globalInfo,
                 blocks[_prevTransitionProof.blockId],
                 invalidTransitionBlock
