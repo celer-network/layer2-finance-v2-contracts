@@ -277,7 +277,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 amt; // asset or share amount
-        uint256 fee; // [128bit-reducedFee]:[128bit-fee]
+        uint256 fee; // [128bit-reducedFee]:[128bit-signedfee]
         bytes32 r;
         bytes32 s;
     }
