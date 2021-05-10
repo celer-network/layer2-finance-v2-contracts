@@ -200,6 +200,15 @@ library DataTypes {
         bytes32[] siblings;
     }
 
+    struct DisputeInputs {
+        TransitionProof prevTransitionProof;
+        TransitionProof invalidTransitionProof;
+        AccountProof[] accountProofs;
+        StrategyProof strategyProof;
+        Block prevTransitionBlock;
+        Block invalidTransitionBlock;
+    }
+
     // ------------------ packed transitions submitted as calldata ------------------
 
     // calldata size: 4 x 32 bytes
@@ -307,14 +316,5 @@ library DataTypes {
         bytes32 stateRoot;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-    }
-
-    struct DisputeInputs {
-        TransitionProof prevTransitionProof;
-        TransitionProof invalidTransitionProof;
-        AccountProof[] accountProofs;
-        StrategyProof strategyProof;
-        Block prevTransitionBlock;
-        Block invalidTransitionBlock;
     }
 }
