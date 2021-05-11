@@ -29,6 +29,10 @@ contract StrategyDummy is IStrategy, Ownable {
     address public funder;
     uint256 public harvestGain;
 
+    uint256 MAX_INT = 2**256 - 1;
+
+    event AggregateOrders(uint256 sharesFromBuy, uint256 amountFromSell);
+
     constructor(
         address _controller,
         address _asset,
@@ -76,10 +80,17 @@ contract StrategyDummy is IStrategy, Ownable {
         } else if (_buyAmount < amountFromSell) {
             IERC20(asset).safeTransfer(controller, amountFromSell.sub(_buyAmount));
         }
+        if (msg.sender == tx.origin) {
+            // only emit event for EOA testing
+            emit AggregateOrders(sharesFromBuy, amountFromSell);
+        }
         return (sharesFromBuy, amountFromSell);
     }
 
     function syncPrice() external view override returns (uint256) {
+        if (shares == 0) {
+            return MAX_INT;
+        }
         return assetAmount.mul(1e18).div(shares);
     }
 
