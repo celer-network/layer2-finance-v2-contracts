@@ -88,7 +88,7 @@ run_abigen() {
   git checkout $BRANCH || git checkout -b $BRANCH
 
   mkdir -p contracts
-  abigen -combined-json ../$CNTRDIR/combined.json -pkg contracts -out combined.go
+  abigen -combined-json ../$CNTRDIR/combined.json -pkg contracts -out contracts/combined.go
 
   pushd contracts
   go build # make sure contracts pkg can build
