@@ -237,6 +237,7 @@ library DataTypes {
         TransitionProof invalidTransitionProof;
         AccountProof[] accountProofs;
         StrategyProof strategyProof;
+        GlobalInfo globalInfo;
         Block prevTransitionBlock;
         Block invalidTransitionBlock;
     }

@@ -372,7 +372,7 @@ library Transitions {
         return transition;
     }
 
-    function decodeTransferOperatorFeeTransitionTransition(bytes memory _rawBytes)
+    function decodeTransferOperatorFeeTransition(bytes memory _rawBytes)
         internal
         pure
         returns (DataTypes.TransferOperatorFeeTransition memory)
