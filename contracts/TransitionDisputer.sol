@@ -84,7 +84,7 @@ contract TransitionDisputer {
         require(
             _checkMultiTreeStateRoot(
                 dsi.preStateRoot,
-                keccak256(_getGlobalInfoBytes(_inputs.globalInfo)),
+                transitionEvaluator.getGlobalInfoHash(_inputs.globalInfo),
                 _inputs.accountProofs[0].stateRoot,
                 _inputs.strategyProof.stateRoot
             ),
@@ -102,7 +102,7 @@ contract TransitionDisputer {
             for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
                 _verifyProofInclusion(
                     _inputs.accountProofs[i].stateRoot,
-                    keccak256(_getAccountInfoBytes(_inputs.accountProofs[i].value)),
+                    transitionEvaluator.getAccountInfoHash(_inputs.accountProofs[i].value),
                     _inputs.accountProofs[i].index,
                     _inputs.accountProofs[i].siblings
                 );
@@ -111,7 +111,7 @@ contract TransitionDisputer {
         if (dsi.strategyId > 0) {
             _verifyProofInclusion(
                 _inputs.strategyProof.stateRoot,
-                keccak256(_getStrategyInfoBytes(_inputs.strategyProof.value)),
+                transitionEvaluator.getStrategyInfoHash(_inputs.strategyProof.value),
                 _inputs.strategyProof.index,
                 _inputs.strategyProof.siblings
             );
@@ -274,91 +274,6 @@ contract TransitionDisputer {
         // Transition is invalid if stateRoot does not match the expected init root.
         // It's OK that other fields of the transition are incorrect.
         return postStateRoot != INIT_TRANSITION_STATE_ROOT;
-    }
-
-    /**
-     * @notice Get the bytes value for this account.
-     *
-     * @param _accountInfo Account info
-     */
-    function _getAccountInfoBytes(dt.AccountInfo memory _accountInfo) private pure returns (bytes memory) {
-        // If it's an empty storage slot, return 32 bytes of zeros (empty value)
-        if (
-            _accountInfo.account == address(0) &&
-            _accountInfo.accountId == 0 &&
-            _accountInfo.idleAssets.length == 0 &&
-            _accountInfo.shares.length == 0 &&
-            _accountInfo.pending.length == 0 &&
-            _accountInfo.timestamp == 0
-        ) {
-            return abi.encodePacked(uint256(0));
-        }
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            abi.encode(
-                _accountInfo.account,
-                _accountInfo.accountId,
-                _accountInfo.idleAssets,
-                _accountInfo.shares,
-                _accountInfo.pending,
-                _accountInfo.timestamp
-            );
-    }
-
-    /**
-     * @notice Get the bytes value for this strategy.
-     * @param _strategyInfo Strategy info
-     */
-    function _getStrategyInfoBytes(dt.StrategyInfo memory _strategyInfo) private pure returns (bytes memory) {
-        // If it's an empty storage slot, return 32 bytes of zeros (empty value)
-        if (
-            _strategyInfo.assetId == 0 &&
-            _strategyInfo.assetBalance == 0 &&
-            _strategyInfo.shareSupply == 0 &&
-            _strategyInfo.nextAggregateId == 0 &&
-            _strategyInfo.lastExecAggregateId == 0 &&
-            _strategyInfo.pending.length == 0
-        ) {
-            return abi.encodePacked(uint256(0));
-        }
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            abi.encode(
-                _strategyInfo.assetId,
-                _strategyInfo.assetBalance,
-                _strategyInfo.shareSupply,
-                _strategyInfo.nextAggregateId,
-                _strategyInfo.lastExecAggregateId,
-                _strategyInfo.pending
-            );
-    }
-
-    /**
-     * @notice Get the bytes value for this global info.
-     * @param _globalInfo Global fee-tracking info
-     */
-    function _getGlobalInfoBytes(dt.GlobalInfo memory _globalInfo) private pure returns (bytes memory) {
-        if (
-            _globalInfo.protoFees.received.length == 0 &&
-            _globalInfo.protoFees.pending.length == 0 &&
-            _globalInfo.opFees.assets.length == 0 &&
-            _globalInfo.opFees.shares.length == 0 &&
-            _globalInfo.currEpoch == 0
-        ) {
-            return abi.encodePacked(uint256(0));
-        }
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            abi.encode(
-                _globalInfo.protoFees.received,
-                _globalInfo.protoFees.pending,
-                _globalInfo.opFees.assets,
-                _globalInfo.opFees.shares,
-                _globalInfo.currEpoch
-            );
     }
 
     /**

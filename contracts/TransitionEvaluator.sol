@@ -30,7 +30,7 @@ contract TransitionEvaluator {
      * @param _transition The disputed transition.
      * @param _accountInfos The involved account(s) at the start of the disputed transition.
      * @param _strategyInfo The involved strategy at the start of the disputed transition.
-     * @param _globalInfo The involved global fee-tracking info at the start of the disputed transition.
+     * @param _globalInfo The involved global info at the start of the disputed transition.
      * @param _registry The address of the Registry contract.
      * @return hashes of the accounts, strategy, and globalInfo after applying the disputed transition.
      */
@@ -54,13 +54,13 @@ contract TransitionEvaluator {
             require(_accountInfos.length == 1, "One account is needed for a deposit transition");
             dt.DepositTransition memory deposit = tn.decodePackedDepositTransition(_transition);
             updatedAccountInfo = _applyDepositTransition(deposit, _accountInfos[0]);
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW) {
             require(_accountInfos.length == 1, "One account is needed for a withdraw transition");
             dt.WithdrawTransition memory withdraw = tn.decodePackedWithdrawTransition(_transition);
             (updatedAccountInfo, updatedGlobalInfo) = _applyWithdrawTransition(withdraw, _accountInfos[0], _globalInfo);
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_BUY) {
             require(_accountInfos.length == 1, "One account is needed for a buy transition");
             dt.BuyTransition memory buy = tn.decodePackedBuyTransition(_transition);
@@ -71,9 +71,9 @@ contract TransitionEvaluator {
                 _globalInfo,
                 _registry
             );
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[2] = _getStrategyInfoHash(updatedStrategyInfo);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[2] = getStrategyInfoHash(updatedStrategyInfo);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_SELL) {
             require(_accountInfos.length == 1, "One account is needed for a sell transition");
             dt.SellTransition memory sell = tn.decodePackedSellTransition(_transition);
@@ -83,9 +83,9 @@ contract TransitionEvaluator {
                 _strategyInfo,
                 _globalInfo
             );
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[2] = _getStrategyInfoHash(updatedStrategyInfo);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[2] = getStrategyInfoHash(updatedStrategyInfo);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
             require(_accountInfos.length == 2, "Two accounts are needed for an asset transfer transition");
             dt.TransferAssetTransition memory xfer = tn.decodePackedTransferAssetTransition(_transition);
@@ -95,9 +95,9 @@ contract TransitionEvaluator {
                 _accountInfos[1],
                 _globalInfo
             );
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[1] = _getAccountInfoHash(updatedAccountInfoDest);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[1] = getAccountInfoHash(updatedAccountInfoDest);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
             require(_accountInfos.length == 2, "Two accounts are needed for a share transfer transition");
             dt.TransferShareTransition memory xfer = tn.decodePackedTransferShareTransition(_transition);
@@ -107,19 +107,19 @@ contract TransitionEvaluator {
                 _accountInfos[1],
                 _globalInfo
             );
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[1] = _getAccountInfoHash(updatedAccountInfoDest);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[1] = getAccountInfoHash(updatedAccountInfoDest);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_AGGREGATE_ORDER) {
             require(_accountInfos.length == 0, "No accounts are needed for an aggregate order transition");
             dt.AggregateOrdersTransition memory aggr = tn.decodePackedAggregateOrdersTransition(_transition);
             updatedStrategyInfo = _applyAggregateOrdersTransition(aggr, _strategyInfo);
-            outputs[2] = _getStrategyInfoHash(updatedStrategyInfo);
+            outputs[2] = getStrategyInfoHash(updatedStrategyInfo);
         } else if (transitionType == tn.TN_TYPE_EXEC_RESULT) {
             require(_accountInfos.length == 0, "No accounts are needed for an execution result transition");
             dt.ExecutionResultTransition memory res = tn.decodePackedExecutionResultTransition(_transition);
             updatedStrategyInfo = _applyExecutionResultTransition(res, _strategyInfo);
-            outputs[2] = _getStrategyInfoHash(updatedStrategyInfo);
+            outputs[2] = getStrategyInfoHash(updatedStrategyInfo);
         } else if (transitionType == tn.TN_TYPE_SETTLE) {
             require(_accountInfos.length == 1, "One account is needed for a settlement transition");
             dt.SettlementTransition memory settle = tn.decodePackedSettlementTransition(_transition);
@@ -129,14 +129,14 @@ contract TransitionEvaluator {
                 _strategyInfo,
                 _globalInfo
             );
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[2] = _getStrategyInfoHash(updatedStrategyInfo);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[2] = getStrategyInfoHash(updatedStrategyInfo);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
             require(_accountInfos.length == 0, "No accounts are needed for a withdraw protocol fee transition");
             dt.WithdrawProtocolFeeTransition memory wpf = tn.decodeWithdrawProtocolFeeTransition(_transition);
             updatedGlobalInfo = _applyWithdrawProtocolFeeTransition(wpf, _globalInfo);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_OP_FEE) {
             require(_accountInfos.length == 1, "One account is needed for a transfer operator fee transition");
             dt.TransferOperatorFeeTransition memory tof = tn.decodeTransferOperatorFeeTransition(_transition);
@@ -145,8 +145,8 @@ contract TransitionEvaluator {
                 _accountInfos[0],
                 _globalInfo
             );
-            outputs[0] = _getAccountInfoHash(updatedAccountInfo);
-            outputs[3] = _getGlobalInfoHash(updatedGlobalInfo);
+            outputs[0] = getAccountInfoHash(updatedAccountInfo);
+            outputs[3] = getGlobalInfoHash(updatedGlobalInfo);
         } else {
             revert("Transition type not recognized");
         }
@@ -232,6 +232,100 @@ contract TransitionEvaluator {
         return (stateRoot, accountId, accountIdDest, strategyId);
     }
 
+    /**
+     * @notice Get the hash of the AccountInfo.
+     * @param _accountInfo Account info
+     */
+    function getAccountInfoHash(dt.AccountInfo memory _accountInfo) public pure returns (bytes32) {
+        // If it's an empty struct, map it to 32 bytes of zeros (empty value)
+        if (
+            _accountInfo.account == address(0) &&
+            _accountInfo.accountId == 0 &&
+            _accountInfo.idleAssets.length == 0 &&
+            _accountInfo.shares.length == 0 &&
+            _accountInfo.pending.length == 0 &&
+            _accountInfo.timestamp == 0
+        ) {
+            return keccak256(abi.encodePacked(uint256(0)));
+        }
+
+        // Here we don't use `abi.encode([struct])` because it's not clear
+        // how to generate that encoding client-side.
+        return
+            keccak256(
+                abi.encode(
+                    _accountInfo.account,
+                    _accountInfo.accountId,
+                    _accountInfo.idleAssets,
+                    _accountInfo.shares,
+                    _accountInfo.pending,
+                    _accountInfo.timestamp
+                )
+            );
+    }
+
+    /**
+     * @notice Get the hash of the StrategyInfo.
+     * @param _strategyInfo Strategy info
+     */
+    function getStrategyInfoHash(dt.StrategyInfo memory _strategyInfo) public pure returns (bytes32) {
+        // If it's an empty struct, map it to 32 bytes of zeros (empty value)
+        if (
+            _strategyInfo.assetId == 0 &&
+            _strategyInfo.assetBalance == 0 &&
+            _strategyInfo.shareSupply == 0 &&
+            _strategyInfo.nextAggregateId == 0 &&
+            _strategyInfo.lastExecAggregateId == 0 &&
+            _strategyInfo.pending.length == 0
+        ) {
+            return keccak256(abi.encodePacked(uint256(0)));
+        }
+
+        // Here we don't use `abi.encode([struct])` because it's not clear
+        // how to generate that encoding client-side.
+        return
+            keccak256(
+                abi.encode(
+                    _strategyInfo.assetId,
+                    _strategyInfo.assetBalance,
+                    _strategyInfo.shareSupply,
+                    _strategyInfo.nextAggregateId,
+                    _strategyInfo.lastExecAggregateId,
+                    _strategyInfo.pending
+                )
+            );
+    }
+
+    /**
+     * @notice Get the hash of the GlobalInfo.
+     * @param _globalInfo Global info
+     */
+    function getGlobalInfoHash(dt.GlobalInfo memory _globalInfo) public pure returns (bytes32) {
+        // If it's an empty struct, map it to 32 bytes of zeros (empty value)
+        if (
+            _globalInfo.protoFees.received.length == 0 &&
+            _globalInfo.protoFees.pending.length == 0 &&
+            _globalInfo.opFees.assets.length == 0 &&
+            _globalInfo.opFees.shares.length == 0 &&
+            _globalInfo.currEpoch == 0
+        ) {
+            return keccak256(abi.encodePacked(uint256(0)));
+        }
+
+        // Here we don't use `abi.encode([struct])` because it's not clear
+        // how to generate that encoding client-side.
+        return
+            keccak256(
+                abi.encode(
+                    _globalInfo.protoFees.received,
+                    _globalInfo.protoFees.pending,
+                    _globalInfo.opFees.assets,
+                    _globalInfo.opFees.shares,
+                    _globalInfo.currEpoch
+                )
+            );
+    }
+
     /*********************
      * Private Functions *
      *********************/
@@ -274,7 +368,7 @@ contract TransitionEvaluator {
      *
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account and global info after applying the disputed transition
      */
     function _applyWithdrawTransition(
@@ -317,7 +411,7 @@ contract TransitionEvaluator {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition.
      * @param _strategyInfo The involved strategy from the previous transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account, strategy info, and global info after applying the disputed transition
      */
     function _applyBuyTransition(
@@ -390,8 +484,7 @@ contract TransitionEvaluator {
             _accountInfo.idleAssets[1] = _accountInfo.idleAssets[1].sub(fee);
             _updateProtoFee(_globalInfo, true, true, 1, fee);
         } else {
-            require(uint256(fee) < amount, "not enough amount to pay the fee");
-            amount = amount.sub(uint256(fee));
+            amount = amount.sub(fee);
             _adjustAccountIdleAssetEntries(_accountInfo, _strategyInfo.assetId);
             _accountInfo.idleAssets[_strategyInfo.assetId] = _accountInfo.idleAssets[_strategyInfo.assetId].sub(amount);
             _updateProtoFee(_globalInfo, true, true, _strategyInfo.assetId, fee);
@@ -418,7 +511,7 @@ contract TransitionEvaluator {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition.
      * @param _strategyInfo The involved strategy from the previous transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account, strategy info, and global info after applying the disputed transition
      */
     function _applySellTransition(
@@ -564,7 +657,7 @@ contract TransitionEvaluator {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition.
      * @param _strategyInfo The involved strategy from the previous transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account, strategy info, and global info after applying the disputed transition
      */
     function _applySettlementTransition(
@@ -647,7 +740,7 @@ contract TransitionEvaluator {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition (source of the transfer).
      * @param _accountInfoDest The involved destination account from the previous transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account info for both accounts, and global info after applying the disputed transition
      */
     function _applyAssetTransferTransition(
@@ -695,8 +788,7 @@ contract TransitionEvaluator {
             _accountInfo.idleAssets[1] = _accountInfo.idleAssets[1].sub(fee);
             _updateOpFee(_globalInfo, true, 1, fee);
         } else {
-            require(uint256(fee) < amount, "not enough amount to pay the fee");
-            amount = amount.sub(uint256(fee));
+            amount = amount.sub(fee);
             _updateOpFee(_globalInfo, true, assetId, fee);
         }
 
@@ -713,7 +805,7 @@ contract TransitionEvaluator {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition (source of the transfer).
      * @param _accountInfoDest The involved destination account from the previous transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account info for both accounts, and global info after applying the disputed transition
      */
     function _applyShareTransferTransition(
@@ -761,8 +853,7 @@ contract TransitionEvaluator {
             _accountInfo.idleAssets[1] = _accountInfo.idleAssets[1].sub(fee);
             _updateOpFee(_globalInfo, true, 1, fee);
         } else {
-            require(uint256(fee) < shares, "not enough shares to pay the fee");
-            shares = shares.sub(uint256(fee));
+            shares = shares.sub(fee);
             _updateOpFee(_globalInfo, false, stId, fee);
         }
 
@@ -777,7 +868,7 @@ contract TransitionEvaluator {
      * @notice Apply a WithdrawProtocolFeeTransition.
      *
      * @param _transition The disputed transition.
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new global info after applying the disputed transition
      */
     function _applyWithdrawProtocolFeeTransition(
@@ -793,7 +884,7 @@ contract TransitionEvaluator {
      *
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition (source of the transfer).
-     * @param _globalInfo The involved global fee-tracking info from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new account info and global info after applying the disputed transition
      */
     function _applyTransferOperatorFeeTransition(
@@ -1010,64 +1101,5 @@ contract TransitionEvaluator {
             arr[i - 1] = _strategyInfo.pending[i];
         }
         _strategyInfo.pending = arr;
-    }
-
-    /**
-     * @notice Get the hash of the AccountInfo.
-     * @param _accountInfo Account info
-     */
-    function _getAccountInfoHash(dt.AccountInfo memory _accountInfo) private pure returns (bytes32) {
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _accountInfo.account,
-                    _accountInfo.accountId,
-                    _accountInfo.idleAssets,
-                    _accountInfo.shares,
-                    _accountInfo.pending,
-                    _accountInfo.timestamp
-                )
-            );
-    }
-
-    /**
-     * @notice Get the hash of the StrategyInfo.
-     * @param _strategyInfo Strategy info
-     */
-    function _getStrategyInfoHash(dt.StrategyInfo memory _strategyInfo) private pure returns (bytes32) {
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _strategyInfo.assetId,
-                    _strategyInfo.assetBalance,
-                    _strategyInfo.shareSupply,
-                    _strategyInfo.nextAggregateId,
-                    _strategyInfo.lastExecAggregateId,
-                    _strategyInfo.pending
-                )
-            );
-    }
-
-    /**
-     * @notice Get the hash of the GlobalInfo.
-     * @param _globalInfo Global info
-     */
-    function _getGlobalInfoHash(dt.GlobalInfo memory _globalInfo) private pure returns (bytes32) {
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _globalInfo.protoFees.received,
-                    _globalInfo.protoFees.pending,
-                    _globalInfo.opFees.assets,
-                    _globalInfo.opFees.shares,
-                    _globalInfo.currEpoch
-                )
-            );
     }
 }
