@@ -22,6 +22,8 @@ describe('StrategyDummy', function () {
       parseEther('1')
     );
     await strategyDummy.deployed();
+
+    await testERC20.approve(strategyDummy.address, parseEther('20'));
     return { strategyDummy, testERC20 };
   }
 
@@ -30,11 +32,74 @@ describe('StrategyDummy', function () {
     expect(await strategyDummy.getAssetAddress()).to.equal(testERC20.address);
   });
 
-  it('should aggregate orders with net buy', async function () {
-    const { strategyDummy, testERC20 } = await loadFixture(fixture);
-    await testERC20.approve(strategyDummy.address, parseEther('2'));
-    await expect(strategyDummy.aggregateOrders(parseEther('1'), parseEther('1'), parseEther('0'), parseEther('0')))
+  it('should aggregate orders correctly', async function () {
+    const { strategyDummy } = await loadFixture(fixture);
+    await expect(strategyDummy.aggregateOrders(parseEther('5'), parseEther('5'), parseEther('0'), parseEther('0')))
       .to.emit(strategyDummy, 'AggregateOrders')
-      .withArgs(parseEther('1'), parseEther('0'));
+      .withArgs(parseEther('5'), parseEther('0'));
+
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('5'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('5'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+
+    await expect(strategyDummy.aggregateOrders(parseEther('0'), parseEther('0'), parseEther('2'), parseEther('2')))
+      .to.emit(strategyDummy, 'AggregateOrders')
+      .withArgs(parseEther('0'), parseEther('2'));
+
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('3'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('3'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+
+    await expect(strategyDummy.aggregateOrders(parseEther('1'), parseEther('1'), parseEther('2'), parseEther('2')))
+      .to.emit(strategyDummy, 'AggregateOrders')
+      .withArgs(parseEther('1'), parseEther('2'));
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('2'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('2'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+  });
+
+  it('should fail if min share/amount requirement not met', async function () {
+    const { strategyDummy } = await loadFixture(fixture);
+    await expect(
+      strategyDummy.aggregateOrders(parseEther('5'), parseEther('6'), parseEther('0'), parseEther('0'))
+    ).to.be.revertedWith('failed min shares from buy');
+
+    await strategyDummy.aggregateOrders(parseEther('5'), parseEther('5'), parseEther('0'), parseEther('0'));
+    await expect(
+      strategyDummy.aggregateOrders(parseEther('0'), parseEther('0'), parseEther('3'), parseEther('4'))
+    ).to.be.revertedWith('failed min amount from sell');
+  });
+
+  it('should calculate price correctly', async function () {
+    const { strategyDummy } = await loadFixture(fixture);
+    await strategyDummy.aggregateOrders(parseEther('2'), parseEther('2'), parseEther('0'), parseEther('0'));
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('2'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('2'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+
+    await strategyDummy.harvest();
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('3'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('2'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.5'));
+
+    await expect(strategyDummy.aggregateOrders(parseEther('6'), parseEther('4'), parseEther('1.5'), parseEther('2')))
+      .to.emit(strategyDummy, 'AggregateOrders')
+      .withArgs(parseEther('4'), parseEther('2.25'));
+
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('6.75'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('4.5'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.5'));
+
+    await strategyDummy.decreaseBalance(parseEther('1.35'));
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('5.4'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('4.5'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.2'));
+
+    await expect(strategyDummy.aggregateOrders(parseEther('2.4'), parseEther('2'), parseEther('1'), parseEther('1.2')))
+      .to.emit(strategyDummy, 'AggregateOrders')
+      .withArgs(parseEther('2'), parseEther('1.2'));
+    expect(await strategyDummy.assetAmount()).to.equal(parseEther('6.6'));
+    expect(await strategyDummy.shares()).to.equal(parseEther('5.5'));
+    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.2'));
   });
 });

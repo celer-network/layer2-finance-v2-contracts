@@ -31,6 +31,7 @@ contract StrategyDummy is IStrategy, Ownable {
 
     uint256 MAX_INT = 2**256 - 1;
 
+    // event for EOA testing
     event AggregateOrders(uint256 sharesFromBuy, uint256 amountFromSell);
 
     constructor(
@@ -96,7 +97,7 @@ contract StrategyDummy is IStrategy, Ownable {
 
     function harvest() external override onlyOwner {
         IERC20(asset).safeTransferFrom(funder, address(this), harvestGain);
-        assetAmount.add(harvestGain);
+        assetAmount = assetAmount.add(harvestGain);
     }
 
     function setHarvestGain(uint256 _harvestGain) external onlyOwner {
@@ -105,12 +106,12 @@ contract StrategyDummy is IStrategy, Ownable {
 
     function increaseBalance(uint256 _amount) external onlyOwner {
         IERC20(asset).safeTransferFrom(funder, address(this), _amount);
-        assetAmount.add(_amount);
+        assetAmount = assetAmount.add(_amount);
     }
 
     function decreaseBalance(uint256 _amount) external onlyOwner {
         IERC20(asset).safeTransfer(funder, _amount);
-        assetAmount.sub(_amount);
+        assetAmount = assetAmount.sub(_amount);
     }
 
     function setFunder(address _funder) external onlyOwner {
