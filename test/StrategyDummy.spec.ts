@@ -58,7 +58,7 @@ describe('StrategyDummy', function () {
     expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
   });
 
-  it('should fail if min share/amount requirement not met', async function () {
+  it('should fail if min share/asset amount requirement not met', async function () {
     const { strategyDummy } = await loadFixture(fixture);
     await expect(
       strategyDummy.aggregateOrders(parseEther('5'), parseEther('6'), parseEther('0'), parseEther('0'))
