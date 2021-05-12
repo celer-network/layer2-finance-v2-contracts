@@ -29,6 +29,11 @@ contract StrategyDummy is IStrategy, Ownable {
     address public funder;
     uint256 public harvestGain;
 
+    uint256 MAX_INT = 2**256 - 1;
+
+    // event for EOA testing
+    event AggregateOrders(uint256 sharesFromBuy, uint256 amountFromSell);
+
     constructor(
         address _controller,
         address _asset,
@@ -43,6 +48,11 @@ contract StrategyDummy is IStrategy, Ownable {
 
     modifier onlyController() {
         require(msg.sender == controller, "caller is not controller");
+        _;
+    }
+
+    modifier onlyOwnerOrController() {
+        require(msg.sender == owner() || msg.sender == controller, "caller is not owner or controller");
         _;
     }
 
@@ -76,30 +86,37 @@ contract StrategyDummy is IStrategy, Ownable {
         } else if (_buyAmount < amountFromSell) {
             IERC20(asset).safeTransfer(controller, amountFromSell.sub(_buyAmount));
         }
+        if (msg.sender == tx.origin) {
+            // only emit event for EOA testing
+            emit AggregateOrders(sharesFromBuy, amountFromSell);
+        }
         return (sharesFromBuy, amountFromSell);
     }
 
     function syncPrice() external view override returns (uint256) {
+        if (shares == 0) {
+            return MAX_INT;
+        }
         return assetAmount.mul(1e18).div(shares);
     }
 
-    function harvest() external override onlyOwner {
+    function harvest() external override onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), harvestGain);
-        assetAmount.add(harvestGain);
+        assetAmount = assetAmount.add(harvestGain);
+    }
+
+    function increaseBalance(uint256 _amount) external onlyOwnerOrController {
+        IERC20(asset).safeTransferFrom(funder, address(this), _amount);
+        assetAmount = assetAmount.add(_amount);
+    }
+
+    function decreaseBalance(uint256 _amount) external onlyOwnerOrController {
+        IERC20(asset).safeTransfer(funder, _amount);
+        assetAmount = assetAmount.sub(_amount);
     }
 
     function setHarvestGain(uint256 _harvestGain) external onlyOwner {
         harvestGain = _harvestGain;
-    }
-
-    function increaseBalance(uint256 _amount) external onlyOwner {
-        IERC20(asset).safeTransferFrom(funder, address(this), _amount);
-        assetAmount.add(_amount);
-    }
-
-    function decreaseBalance(uint256 _amount) external onlyOwner {
-        IERC20(asset).safeTransfer(funder, _amount);
-        assetAmount.sub(_amount);
     }
 
     function setFunder(address _funder) external onlyOwner {
