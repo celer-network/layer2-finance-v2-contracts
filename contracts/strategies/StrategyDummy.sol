@@ -51,6 +51,11 @@ contract StrategyDummy is IStrategy, Ownable {
         _;
     }
 
+    modifier onlyOwnerOrController() {
+        require(msg.sender == owner() || msg.sender == controller, "caller is not owner or controller");
+        _;
+    }
+
     function getAssetAddress() external view override returns (address) {
         return asset;
     }
@@ -95,23 +100,23 @@ contract StrategyDummy is IStrategy, Ownable {
         return assetAmount.mul(1e18).div(shares);
     }
 
-    function harvest() external override onlyOwner {
+    function harvest() external override onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), harvestGain);
         assetAmount = assetAmount.add(harvestGain);
     }
 
-    function setHarvestGain(uint256 _harvestGain) external onlyOwner {
-        harvestGain = _harvestGain;
-    }
-
-    function increaseBalance(uint256 _amount) external onlyOwner {
+    function increaseBalance(uint256 _amount) external onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), _amount);
         assetAmount = assetAmount.add(_amount);
     }
 
-    function decreaseBalance(uint256 _amount) external onlyOwner {
+    function decreaseBalance(uint256 _amount) external onlyOwnerOrController {
         IERC20(asset).safeTransfer(funder, _amount);
         assetAmount = assetAmount.sub(_amount);
+    }
+
+    function setHarvestGain(uint256 _harvestGain) external onlyOwner {
+        harvestGain = _harvestGain;
     }
 
     function setFunder(address _funder) external onlyOwner {
