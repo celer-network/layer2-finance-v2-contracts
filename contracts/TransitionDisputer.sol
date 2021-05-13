@@ -98,7 +98,7 @@ contract TransitionDisputer {
             );
         }
 
-        // ------ #4: verify account and strategy inclusion
+        // ------ #4: verify account, strategy and staking pool inclusion
         if (dsi.accountId > 0) {
             for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
                 _verifyProofInclusion(
@@ -115,6 +115,14 @@ contract TransitionDisputer {
                 transitionEvaluator.getStrategyInfoHash(_inputs.strategyProof.value),
                 _inputs.strategyProof.index,
                 _inputs.strategyProof.siblings
+            );
+        }
+        if (dsi.stakingPoolId > 0) {
+            _verifyProofInclusion(
+                _inputs.stakingPoolProof.stateRoot,
+                transitionEvaluator.getStakingPoolInfoHash(_inputs.stakingPoolProof.value),
+                _inputs.stakingPoolProof.index,
+                _inputs.stakingPoolProof.siblings
             );
         }
 
@@ -346,7 +354,7 @@ contract TransitionDisputer {
 
     /**
      * @notice Check if the combined stateRoots of the Merkle trees matches the stateRoot.
-     * @dev hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfo)
+     * @dev hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
      */
     function _checkMultiTreeStateRoot(
         bytes32 _stateRoot,

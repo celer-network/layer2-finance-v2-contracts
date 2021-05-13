@@ -166,7 +166,7 @@ library DataTypes {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 poolId;
-        uint32 shareId;
+        uint32 strategyId;
         uint32[] rewardAssetIds;
         uint256[] rewardPerEpoch;
         uint256 stakeAdjustmentFactor;
@@ -248,7 +248,7 @@ library DataTypes {
     }
 
     struct StakingPoolInfo {
-        uint32 shareId;
+        uint32 strategyId;
         uint32[] rewardAssetIds; // reward asset index -> asset ID
         uint256[] rewardPerEpoch; // reward asset index -> reward per epoch, must be limited in length
         uint256 totalShares;
@@ -420,13 +420,13 @@ library DataTypes {
     // calldata size: 6 x 32 bytes
     struct PackedStakingTransition {
         /* infoCode packing:
-        192:255  [0]
-        160:191  [uint32 poolId]
-        128:159  [uint32 accountId]
+        192:255 [0]
+        160:191 [uint32 poolId]
+        128:159 [uint32 accountId]
         64:127  [uint64 timestamp]
         16:63   [0]
         8:15    [uint8 sig-v]
-        0:7    [uint8 tntype] */
+        0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 shares;

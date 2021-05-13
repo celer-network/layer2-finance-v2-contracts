@@ -43,6 +43,7 @@ contract TransitionEvaluator {
         uint8 transitionType = tn.extractTransitionType(_transition);
         bytes32[5] memory outputs;
         dt.EvaluateInfos memory updatedInfos;
+        updatedInfos.accountInfos = new dt.AccountInfo[](2);
 
         // Apply the transition and record the resulting storage slots
         if (transitionType == tn.TN_TYPE_DEPOSIT) {
@@ -136,8 +137,8 @@ contract TransitionEvaluator {
                 updatedInfos.stakingPoolInfo,
                 updatedInfos.globalInfo
             ) = _applyStakeTransition(stake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
-            outputs[0] = _getAccountInfoHash(updatedInfos.accountInfos[0]);
-            outputs[3] = _getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
+            outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
+            outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_UNSTAKE) {
             require(_infos.accountInfos.length == 1, "One account is needed for an unstake transition");
@@ -147,8 +148,8 @@ contract TransitionEvaluator {
                 updatedInfos.stakingPoolInfo,
                 updatedInfos.globalInfo
             ) = _applyUnstakeTransition(unstake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
-            outputs[0] = _getAccountInfoHash(updatedInfos.accountInfos[0]);
-            outputs[3] = _getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
+            outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
+            outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
             require(_infos.accountInfos.length == 0, "No accounts are needed for a update pool info transition");
@@ -158,7 +159,7 @@ contract TransitionEvaluator {
                 _infos.stakingPoolInfo,
                 _infos.globalInfo
             );
-            outputs[3] = _getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
+            outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
             require(_infos.accountInfos.length == 0, "No accounts are needed for a withdraw protocol fee transition");
             dt.WithdrawProtocolFeeTransition memory wpf = tn.decodeWithdrawProtocolFeeTransition(_transition);
@@ -335,6 +336,42 @@ contract TransitionEvaluator {
                     _strategyInfo.nextAggregateId,
                     _strategyInfo.lastExecAggregateId,
                     _strategyInfo.pending
+                )
+            );
+    }
+
+    /**
+     * @notice Get the hash of the StakingPoolInfo.
+     * @param _stakingPoolInfo Staking pool info
+     */
+    function getStakingPoolInfoHash(dt.StakingPoolInfo memory _stakingPoolInfo) public pure returns (bytes32) {
+        // If it's an empty struct, map it to 32 bytes of zeros (empty value)
+        if (
+            _stakingPoolInfo.strategyId == 0 &&
+            _stakingPoolInfo.rewardAssetIds.length == 0 &&
+            _stakingPoolInfo.rewardPerEpoch.length == 0 &&
+            _stakingPoolInfo.totalShares == 0 &&
+            _stakingPoolInfo.totalStakes == 0 &&
+            _stakingPoolInfo.accumulatedRewardPerUnit.length == 0 &&
+            _stakingPoolInfo.lastRewardEpoch == 0 &&
+            _stakingPoolInfo.stakeAdjustmentFactor == 0
+        ) {
+            return keccak256(abi.encodePacked(uint256(0)));
+        }
+
+        // Here we don't use `abi.encode([struct])` because it's not clear
+        // how to generate that encoding client-side.
+        return
+            keccak256(
+                abi.encode(
+                    _stakingPoolInfo.strategyId,
+                    _stakingPoolInfo.rewardAssetIds,
+                    _stakingPoolInfo.rewardPerEpoch,
+                    _stakingPoolInfo.totalShares,
+                    _stakingPoolInfo.totalStakes,
+                    _stakingPoolInfo.accumulatedRewardPerUnit,
+                    _stakingPoolInfo.lastRewardEpoch,
+                    _stakingPoolInfo.stakeAdjustmentFactor
                 )
             );
     }
@@ -1009,21 +1046,19 @@ contract TransitionEvaluator {
         uint32 poolId = _transition.poolId;
         uint256 shares = _transition.shares;
         (bool isCelr, uint256 fee) = _getFeeInfo(_transition.fee, 0);
-        uint256 feeInShares = fee;
         if (isCelr) {
-            feeInShares = 0;
             _adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             _updateOpFee(_globalInfo, true, 1, fee);
         } else {
-            _updateOpFee(_globalInfo, false, _stakingPoolInfo.shareId, fee);
+            shares -= fee;
+            _updateOpFee(_globalInfo, false, _stakingPoolInfo.strategyId, fee);
         }
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
         if (shares > 0) {
-            _adjustAccountStakedShareEntries(_accountInfo, poolId);
-            _adjustAccountStakeEntries(_accountInfo, poolId);
+            _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
             uint256 addedStake =
                 _getAdjustedStake(_accountInfo.stakedShares[poolId] + shares, _stakingPoolInfo.stakeAdjustmentFactor) -
                     _accountInfo.stakes[poolId];
@@ -1039,7 +1074,8 @@ contract TransitionEvaluator {
                     STAKING_SCALE_FACTOR;
             }
         }
-        _accountInfo.shares[_stakingPoolInfo.shareId] -= shares + feeInShares;
+        _adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
+        _accountInfo.shares[_stakingPoolInfo.strategyId] -= shares;
 
         return (_accountInfo, _stakingPoolInfo, _globalInfo);
     }
@@ -1094,31 +1130,26 @@ contract TransitionEvaluator {
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
+        uint256 shares = _transition.shares;
         (bool isCelr, uint256 fee) = _getFeeInfo(_transition.fee, 0);
-        uint256 feeInShares = fee;
         if (isCelr) {
-            feeInShares = 0;
             _adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             _updateOpFee(_globalInfo, true, 1, fee);
         } else {
-            _updateOpFee(_globalInfo, false, _stakingPoolInfo.shareId, fee);
+            shares -= fee;
+            _updateOpFee(_globalInfo, false, _stakingPoolInfo.strategyId, fee);
         }
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
-        _adjustAccountStakedShareEntries(_accountInfo, poolId);
-        _adjustAccountStakeEntries(_accountInfo, poolId);
-        uint256 unstakedShares = _transition.shares + feeInShares;
+        _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
         uint256 removedStake =
             _accountInfo.stakes[poolId] -
-                _getAdjustedStake(
-                    _accountInfo.stakedShares[poolId] - unstakedShares,
-                    _stakingPoolInfo.stakeAdjustmentFactor
-                );
-        _accountInfo.stakedShares[poolId] -= unstakedShares;
+                _getAdjustedStake(_accountInfo.stakedShares[poolId] - shares, _stakingPoolInfo.stakeAdjustmentFactor);
+        _accountInfo.stakedShares[poolId] -= shares;
         _accountInfo.stakes[poolId] -= removedStake;
-        _stakingPoolInfo.totalShares -= unstakedShares;
+        _stakingPoolInfo.totalShares -= shares;
         _stakingPoolInfo.totalStakes -= removedStake;
 
         for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
@@ -1134,8 +1165,8 @@ contract TransitionEvaluator {
             _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
             _accountInfo.idleAssets[_stakingPoolInfo.rewardAssetIds[rewardTokenId]] += pendingReward;
         }
-
-        _accountInfo.shares[_stakingPoolInfo.shareId] += _transition.shares;
+        _adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
+        _accountInfo.shares[_stakingPoolInfo.strategyId] += shares;
 
         return (_accountInfo, _stakingPoolInfo, _globalInfo);
     }
@@ -1155,7 +1186,7 @@ contract TransitionEvaluator {
     ) private pure returns (dt.StakingPoolInfo memory) {
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
-        _stakingPoolInfo.shareId = _transition.shareId;
+        _stakingPoolInfo.strategyId = _transition.strategyId;
         _stakingPoolInfo.rewardAssetIds = _transition.rewardAssetIds;
         _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
         _stakingPoolInfo.stakeAdjustmentFactor = _transition.stakeAdjustmentFactor;
@@ -1249,9 +1280,9 @@ contract TransitionEvaluator {
     }
 
     /**
-     * Helper to expand the account array of staked shares if needed.
+     * Helper to expand the account array of staked shares and stakes if needed.
      */
-    function _adjustAccountStakedShareEntries(dt.AccountInfo memory _accountInfo, uint32 poolId) private pure {
+    function _adjustAccountStakedShareAndStakeEntries(dt.AccountInfo memory _accountInfo, uint32 poolId) private pure {
         uint32 n = uint32(_accountInfo.stakedShares.length);
         if (n <= poolId) {
             uint256[] memory arr = new uint256[](poolId + 1);
@@ -1263,13 +1294,7 @@ contract TransitionEvaluator {
             }
             _accountInfo.stakedShares = arr;
         }
-    }
-
-    /**
-     * Helper to expand the account array of stakes if needed.
-     */
-    function _adjustAccountStakeEntries(dt.AccountInfo memory _accountInfo, uint32 poolId) private pure {
-        uint32 n = uint32(_accountInfo.stakes.length);
+        n = uint32(_accountInfo.stakes.length);
         if (n <= poolId) {
             uint256[] memory arr = new uint256[](poolId + 1);
             for (uint32 i = 0; i < n; i++) {
@@ -1438,69 +1463,7 @@ contract TransitionEvaluator {
     }
 
     /**
-     * @notice Get the hash of the AccountInfo.
-     * @param _accountInfo Account info
-     */
-    function _getAccountInfoHash(dt.AccountInfo memory _accountInfo) private pure returns (bytes32) {
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _accountInfo.account,
-                    _accountInfo.accountId,
-                    _accountInfo.idleAssets,
-                    _accountInfo.shares,
-                    _accountInfo.pending,
-                    _accountInfo.timestamp
-                )
-            );
-    }
-
-    /**
-     * @notice Get the hash of the StrategyInfo.
-     * @param _strategyInfo Strategy info
-     */
-    function _getStrategyInfoHash(dt.StrategyInfo memory _strategyInfo) private pure returns (bytes32) {
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _strategyInfo.assetId,
-                    _strategyInfo.assetBalance,
-                    _strategyInfo.shareSupply,
-                    _strategyInfo.nextAggregateId,
-                    _strategyInfo.lastExecAggregateId,
-                    _strategyInfo.pending
-                )
-            );
-    }
-
-    /**
-     * @notice Get the hash of the StakingPoolInfo.
-     * @param _stakingPoolInfo Staking pool info
-     */
-    function _getStakingPoolInfoHash(dt.StakingPoolInfo memory _stakingPoolInfo) private pure returns (bytes32) {
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _stakingPoolInfo.shareId,
-                    _stakingPoolInfo.rewardAssetIds,
-                    _stakingPoolInfo.rewardPerEpoch,
-                    _stakingPoolInfo.totalShares,
-                    _stakingPoolInfo.totalStakes,
-                    _stakingPoolInfo.accumulatedRewardPerUnit,
-                    _stakingPoolInfo.lastRewardEpoch,
-                    _stakingPoolInfo.stakeAdjustmentFactor
-                )
-            );
-    }
-
-    /**
-     * @notice Calculates the adjusted stake from staked shares
+     * @notice Calculates the adjusted stake from staked shares.
      * @param _stakedShares The staked shares
      * @param _adjustmentFactor The adjustment factor, a value from (0, 1) * STAKING_SCALE_FACTOR
      */
@@ -1512,7 +1475,7 @@ contract TransitionEvaluator {
     }
 
     /**
-     * @notice Implements sqrt with Babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)
+     * @notice Implements square root with Babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method).
      * @param _y The input
      */
     function _sqrt(uint256 _y) private pure returns (uint256) {

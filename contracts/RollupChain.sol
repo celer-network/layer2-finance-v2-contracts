@@ -325,8 +325,8 @@ contract RollupChain is Ownable, Pausable {
      * @notice Dispute a transition in a block.
      * @dev Provide the transition proofs of the previous (valid) transition and the disputed transition,
      * the account proof(s), the strategy proof, the staking pool proof, and the global info. The account proof(s),
-     * strategy proof, strategy proof and global info are always needed even if the disputed transition only updates an
-     * account (or two) or only updates the strategy because the transition stateRoot is computed as:
+     * strategy proof, staking pool proof and global info are always needed even if the disputed transition only updates
+     * an account (or two) or only updates the strategy because the transition stateRoot is computed as:
      *
      * stateRoot = hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
      *

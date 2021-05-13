@@ -421,7 +421,7 @@ library Transitions {
             uint8 transitionType,
             bytes32 stateRoot,
             uint32 poolId,
-            uint32 shareId,
+            uint32 strategyId,
             uint32[] memory rewardAssetIds,
             uint256[] memory rewardPerEpoch,
             uint256 stakeAdjustmentFactor
@@ -431,7 +431,7 @@ library Transitions {
                 transitionType,
                 stateRoot,
                 poolId,
-                shareId,
+                strategyId,
                 rewardAssetIds,
                 rewardPerEpoch,
                 stakeAdjustmentFactor
