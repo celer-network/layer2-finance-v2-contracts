@@ -1044,27 +1044,30 @@ contract TransitionEvaluator {
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
-        uint256 shares = _transition.shares;
+        uint256 feeInShares;
         (bool isCelr, uint256 fee) = _getFeeInfo(_transition.fee, 0);
         if (isCelr) {
             _adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             _updateOpFee(_globalInfo, true, 1, fee);
         } else {
-            shares -= fee;
+            feeInShares = fee;
             _updateOpFee(_globalInfo, false, _stakingPoolInfo.strategyId, fee);
         }
+        uint256 addedShares = _transition.shares - feeInShares;
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
-        if (shares > 0) {
+        if (addedShares > 0) {
             _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
             uint256 addedStake =
-                _getAdjustedStake(_accountInfo.stakedShares[poolId] + shares, _stakingPoolInfo.stakeAdjustmentFactor) -
-                    _accountInfo.stakes[poolId];
-            _accountInfo.stakedShares[poolId] += shares;
+                _getAdjustedStake(
+                    _accountInfo.stakedShares[poolId] + addedShares,
+                    _stakingPoolInfo.stakeAdjustmentFactor
+                ) - _accountInfo.stakes[poolId];
+            _accountInfo.stakedShares[poolId] += addedShares;
             _accountInfo.stakes[poolId] += addedStake;
-            _stakingPoolInfo.totalShares += shares;
+            _stakingPoolInfo.totalShares += addedShares;
             _stakingPoolInfo.totalStakes += addedStake;
 
             for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
@@ -1075,7 +1078,7 @@ contract TransitionEvaluator {
             }
         }
         _adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
-        _accountInfo.shares[_stakingPoolInfo.strategyId] -= shares;
+        _accountInfo.shares[_stakingPoolInfo.strategyId] -= _transition.shares;
 
         return (_accountInfo, _stakingPoolInfo, _globalInfo);
     }
@@ -1130,34 +1133,42 @@ contract TransitionEvaluator {
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
-        uint256 shares = _transition.shares;
+        uint256 feeInShares;
         (bool isCelr, uint256 fee) = _getFeeInfo(_transition.fee, 0);
         if (isCelr) {
             _adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             _updateOpFee(_globalInfo, true, 1, fee);
         } else {
-            shares -= fee;
+            feeInShares = fee;
             _updateOpFee(_globalInfo, false, _stakingPoolInfo.strategyId, fee);
         }
+        uint256 removedShares = _transition.shares;
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
-        _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
-        uint256 removedStake =
-            _accountInfo.stakes[poolId] -
-                _getAdjustedStake(_accountInfo.stakedShares[poolId] - shares, _stakingPoolInfo.stakeAdjustmentFactor);
-        _accountInfo.stakedShares[poolId] -= shares;
-        _accountInfo.stakes[poolId] -= removedStake;
-        _stakingPoolInfo.totalShares -= shares;
-        _stakingPoolInfo.totalStakes -= removedStake;
+        if (removedShares > 0) {
+            _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
+            uint256 removedStake =
+                _accountInfo.stakes[poolId] -
+                    _getAdjustedStake(
+                        _accountInfo.stakedShares[poolId] - removedShares,
+                        _stakingPoolInfo.stakeAdjustmentFactor
+                    );
+            _accountInfo.stakedShares[poolId] -= removedShares;
+            _accountInfo.stakes[poolId] -= removedStake;
+            _stakingPoolInfo.totalShares -= removedShares;
+            _stakingPoolInfo.totalStakes -= removedStake;
 
+            for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
+                _adjustAccountRewardDebtEntries(_accountInfo, poolId, rewardTokenId);
+                _accountInfo.rewardDebts[poolId][rewardTokenId] -=
+                    (removedStake * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
+                    STAKING_SCALE_FACTOR;
+            }
+        }
+        // Harvest
         for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
-            _adjustAccountRewardDebtEntries(_accountInfo, poolId, rewardTokenId);
-            _accountInfo.rewardDebts[poolId][rewardTokenId] -=
-                (removedStake * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
-                STAKING_SCALE_FACTOR;
-            // Harvest
             uint256 accumulatedReward =
                 (_accountInfo.stakes[poolId] * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
                     STAKING_SCALE_FACTOR;
@@ -1166,7 +1177,7 @@ contract TransitionEvaluator {
             _accountInfo.idleAssets[_stakingPoolInfo.rewardAssetIds[rewardTokenId]] += pendingReward;
         }
         _adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
-        _accountInfo.shares[_stakingPoolInfo.strategyId] += shares;
+        _accountInfo.shares[_stakingPoolInfo.strategyId] += _transition.shares - feeInShares;
 
         return (_accountInfo, _stakingPoolInfo, _globalInfo);
     }

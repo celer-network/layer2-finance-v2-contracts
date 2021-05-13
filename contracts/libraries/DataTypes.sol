@@ -197,6 +197,7 @@ library DataTypes {
     struct GlobalInfo {
         ProtocolFees protoFees; // fee owned by contract owner (governance multi-sig account)
         OperatorFees opFees; // fee owned by operator
+        // TODO: update currEpoch somewhere
         uint256 currEpoch; // liquidity mining epoch
     }
 
