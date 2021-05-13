@@ -21,6 +21,11 @@ library Transitions {
     uint8 public constant TN_TYPE_WITHDRAW_PROTO_FEE = 11;
     uint8 public constant TN_TYPE_XFER_OP_FEE = 12;
 
+    // Liquidity Mining
+    uint8 public constant TN_TYPE_STAKE = 13;
+    uint8 public constant TN_TYPE_UNSTAKE = 14;
+    uint8 public constant TN_TYPE_UPDATE_POOL_INFO = 15;
+
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
         assembly {
@@ -358,6 +363,80 @@ library Transitions {
         uint8 transitionType = uint8(low2);
         bool success = uint8(low2 >> 8) == 1;
         return (aggregateId, strategyId, success, transitionType);
+    }
+
+    function decodePackedStakeTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.StakeTransition memory)
+    {
+        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
+        (uint32 poolId, uint32 accountId, uint64 timestamp, uint8 v, uint8 transitionType) =
+            decodeStakingInfoCode(infoCode);
+        DataTypes.StakeTransition memory transition =
+            DataTypes.StakeTransition(transitionType, stateRoot, poolId, accountId, shares, fee, timestamp, r, s, v);
+        return transition;
+    }
+
+    function decodePackedUnstakeTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.UnstakeTransition memory)
+    {
+        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
+        (uint32 poolId, uint32 accountId, uint64 timestamp, uint8 v, uint8 transitionType) =
+            decodeStakingInfoCode(infoCode);
+        DataTypes.UnstakeTransition memory transition =
+            DataTypes.UnstakeTransition(transitionType, stateRoot, poolId, accountId, shares, fee, timestamp, r, s, v);
+        return transition;
+    }
+
+    function decodeStakingInfoCode(uint256 _infoCode)
+        internal
+        pure
+        returns (
+            uint32, // poolId
+            uint32, // accountId
+            uint64, // timestamp
+            uint8, // sig-v
+            uint8 // transitionType
+        )
+    {
+        (uint128 high, uint128 low) = splitUint256(_infoCode);
+        (, uint64 poolIdAccountId) = splitUint128(high);
+        (uint32 poolId, uint32 accountId) = splitUint64(poolIdAccountId);
+        (uint64 timestamp, uint64 vt) = splitUint128(low);
+        (uint8 v, uint8 transitionType) = splitUint16(uint16(vt));
+        return (poolId, accountId, timestamp, v, transitionType);
+    }
+
+    function decodeUpdatePoolInfoTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.UpdatePoolInfoTransition memory)
+    {
+        (
+            uint8 transitionType,
+            bytes32 stateRoot,
+            uint32 poolId,
+            uint32 strategyId,
+            uint32[] memory rewardAssetIds,
+            uint256[] memory rewardPerEpoch,
+            uint256 stakeAdjustmentFactor
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32[], uint256[], uint256));
+        DataTypes.UpdatePoolInfoTransition memory transition =
+            DataTypes.UpdatePoolInfoTransition(
+                transitionType,
+                stateRoot,
+                poolId,
+                strategyId,
+                rewardAssetIds,
+                rewardPerEpoch,
+                stakeAdjustmentFactor
+            );
+        return transition;
     }
 
     function decodeWithdrawProtocolFeeTransition(bytes memory _rawBytes)

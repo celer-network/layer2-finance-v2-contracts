@@ -12,7 +12,7 @@ import "./TransitionEvaluator.sol";
 import "./Registry.sol";
 
 contract TransitionDisputer {
-    // state root of empty strategy set and empty account set
+    // state root of empty account, strategy, or staking pool set
     bytes32 public constant INIT_TRANSITION_STATE_ROOT =
         bytes32(0xcf277fb80a82478460e8988570b718f1e083ceb76f7e271a1a1497e5975f53ae);
 
@@ -34,6 +34,7 @@ contract TransitionDisputer {
         uint32 accountId;
         uint32 accountIdDest;
         uint32 strategyId;
+        uint32 stakingPoolId;
     }
 
     /**
@@ -78,15 +79,15 @@ contract TransitionDisputer {
             require(_inputs.accountProofs.length == 1, "One account proof must be given");
         }
 
-        // ------ #3: verify transition stateRoot == hash(globalInfoHash, accountStateRoot, strategyStateRoot)
-        // The global info and the account and strategy stateRoots must always be given irrespective of
-        // what is being disputed.
+        // ------ #3: verify transition stateRoot == hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
+        // All stateRoots for the subtrees must always be given irrespective of what is being disputed.
         require(
             _checkMultiTreeStateRoot(
                 dsi.preStateRoot,
-                transitionEvaluator.getGlobalInfoHash(_inputs.globalInfo),
                 _inputs.accountProofs[0].stateRoot,
-                _inputs.strategyProof.stateRoot
+                _inputs.strategyProof.stateRoot,
+                _inputs.stakingPoolProof.stateRoot,
+                transitionEvaluator.getGlobalInfoHash(_inputs.globalInfo)
             ),
             "Failed combined multi-tree stateRoot verification check"
         );
@@ -97,7 +98,7 @@ contract TransitionDisputer {
             );
         }
 
-        // ------ #4: verify account and strategy inclusion
+        // ------ #4: verify account, strategy and staking pool inclusion
         if (dsi.accountId > 0) {
             for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
                 _verifyProofInclusion(
@@ -114,6 +115,14 @@ contract TransitionDisputer {
                 transitionEvaluator.getStrategyInfoHash(_inputs.strategyProof.value),
                 _inputs.strategyProof.index,
                 _inputs.strategyProof.siblings
+            );
+        }
+        if (dsi.stakingPoolId > 0) {
+            _verifyProofInclusion(
+                _inputs.stakingPoolProof.stateRoot,
+                transitionEvaluator.getStakingPoolInfoHash(_inputs.stakingPoolProof.value),
+                _inputs.stakingPoolProof.index,
+                _inputs.stakingPoolProof.siblings
             );
         }
 
@@ -141,6 +150,9 @@ contract TransitionDisputer {
         if (dsi.strategyId > 0) {
             require(_inputs.strategyProof.index == dsi.strategyId, "Supplied strategy index is incorrect");
         }
+        if (dsi.stakingPoolId > 0) {
+            require(_inputs.stakingPoolProof.index == dsi.stakingPoolId, "Supplied staking pool index is incorrect");
+        }
 
         // ------ #7: evaluate transition and verify new state root
         // split function to address "stack too deep" compiler error
@@ -167,19 +179,28 @@ contract TransitionDisputer {
         // Apply the transaction and verify the state root after that.
         bool ok;
         bytes memory returnData;
-        dt.AccountInfo[] memory _accountInfos = new dt.AccountInfo[](_inputs.accountProofs.length);
+
+        dt.AccountInfo[] memory accountInfos = new dt.AccountInfo[](_inputs.accountProofs.length);
         for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
-            _accountInfos[i] = _inputs.accountProofs[i].value;
+            accountInfos[i] = _inputs.accountProofs[i].value;
         }
 
-        // Make the external call
-        (ok, returnData) = address(transitionEvaluator).call(
+        dt.EvaluateInfos memory infos =
+            dt.EvaluateInfos({
+                accountInfos: accountInfos,
+                strategyInfo: _inputs.strategyProof.value,
+                stakingPoolInfo: _inputs.stakingPoolProof.value,
+                globalInfo: _inputs.globalInfo
+            });
+        (
+            // Make the external call
+            ok,
+            returnData
+        ) = address(transitionEvaluator).call(
             abi.encodeWithSelector(
                 transitionEvaluator.evaluateTransition.selector,
                 _inputs.invalidTransitionProof.transition,
-                _accountInfos,
-                _inputs.strategyProof.value,
-                _inputs.globalInfo,
+                infos,
                 _registry
             )
         );
@@ -188,10 +209,16 @@ contract TransitionDisputer {
             return "failed to evaluate";
         }
         // It was successful so let's decode the outputs to get the new leaf nodes we'll have to insert
-        bytes32[4] memory outputs = abi.decode((returnData), (bytes32[4]));
+        bytes32[5] memory outputs = abi.decode((returnData), (bytes32[5]));
 
-        // Check if the combined new stateRoots of account and strategy Merkle trees is incorrect.
-        ok = _updateAndVerify(_postStateRoot, outputs, _inputs.accountProofs, _inputs.strategyProof);
+        // Check if the combined new stateRoots of the Merkle trees is incorrect.
+        ok = _updateAndVerify(
+            _postStateRoot,
+            outputs,
+            _inputs.accountProofs,
+            _inputs.strategyProof,
+            _inputs.stakingPoolProof
+        );
         if (!ok) {
             // revert the block because we found an invalid post state root
             return "invalid post-state root";
@@ -217,6 +244,7 @@ contract TransitionDisputer {
         uint32 accountId;
         uint32 accountIdDest;
         uint32 strategyId;
+        uint32 stakingPoolId;
         disputeStateInfo memory dsi;
 
         // First decode the prestate root
@@ -226,7 +254,7 @@ contract TransitionDisputer {
 
         // Make sure the call was successful
         require(success, "If the preStateRoot is invalid, then prove that invalid instead");
-        (preStateRoot, , , ) = abi.decode((returnData), (bytes32, uint32, uint32, uint32));
+        (preStateRoot, , , , ) = abi.decode((returnData), (bytes32, uint32, uint32, uint32, uint32));
 
         // Now that we have the prestateRoot, let's decode the postState
         (success, returnData) = address(transitionEvaluator).call(
@@ -235,15 +263,16 @@ contract TransitionDisputer {
 
         // If the call was successful let's decode!
         if (success) {
-            (postStateRoot, accountId, accountIdDest, strategyId) = abi.decode(
+            (postStateRoot, accountId, accountIdDest, strategyId, stakingPoolId) = abi.decode(
                 (returnData),
-                (bytes32, uint32, uint32, uint32)
+                (bytes32, uint32, uint32, uint32, uint32)
             );
             dsi.preStateRoot = preStateRoot;
             dsi.postStateRoot = postStateRoot;
             dsi.accountId = accountId;
             dsi.accountIdDest = accountIdDest;
             dsi.strategyId = strategyId;
+            dsi.stakingPoolId = stakingPoolId;
         }
         return (success, dsi);
     }
@@ -325,15 +354,17 @@ contract TransitionDisputer {
 
     /**
      * @notice Check if the combined stateRoots of the Merkle trees matches the stateRoot.
-     * @dev hash(globalInfoHash, accountStateRoot, strategyStateRoot)
+     * @dev hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
      */
     function _checkMultiTreeStateRoot(
         bytes32 _stateRoot,
-        bytes32 _globalInfoHash,
         bytes32 _accountStateRoot,
-        bytes32 _strategyStateRoot
+        bytes32 _strategyStateRoot,
+        bytes32 _stakingPoolStateRoot,
+        bytes32 _globalInfoHash
     ) private pure returns (bool) {
-        bytes32 newStateRoot = keccak256(abi.encodePacked(_globalInfoHash, _accountStateRoot, _strategyStateRoot));
+        bytes32 newStateRoot =
+            keccak256(abi.encodePacked(_accountStateRoot, _strategyStateRoot, _stakingPoolStateRoot, _globalInfoHash));
         return (_stateRoot == newStateRoot);
     }
 
@@ -351,14 +382,15 @@ contract TransitionDisputer {
     }
 
     /**
-     * @notice Update the account, strategy, and global info Merkle trees with their new leaf nodes and check validity.
-     * @dev The _leafHashes array holds: [account (src), account (dest), strategy, globalInfo].
+     * @notice Update the account, strategy, staking pool, and global info Merkle trees with their new leaf nodes and check validity.
+     * @dev The _leafHashes array holds: [account (src), account (dest), strategy, stakingPool, globalInfo].
      */
     function _updateAndVerify(
         bytes32 _stateRoot,
-        bytes32[4] memory _leafHashes,
+        bytes32[5] memory _leafHashes,
         dt.AccountProof[] memory _accountProofs,
-        dt.StrategyProof memory _strategyProof
+        dt.StrategyProof memory _strategyProof,
+        dt.StakingPoolProof memory _stakingPoolProof
     ) private pure returns (bool) {
         if (_leafHashes[0] == bytes32(0) && _leafHashes[1] == bytes32(0)) {
             return false;
@@ -389,9 +421,26 @@ contract TransitionDisputer {
         // If there is a strategy update, compute its new Merkle tree root.
         bytes32 strategyStateRoot = _strategyProof.stateRoot;
         if (_leafHashes[2] != bytes32(0)) {
-            strategyStateRoot = MerkleTree.computeRoot(_leafHashes[1], _strategyProof.index, _strategyProof.siblings);
+            strategyStateRoot = MerkleTree.computeRoot(_leafHashes[2], _strategyProof.index, _strategyProof.siblings);
         }
 
-        return _checkMultiTreeStateRoot(_stateRoot, _leafHashes[3], accountStateRoot, strategyStateRoot);
+        // If there is a staking pool update, compute its new Merkle tree root.
+        bytes32 stakingPoolStateRoot = _stakingPoolProof.stateRoot;
+        if (_leafHashes[3] != bytes32(0)) {
+            stakingPoolStateRoot = MerkleTree.computeRoot(
+                _leafHashes[3],
+                _stakingPoolProof.index,
+                _stakingPoolProof.siblings
+            );
+        }
+
+        return
+            _checkMultiTreeStateRoot(
+                _stateRoot,
+                accountStateRoot,
+                strategyStateRoot,
+                stakingPoolStateRoot,
+                _leafHashes[4] /* globalInfoHash */
+            );
     }
 }
