@@ -217,10 +217,7 @@ contract RollupChain is Ownable, Pausable {
         // 2. withdraw: create a pending withdraw-commit record
         // 3. aggregate-orders: fill the "intents" array for future executeBlock()
         // 4. execution-result: update the pending execution result record
-
-        uint256[] memory intentIndexes = new uint256[](_transitions.length);
-        uint32 numIntents = 0;
-
+        bytes32 intentHash = bytes32(0);
         for (uint256 i = 0; i < _transitions.length; i++) {
             uint8 tnType = tn.extractTransitionType(_transitions[i]);
             if (
@@ -242,7 +239,7 @@ contract RollupChain is Ownable, Pausable {
                     PendingWithdrawCommit({account: wd.account, assetId: wd.assetId, amount: wd.amount - wd.fee})
                 );
             } else if (tnType == tn.TN_TYPE_AGGREGATE_ORDER) {
-                intentIndexes[numIntents++] = i;
+                intentHash = keccak256(abi.encodePacked(intentHash, _transitions[i]));
             } else if (tnType == tn.TN_TYPE_EXEC_RESULT) {
                 // Update the pending execution result record.
                 dt.ExecutionResultTransition memory er = tn.decodePackedExecutionResultTransition(_transitions[i]);
@@ -253,16 +250,6 @@ contract RollupChain is Ownable, Pausable {
                     PendingWithdrawCommit({account: owner(), assetId: wf.assetId, amount: wf.amount})
                 );
             }
-        }
-
-        // Compute the intent hash.
-        bytes32 intentHash = bytes32(0);
-        if (numIntents > 0) {
-            bytes32[] memory intents = new bytes32[](numIntents);
-            for (uint256 i = 0; i < numIntents; i++) {
-                intents[i] = keccak256(_transitions[intentIndexes[i]]);
-            }
-            intentHash = keccak256(abi.encodePacked(intents));
         }
 
         dt.Block memory rollupBlock =
@@ -302,14 +289,12 @@ contract RollupChain is Ownable, Pausable {
         // Validate the input intent transitions.
         bytes32 intentHash = bytes32(0);
         if (_intents.length > 0) {
-            bytes32[] memory hashes = new bytes32[](_intents.length);
             for (uint256 i = 0; i < _intents.length; i++) {
-                hashes[i] = keccak256(_intents[i]);
+                intentHash = keccak256(abi.encodePacked(intentHash, _intents[i]));
             }
-            intentHash = keccak256(abi.encodePacked(hashes));
         }
-
         require(intentHash == blocks[_blockId].intentHash, REQ_BAD_HASH);
+
         uint32 newIntentExecCount = intentExecCount + _execLen;
         require(newIntentExecCount <= _intents.length, REQ_BAD_LEN);
 
