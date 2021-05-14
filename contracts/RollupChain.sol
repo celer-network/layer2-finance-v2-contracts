@@ -46,7 +46,7 @@ contract RollupChain is Ownable, Pausable {
 
     // All the blocks (prepared and/or executed).
     dt.Block[] public blocks;
-    uint256 public countExecuted = 0;
+    uint256 public countExecuted;
 
     // Track pending L1-initiated even roundtrip status across L1->L2->L1.
     // Each event record ID is a count++ (i.e. it's a queue).
@@ -217,7 +217,7 @@ contract RollupChain is Ownable, Pausable {
         // 2. withdraw: create a pending withdraw-commit record
         // 3. aggregate-orders: fill the "intents" array for future executeBlock()
         // 4. execution-result: update the pending execution result record
-        bytes32 intentHash = bytes32(0);
+        bytes32 intentHash;
         for (uint256 i = 0; i < _transitions.length; i++) {
             uint8 tnType = tn.extractTransitionType(_transitions[i]);
             if (
@@ -281,13 +281,11 @@ contract RollupChain is Ownable, Pausable {
         uint32 _execLen
     ) external whenNotPaused {
         require(_blockId == countExecuted, REQ_BAD_BLOCKID);
-        require(_blockId < blocks.length, REQ_BAD_BLOCKID);
         require(blocks[_blockId].blockTime + blockChallengePeriod < block.number, REQ_BAD_CHALLENGE);
         uint32 intentExecCount = blocks[_blockId].intentExecCount;
-        require(intentExecCount != BLOCK_EXEC_COUNT_DONE, REQ_BAD_BLOCKID);
 
         // Validate the input intent transitions.
-        bytes32 intentHash = bytes32(0);
+        bytes32 intentHash;
         if (_intents.length > 0) {
             for (uint256 i = 0; i < _intents.length; i++) {
                 intentHash = keccak256(abi.encodePacked(intentHash, _intents[i]));
@@ -346,9 +344,6 @@ contract RollupChain is Ownable, Pausable {
         dt.StakingPoolProof calldata _stakingPoolProof,
         dt.GlobalInfo calldata _globalInfo
     ) external {
-        require(_prevTransitionProof.blockId < blocks.length, REQ_BAD_BLOCKID);
-        require(_invalidTransitionProof.blockId < blocks.length, REQ_BAD_BLOCKID);
-        require(_prevTransitionProof.blockId <= _invalidTransitionProof.blockId, REQ_BAD_BLOCKID);
         dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
         require(invalidTransitionBlock.blockTime + blockChallengePeriod > block.number, REQ_BAD_CHALLENGE);
 
@@ -488,10 +483,8 @@ contract RollupChain is Ownable, Pausable {
      * @param _amount The asset token amount.
      */
     function _deposit(address _asset, uint256 _amount) private {
-        address account = msg.sender;
         uint32 assetId = registry.assetAddressToIndex(_asset);
-
-        require(assetId != 0, REQ_BAD_ASSET);
+        require(assetId > 0, REQ_BAD_ASSET);
 
         uint256 netDeposit = netDeposits[_asset] + _amount;
         require(netDeposit <= netDepositLimits[_asset], REQ_OVER_LIMIT);
@@ -499,14 +492,14 @@ contract RollupChain is Ownable, Pausable {
 
         // Add a pending deposit record.
         uint64 depositId = depositQueuePointer.tail++;
-        bytes32 ehash = keccak256(abi.encodePacked(account, assetId, _amount));
+        bytes32 ehash = keccak256(abi.encodePacked(msg.sender, assetId, _amount));
         pendingDeposits[depositId] = PendingEvent({
             ehash: ehash,
             blockId: uint64(blocks.length), // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
 
-        emit AssetDeposited(account, assetId, _amount, depositId);
+        emit AssetDeposited(msg.sender, assetId, _amount, depositId);
     }
 
     /**
