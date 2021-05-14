@@ -3,7 +3,6 @@
 pragma solidity >=0.6.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -17,7 +16,6 @@ import "./interfaces/IStrategy.sol";
  */
 contract StrategyDummy is IStrategy, Ownable {
     using Address for address;
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public controller;
@@ -74,17 +72,17 @@ contract StrategyDummy is IStrategy, Ownable {
             assetAmount = _buyAmount;
             sharesFromBuy = shares;
         } else {
-            sharesFromBuy = _buyAmount.mul(shares).div(assetAmount);
-            amountFromSell = _sellShares.mul(assetAmount).div(shares);
-            assetAmount = assetAmount.add(_buyAmount).sub(amountFromSell);
-            shares = shares.add(sharesFromBuy).sub(_sellShares);
+            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+            amountFromSell = (_sellShares * assetAmount) / shares;
+            assetAmount += _buyAmount - amountFromSell;
+            shares += sharesFromBuy - _sellShares;
         }
         require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
         require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
         if (_buyAmount > amountFromSell) {
-            IERC20(asset).safeTransferFrom(controller, address(this), _buyAmount.sub(amountFromSell));
+            IERC20(asset).safeTransferFrom(controller, address(this), _buyAmount - amountFromSell);
         } else if (_buyAmount < amountFromSell) {
-            IERC20(asset).safeTransfer(controller, amountFromSell.sub(_buyAmount));
+            IERC20(asset).safeTransfer(controller, amountFromSell - _buyAmount);
         }
         if (msg.sender == tx.origin) {
             // only emit event for EOA testing
@@ -97,22 +95,22 @@ contract StrategyDummy is IStrategy, Ownable {
         if (shares == 0) {
             return MAX_INT;
         }
-        return assetAmount.mul(1e18).div(shares);
+        return (assetAmount * 1e18) / shares;
     }
 
     function harvest() external override onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), harvestGain);
-        assetAmount = assetAmount.add(harvestGain);
+        assetAmount += harvestGain;
     }
 
     function increaseBalance(uint256 _amount) external onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), _amount);
-        assetAmount = assetAmount.add(_amount);
+        assetAmount += _amount;
     }
 
     function decreaseBalance(uint256 _amount) external onlyOwnerOrController {
         IERC20(asset).safeTransfer(funder, _amount);
-        assetAmount = assetAmount.sub(_amount);
+        assetAmount -= _amount;
     }
 
     function setHarvestGain(uint256 _harvestGain) external onlyOwner {

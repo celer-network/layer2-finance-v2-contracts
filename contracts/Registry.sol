@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.0 <0.9.0;
+pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Registry is Ownable {
+    // require() error messages
+    string constant REQ_BAD_ASSET = "invalid asset";
+    string constant REQ_BAD_ST = "invalid strategy";
+
     // Map asset addresses to indexes.
     // asset with index 1 is CELR as the platform token
     mapping(address => uint32) public assetAddressToIndex;
@@ -25,8 +29,8 @@ contract Registry is Ownable {
      * @param _asset The asset token address;
      */
     function registerAsset(address _asset) external onlyOwner {
-        require(_asset != address(0), "Invalid asset");
-        require(assetAddressToIndex[_asset] == 0, "Asset already registered");
+        require(_asset != address(0), REQ_BAD_ASSET);
+        require(assetAddressToIndex[_asset] == 0, REQ_BAD_ASSET);
 
         // Register asset with an index >= 1 (zero is reserved).
         numAssets++;
@@ -41,8 +45,8 @@ contract Registry is Ownable {
      * @param _strategy The strategy contract address;
      */
     function registerStrategy(address _strategy) external onlyOwner {
-        require(_strategy != address(0), "Invalid strategy");
-        require(strategyAddressToIndex[_strategy] == 0, "Strategy already registered");
+        require(_strategy != address(0), REQ_BAD_ST);
+        require(strategyAddressToIndex[_strategy] == 0, REQ_BAD_ST);
 
         // Register strategy with an index >= 1 (zero is reserved).
         numStrategies++;
@@ -58,8 +62,8 @@ contract Registry is Ownable {
      * @param _strategyId The strategy ID;
      */
     function updateStrategy(address _strategy, uint32 _strategyId) external onlyOwner {
-        require(_strategy != address(0), "Invalid strategy");
-        require(strategyIndexToAddress[_strategyId] != address(0), "Strategy doesn't exist");
+        require(_strategy != address(0), REQ_BAD_ST);
+        require(strategyIndexToAddress[_strategyId] != address(0), REQ_BAD_ST);
 
         address previousStrategy = strategyIndexToAddress[_strategyId];
         strategyAddressToIndex[previousStrategy] = 0;
