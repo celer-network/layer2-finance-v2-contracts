@@ -191,6 +191,11 @@ contract TransitionDisputer {
      * @notice Evaluate a disputed transition
      * @dev This was split from the disputeTransition function to address "stack too deep" compiler error
      *
+     * @param _invalidTransitionProof The inclusion proof of the fraudulent transition.
+     * @param _accountProofs The inclusion proofs of one or two accounts involved.
+     * @param _strategyProof The inclusion proof of the strategy involved.
+     * @param _stakingPoolProof The inclusion proof of the staking pool involved.
+     * @param _globalInfo The global info.
      * @param _postStateRoot State root of the disputed transition.
      * @param _registry The address of the Registry contract.
      */
