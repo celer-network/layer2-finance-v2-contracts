@@ -74,8 +74,8 @@ contract StrategyDummy is IStrategy, Ownable {
         } else {
             sharesFromBuy = (_buyAmount * shares) / assetAmount;
             amountFromSell = (_sellShares * assetAmount) / shares;
-            assetAmount += _buyAmount - amountFromSell;
-            shares += sharesFromBuy - _sellShares;
+            assetAmount = assetAmount + _buyAmount - amountFromSell;
+            shares = shares + sharesFromBuy - _sellShares;
         }
         require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
         require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
