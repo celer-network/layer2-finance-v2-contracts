@@ -15,12 +15,85 @@ import "./libraries/ErrMsg.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
 
-contract TransitionEvaluator2 {
+contract TransitionApplier1 {
     uint128 public constant UINT128_MAX = 2**128 - 1;
 
     /**********************
      * External Functions *
      **********************/
+
+    /**
+     * @notice Apply a DepositTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _accountInfo The involved account from the previous transition.
+     * @return new account info after applying the disputed transition
+     */
+    function applyDepositTransition(dt.DepositTransition memory _transition, dt.AccountInfo memory _accountInfo)
+        public
+        pure
+        returns (dt.AccountInfo memory)
+    {
+        if (_accountInfo.account == address(0)) {
+            // first time deposit of this account
+            require(_accountInfo.accountId == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfo.idleAssets.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfo.shares.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfo.pending.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfo.timestamp == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            _accountInfo.account = _transition.account;
+            _accountInfo.accountId = _transition.accountId;
+        } else {
+            require(_accountInfo.account == _transition.account, ErrMsg.REQ_BAD_ACCT);
+            require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        }
+
+        uint32 assetId = _transition.assetId;
+        tn.adjustAccountIdleAssetEntries(_accountInfo, assetId);
+        _accountInfo.idleAssets[assetId] += _transition.amount;
+
+        return _accountInfo;
+    }
+
+    /**
+     * @notice Apply a WithdrawTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _accountInfo The involved account from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
+     * @return new account and global info after applying the disputed transition
+     */
+    function applyWithdrawTransition(
+        dt.WithdrawTransition memory _transition,
+        dt.AccountInfo memory _accountInfo,
+        dt.GlobalInfo memory _globalInfo
+    ) public pure returns (dt.AccountInfo memory, dt.GlobalInfo memory) {
+        bytes32 txHash =
+            keccak256(
+                abi.encodePacked(
+                    _transition.transitionType,
+                    _transition.account,
+                    _transition.assetId,
+                    _transition.amount,
+                    _transition.fee,
+                    _transition.timestamp
+                )
+            );
+        require(
+            ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
+                _accountInfo.account,
+            ErrMsg.REQ_BAD_SIG
+        );
+
+        require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
+        _accountInfo.timestamp = _transition.timestamp;
+
+        _accountInfo.idleAssets[_transition.assetId] -= _transition.amount;
+        tn.updateProtoFee(_globalInfo, true, false, _transition.assetId, _transition.fee);
+
+        return (_accountInfo, _globalInfo);
+    }
 
     /**
      * @notice Apply a BuyTransition.
