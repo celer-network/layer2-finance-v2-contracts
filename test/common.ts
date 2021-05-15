@@ -11,6 +11,7 @@ import { TestERC20__factory } from '../typechain/factories/TestERC20__factory';
 import { TransitionDisputer__factory } from '../typechain/factories/TransitionDisputer__factory';
 import { TransitionEvaluator__factory } from '../typechain/factories/TransitionEvaluator__factory';
 import { TransitionEvaluator2__factory } from '../typechain/factories/TransitionEvaluator2__factory';
+import { TransitionEvaluator3__factory } from '../typechain/factories/TransitionEvaluator3__factory';
 import { WETH9__factory } from '../typechain/factories/WETH9__factory';
 import { Registry } from '../typechain/Registry.d';
 import { RollupChain } from '../typechain/RollupChain.d';
@@ -55,10 +56,16 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   const transitionEvaluator2 = await transitionEvaluator2Factory.deploy();
   await transitionEvaluator2.deployed();
 
+  const transitionEvaluator3Factory = (await ethers.getContractFactory(
+    'TransitionEvaluator3'
+  )) as TransitionEvaluator3__factory;
+  const transitionEvaluator3 = await transitionEvaluator3Factory.deploy();
+  await transitionEvaluator3.deployed();
+
   const transitionEvaluatorFactory = (await ethers.getContractFactory(
     'TransitionEvaluator'
   )) as TransitionEvaluator__factory;
-  const transitionEvaluator = await transitionEvaluatorFactory.deploy(transitionEvaluator2.address);
+  const transitionEvaluator = await transitionEvaluatorFactory.deploy(transitionEvaluator2.address, transitionEvaluator3.address);
   await transitionEvaluator.deployed();
 
   const transitionDisputerFactory = (await ethers.getContractFactory(

@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
-import {Transitions2 as tn2} from "./libraries/Transitions2.sol";
 import "./TransitionEvaluator2.sol";
+import "./TransitionEvaluator3.sol";
 import "./Registry.sol";
 
 contract TransitionEvaluator {
@@ -27,11 +27,13 @@ contract TransitionEvaluator {
     string constant REQ_BAD_AGGR = "wrong aggregate ID";
 
     TransitionEvaluator2 transitionEvaluator2;
+    TransitionEvaluator3 transitionEvaluator3;
 
-    // Transition evaluation is split across 2 contracts, this one is the main entry point.
-    // In turn, it needs to access the 2nd contract to evaluate the other transitions.
-    constructor(TransitionEvaluator2 _transitionEvaluator2) {
+    // Transition evaluation is split across 3 contracts, this one is the main entry point.
+    // In turn, it needs to access the other two contracts to evaluate the other transitions.
+    constructor(TransitionEvaluator2 _transitionEvaluator2, TransitionEvaluator3 _transitionEvaluator3) {
         transitionEvaluator2 = _transitionEvaluator2;
+        transitionEvaluator3 = _transitionEvaluator3;
     }
 
     /**********************
@@ -77,7 +79,7 @@ contract TransitionEvaluator {
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_BUY) {
             require(_infos.accountInfos.length == 1, REQ_ONE_ACCT);
-            dt.BuyTransition memory buy = tn2.decodePackedBuyTransition(_transition);
+            dt.BuyTransition memory buy = tn.decodePackedBuyTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionEvaluator2
                 .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo, _registry);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
@@ -85,7 +87,7 @@ contract TransitionEvaluator {
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_SELL) {
             require(_infos.accountInfos.length == 1, REQ_ONE_ACCT);
-            dt.SellTransition memory sell = tn2.decodePackedSellTransition(_transition);
+            dt.SellTransition memory sell = tn.decodePackedSellTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionEvaluator2
                 .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
@@ -93,7 +95,7 @@ contract TransitionEvaluator {
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
             require(_infos.accountInfos.length == 2, REQ_TWO_ACCT);
-            dt.TransferAssetTransition memory xfer = tn2.decodePackedTransferAssetTransition(_transition);
+            dt.TransferAssetTransition memory xfer = tn.decodePackedTransferAssetTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionEvaluator2
                 .applyAssetTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
@@ -101,7 +103,7 @@ contract TransitionEvaluator {
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
             require(_infos.accountInfos.length == 2, REQ_TWO_ACCT);
-            dt.TransferShareTransition memory xfer = tn2.decodePackedTransferShareTransition(_transition);
+            dt.TransferShareTransition memory xfer = tn.decodePackedTransferShareTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionEvaluator2
                 .applyShareTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
@@ -119,7 +121,7 @@ contract TransitionEvaluator {
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
         } else if (transitionType == tn.TN_TYPE_SETTLE) {
             require(_infos.accountInfos.length == 1, REQ_ONE_ACCT);
-            dt.SettlementTransition memory settle = tn2.decodePackedSettlementTransition(_transition);
+            dt.SettlementTransition memory settle = tn.decodePackedSettlementTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionEvaluator2
                 .applySettlementTransition(settle, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
@@ -127,24 +129,24 @@ contract TransitionEvaluator {
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_STAKE) {
             require(_infos.accountInfos.length == 1, REQ_ONE_ACCT);
-            dt.StakeTransition memory stake = tn2.decodePackedStakeTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionEvaluator2
+            dt.StakeTransition memory stake = tn.decodePackedStakeTransition(_transition);
+            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionEvaluator3
                 .applyStakeTransition(stake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_UNSTAKE) {
             require(_infos.accountInfos.length == 1, REQ_ONE_ACCT);
-            dt.UnstakeTransition memory unstake = tn2.decodePackedUnstakeTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionEvaluator2
+            dt.UnstakeTransition memory unstake = tn.decodePackedUnstakeTransition(_transition);
+            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionEvaluator3
                 .applyUnstakeTransition(unstake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
             require(_infos.accountInfos.length == 0, REQ_ZERO_ACCT);
-            dt.UpdatePoolInfoTransition memory updatePoolInfo = tn2.decodeUpdatePoolInfoTransition(_transition);
-            updatedInfos.stakingPoolInfo = transitionEvaluator2.applyUpdatePoolInfoTransition(
+            dt.UpdatePoolInfoTransition memory updatePoolInfo = tn.decodeUpdatePoolInfoTransition(_transition);
+            updatedInfos.stakingPoolInfo = transitionEvaluator3.applyUpdatePoolInfoTransition(
                 updatePoolInfo,
                 _infos.stakingPoolInfo,
                 _infos.globalInfo
@@ -157,8 +159,8 @@ contract TransitionEvaluator {
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_OP_FEE) {
             require(_infos.accountInfos.length == 1, REQ_ONE_ACCT);
-            dt.TransferOperatorFeeTransition memory tof = tn2.decodeTransferOperatorFeeTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionEvaluator2
+            dt.TransferOperatorFeeTransition memory tof = tn.decodeTransferOperatorFeeTransition(_transition);
+            (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionEvaluator3
                 .applyTransferOperatorFeeTransition(tof, _infos.accountInfos[0], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
@@ -201,22 +203,22 @@ contract TransitionEvaluator {
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
         } else if (transitionType == tn.TN_TYPE_BUY) {
-            dt.BuyTransition memory transition = tn2.decodePackedBuyTransition(rawTransition);
+            dt.BuyTransition memory transition = tn.decodePackedBuyTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
             strategyId = transition.strategyId;
         } else if (transitionType == tn.TN_TYPE_SELL) {
-            dt.SellTransition memory transition = tn2.decodePackedSellTransition(rawTransition);
+            dt.SellTransition memory transition = tn.decodePackedSellTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
             strategyId = transition.strategyId;
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
-            dt.TransferAssetTransition memory transition = tn2.decodePackedTransferAssetTransition(rawTransition);
+            dt.TransferAssetTransition memory transition = tn.decodePackedTransferAssetTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.fromAccountId;
             accountIdDest = transition.toAccountId;
         } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
-            dt.TransferShareTransition memory transition = tn2.decodePackedTransferShareTransition(rawTransition);
+            dt.TransferShareTransition memory transition = tn.decodePackedTransferShareTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.fromAccountId;
             accountIdDest = transition.toAccountId;
@@ -229,33 +231,33 @@ contract TransitionEvaluator {
             stateRoot = transition.stateRoot;
             strategyId = transition.strategyId;
         } else if (transitionType == tn.TN_TYPE_SETTLE) {
-            dt.SettlementTransition memory transition = tn2.decodePackedSettlementTransition(rawTransition);
+            dt.SettlementTransition memory transition = tn.decodePackedSettlementTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
             strategyId = transition.strategyId;
         } else if (transitionType == tn.TN_TYPE_STAKE) {
-            dt.StakeTransition memory transition = tn2.decodePackedStakeTransition(rawTransition);
+            dt.StakeTransition memory transition = tn.decodePackedStakeTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
             stakingPoolId = transition.poolId;
         } else if (transitionType == tn.TN_TYPE_UNSTAKE) {
-            dt.UnstakeTransition memory transition = tn2.decodePackedUnstakeTransition(rawTransition);
+            dt.UnstakeTransition memory transition = tn.decodePackedUnstakeTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
             stakingPoolId = transition.poolId;
         } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
-            dt.UpdatePoolInfoTransition memory transition = tn2.decodeUpdatePoolInfoTransition(rawTransition);
+            dt.UpdatePoolInfoTransition memory transition = tn.decodeUpdatePoolInfoTransition(rawTransition);
             stateRoot = transition.stateRoot;
             stakingPoolId = transition.poolId;
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
             dt.WithdrawProtocolFeeTransition memory transition = tn.decodeWithdrawProtocolFeeTransition(rawTransition);
             stateRoot = transition.stateRoot;
         } else if (transitionType == tn.TN_TYPE_XFER_OP_FEE) {
-            dt.TransferOperatorFeeTransition memory transition = tn2.decodeTransferOperatorFeeTransition(rawTransition);
+            dt.TransferOperatorFeeTransition memory transition = tn.decodeTransferOperatorFeeTransition(rawTransition);
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
         } else if (transitionType == tn.TN_TYPE_INIT) {
-            dt.InitTransition memory transition = tn2.decodeInitTransition(rawTransition);
+            dt.InitTransition memory transition = tn.decodeInitTransition(rawTransition);
             stateRoot = transition.stateRoot;
         } else {
             revert("Transition type not recognized");
@@ -430,7 +432,7 @@ contract TransitionEvaluator {
         }
 
         uint32 assetId = _transition.assetId;
-        tn2.adjustAccountIdleAssetEntries(_accountInfo, assetId);
+        tn.adjustAccountIdleAssetEntries(_accountInfo, assetId);
         _accountInfo.idleAssets[assetId] += _transition.amount;
 
         return _accountInfo;
@@ -471,7 +473,7 @@ contract TransitionEvaluator {
         _accountInfo.timestamp = _transition.timestamp;
 
         _accountInfo.idleAssets[_transition.assetId] -= _transition.amount;
-        tn2.updateProtoFee(_globalInfo, true, false, _transition.assetId, _transition.fee);
+        tn.updateProtoFee(_globalInfo, true, false, _transition.assetId, _transition.fee);
 
         return (_accountInfo, _globalInfo);
     }
@@ -548,7 +550,7 @@ contract TransitionEvaluator {
         dt.WithdrawProtocolFeeTransition memory _transition,
         dt.GlobalInfo memory _globalInfo
     ) private pure returns (dt.GlobalInfo memory) {
-        tn2.updateProtoFee(_globalInfo, false, false, _transition.assetId, _transition.amount);
+        tn.updateProtoFee(_globalInfo, false, false, _transition.assetId, _transition.amount);
         return _globalInfo;
     }
 }

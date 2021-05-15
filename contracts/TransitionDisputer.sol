@@ -73,10 +73,7 @@ contract TransitionDisputer {
     ) external returns (string memory) {
         require(_accountProofs.length > 0, REQ_ONE_ACCT);
         if (_invalidTransitionProof.blockId == 0 && _invalidTransitionProof.index == 0) {
-            require(
-                _invalidInitTransition(_invalidTransitionProof, _invalidTransitionBlock),
-                REQ_NO_FRAUD
-            );
+            require(_invalidInitTransition(_invalidTransitionProof, _invalidTransitionBlock), REQ_NO_FRAUD);
             return "bad init tn";
         }
 
@@ -178,9 +175,16 @@ contract TransitionDisputer {
 
         // ------ #7: evaluate transition and verify new state root
         // split function to address "stack too deep" compiler error
-        return _evaluateInvalidTransition(
-            _invalidTransitionProof, _accountProofs, _strategyProof, _stakingPoolProof, _globalInfo,
-            dsi.postStateRoot, _registry);
+        return
+            _evaluateInvalidTransition(
+                _invalidTransitionProof,
+                _accountProofs,
+                _strategyProof,
+                _stakingPoolProof,
+                _globalInfo,
+                dsi.postStateRoot,
+                _registry
+            );
     }
 
     /*********************
@@ -244,13 +248,7 @@ contract TransitionDisputer {
         bytes32[5] memory outputs = abi.decode((returnData), (bytes32[5]));
 
         // Check if the combined new stateRoots of the Merkle trees is incorrect.
-        ok = _updateAndVerify(
-            _postStateRoot,
-            outputs,
-            _accountProofs,
-            _strategyProof,
-            _stakingPoolProof
-        );
+        ok = _updateAndVerify(_postStateRoot, outputs, _accountProofs, _strategyProof, _stakingPoolProof);
         if (!ok) {
             // revert the block because we found an invalid post state root
             return "invalid post-state root";
