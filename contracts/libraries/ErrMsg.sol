@@ -27,4 +27,12 @@ library ErrMsg {
     string internal constant REQ_BAD_SHARES = "wrong shares";
     string internal constant REQ_BAD_AGGR = "wrong aggregate ID";
     string internal constant REQ_ST_NOT_EMPTY = "strategy not empty";
+    string internal constant REQ_NO_FRAUD = "no fraud found";
+    string internal constant REQ_BAD_NTREE = "bad n-tree verify";
+    string internal constant REQ_BAD_SROOT = "state roots not equal";
+    string internal constant REQ_BAD_INDEX = "wrong proof index";
+    string internal constant REQ_BAD_PREV_TN = "invalid prev tn";
+    string internal constant REQ_TN_NOT_IN = "tn not in block";
+    string internal constant REQ_TN_NOT_SEQ = "tns not sequential";
+    string internal constant REQ_BAD_MERKLE = "failed Merkle proof check";
 }
