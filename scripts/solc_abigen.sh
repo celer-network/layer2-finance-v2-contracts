@@ -17,6 +17,7 @@ solFiles=(
   TransitionDisputer
   TransitionEvaluator
   TransitionEvaluator2
+  TransitionEvaluator3
   RollupChain
   # strategies
   strategies/interfaces/IStrategy
