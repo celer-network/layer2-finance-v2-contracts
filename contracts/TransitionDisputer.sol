@@ -48,16 +48,33 @@ contract TransitionDisputer {
     /**
      * @notice Dispute a transition.
      *
-     * @param _inputs The dispute input parameters.
+     * @param _prevTransitionProof The inclusion proof of the transition immediately before the fraudulent transition.
+     * @param _invalidTransitionProof The inclusion proof of the fraudulent transition.
+     * @param _accountProofs The inclusion proofs of one or two accounts involved.
+     * @param _strategyProof The inclusion proof of the strategy involved.
+     * @param _stakingPoolProof The inclusion proof of the staking pool involved.
+     * @param _globalInfo The global info.
+     * @param _prevTransitionBlock The previous transition block
+     * @param _invalidTransitionBlock The invalid transition block
      * @param _registry The address of the Registry contract.
      *
      * @return reason of the transition being determined as invalid
      */
-    function disputeTransition(dt.DisputeInputs calldata _inputs, Registry _registry) external returns (string memory) {
-        require(_inputs.accountProofs.length > 0, REQ_ONE_ACCT);
-        if (_inputs.invalidTransitionProof.blockId == 0 && _inputs.invalidTransitionProof.index == 0) {
+    function disputeTransition(
+        dt.TransitionProof calldata _prevTransitionProof,
+        dt.TransitionProof calldata _invalidTransitionProof,
+        dt.AccountProof[] calldata _accountProofs,
+        dt.StrategyProof calldata _strategyProof,
+        dt.StakingPoolProof calldata _stakingPoolProof,
+        dt.GlobalInfo calldata _globalInfo,
+        dt.Block calldata _prevTransitionBlock,
+        dt.Block calldata _invalidTransitionBlock,
+        Registry _registry
+    ) external returns (string memory) {
+        require(_accountProofs.length > 0, REQ_ONE_ACCT);
+        if (_invalidTransitionProof.blockId == 0 && _invalidTransitionProof.index == 0) {
             require(
-                _invalidInitTransition(_inputs.invalidTransitionProof, _inputs.invalidTransitionBlock),
+                _invalidInitTransition(_invalidTransitionProof, _invalidTransitionBlock),
                 REQ_NO_FRAUD
             );
             return "bad init tn";
@@ -66,15 +83,15 @@ contract TransitionDisputer {
         // ------ #1: verify sequential transitions
         // First verify that the transitions are sequential and in their respective block root hashes.
         _verifySequentialTransitions(
-            _inputs.prevTransitionProof,
-            _inputs.invalidTransitionProof,
-            _inputs.prevTransitionBlock,
-            _inputs.invalidTransitionBlock
+            _prevTransitionProof,
+            _invalidTransitionProof,
+            _prevTransitionBlock,
+            _invalidTransitionBlock
         );
 
         // ------ #2: decode transitions to get post- and pre-StateRoot, and ids of account(s) and strategy
         (bool ok, disputeStateInfo memory dsi) =
-            _getStateRootsAndIds(_inputs.prevTransitionProof.transition, _inputs.invalidTransitionProof.transition);
+            _getStateRootsAndIds(_prevTransitionProof.transition, _invalidTransitionProof.transition);
         // If not success something went wrong with the decoding...
         if (!ok) {
             // revert the block if it has an incorrectly encoded transition!
@@ -82,9 +99,9 @@ contract TransitionDisputer {
         }
 
         if ((dsi.accountId > 0) && (dsi.accountIdDest > 0)) {
-            require(_inputs.accountProofs.length == 2, REQ_TWO_ACCT);
+            require(_accountProofs.length == 2, REQ_TWO_ACCT);
         } else if (dsi.accountId > 0) {
-            require(_inputs.accountProofs.length == 1, REQ_ONE_ACCT);
+            require(_accountProofs.length == 1, REQ_ONE_ACCT);
         }
 
         // ------ #3: verify transition stateRoot == hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
@@ -92,53 +109,53 @@ contract TransitionDisputer {
         require(
             _checkMultiTreeStateRoot(
                 dsi.preStateRoot,
-                _inputs.accountProofs[0].stateRoot,
-                _inputs.strategyProof.stateRoot,
-                _inputs.stakingPoolProof.stateRoot,
-                transitionEvaluator.getGlobalInfoHash(_inputs.globalInfo)
+                _accountProofs[0].stateRoot,
+                _strategyProof.stateRoot,
+                _stakingPoolProof.stateRoot,
+                transitionEvaluator.getGlobalInfoHash(_globalInfo)
             ),
             REQ_BAD_NTREE
         );
-        for (uint256 i = 1; i < _inputs.accountProofs.length; i++) {
-            require(_inputs.accountProofs[i].stateRoot == _inputs.accountProofs[0].stateRoot, REQ_BAD_SROOT);
+        for (uint256 i = 1; i < _accountProofs.length; i++) {
+            require(_accountProofs[i].stateRoot == _accountProofs[0].stateRoot, REQ_BAD_SROOT);
         }
 
         // ------ #4: verify account, strategy and staking pool inclusion
         if (dsi.accountId > 0) {
-            for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
+            for (uint256 i = 0; i < _accountProofs.length; i++) {
                 _verifyProofInclusion(
-                    _inputs.accountProofs[i].stateRoot,
-                    transitionEvaluator.getAccountInfoHash(_inputs.accountProofs[i].value),
-                    _inputs.accountProofs[i].index,
-                    _inputs.accountProofs[i].siblings
+                    _accountProofs[i].stateRoot,
+                    transitionEvaluator.getAccountInfoHash(_accountProofs[i].value),
+                    _accountProofs[i].index,
+                    _accountProofs[i].siblings
                 );
             }
         }
         if (dsi.strategyId > 0) {
             _verifyProofInclusion(
-                _inputs.strategyProof.stateRoot,
-                transitionEvaluator.getStrategyInfoHash(_inputs.strategyProof.value),
-                _inputs.strategyProof.index,
-                _inputs.strategyProof.siblings
+                _strategyProof.stateRoot,
+                transitionEvaluator.getStrategyInfoHash(_strategyProof.value),
+                _strategyProof.index,
+                _strategyProof.siblings
             );
         }
         if (dsi.stakingPoolId > 0) {
             _verifyProofInclusion(
-                _inputs.stakingPoolProof.stateRoot,
-                transitionEvaluator.getStakingPoolInfoHash(_inputs.stakingPoolProof.value),
-                _inputs.stakingPoolProof.index,
-                _inputs.stakingPoolProof.siblings
+                _stakingPoolProof.stateRoot,
+                transitionEvaluator.getStakingPoolInfoHash(_stakingPoolProof.value),
+                _stakingPoolProof.index,
+                _stakingPoolProof.siblings
             );
         }
 
         // ------ #5: verify deposit account id mapping
-        uint8 transitionType = tn.extractTransitionType(_inputs.invalidTransitionProof.transition);
+        uint8 transitionType = tn.extractTransitionType(_invalidTransitionProof.transition);
         if (transitionType == tn.TN_TYPE_DEPOSIT) {
             dt.DepositTransition memory transition =
-                tn.decodePackedDepositTransition(_inputs.invalidTransitionProof.transition);
+                tn.decodePackedDepositTransition(_invalidTransitionProof.transition);
             if (
-                _inputs.accountProofs[0].value.account == transition.account &&
-                _inputs.accountProofs[0].value.accountId != dsi.accountId
+                _accountProofs[0].value.account == transition.account &&
+                _accountProofs[0].value.accountId != dsi.accountId
             ) {
                 // same account address with different id
                 return "bad account id";
@@ -147,21 +164,23 @@ contract TransitionDisputer {
 
         // ------ #6: verify transition account, strategy, staking pool indexes
         if (dsi.accountId > 0) {
-            require(_inputs.accountProofs[0].index == dsi.accountId, REQ_BAD_INDEX);
+            require(_accountProofs[0].index == dsi.accountId, REQ_BAD_INDEX);
             if (dsi.accountIdDest > 0) {
-                require(_inputs.accountProofs[1].index == dsi.accountIdDest, REQ_BAD_INDEX);
+                require(_accountProofs[1].index == dsi.accountIdDest, REQ_BAD_INDEX);
             }
         }
         if (dsi.strategyId > 0) {
-            require(_inputs.strategyProof.index == dsi.strategyId, REQ_BAD_INDEX);
+            require(_strategyProof.index == dsi.strategyId, REQ_BAD_INDEX);
         }
         if (dsi.stakingPoolId > 0) {
-            require(_inputs.stakingPoolProof.index == dsi.stakingPoolId, REQ_BAD_INDEX);
+            require(_stakingPoolProof.index == dsi.stakingPoolId, REQ_BAD_INDEX);
         }
 
         // ------ #7: evaluate transition and verify new state root
         // split function to address "stack too deep" compiler error
-        return _evaluateInvalidTransition(_inputs, dsi.postStateRoot, _registry);
+        return _evaluateInvalidTransition(
+            _invalidTransitionProof, _accountProofs, _strategyProof, _stakingPoolProof, _globalInfo,
+            dsi.postStateRoot, _registry);
     }
 
     /*********************
@@ -172,12 +191,20 @@ contract TransitionDisputer {
      * @notice Evaluate a disputed transition
      * @dev This was split from the disputeTransition function to address "stack too deep" compiler error
      *
-     * @param _inputs The dispute input parameters.
+     * @param _invalidTransitionProof The inclusion proof of the fraudulent transition.
+     * @param _accountProofs The inclusion proofs of one or two accounts involved.
+     * @param _strategyProof The inclusion proof of the strategy involved.
+     * @param _stakingPoolProof The inclusion proof of the staking pool involved.
+     * @param _globalInfo The global info.
      * @param _postStateRoot State root of the disputed transition.
      * @param _registry The address of the Registry contract.
      */
     function _evaluateInvalidTransition(
-        dt.DisputeInputs calldata _inputs,
+        dt.TransitionProof calldata _invalidTransitionProof,
+        dt.AccountProof[] calldata _accountProofs,
+        dt.StrategyProof calldata _strategyProof,
+        dt.StakingPoolProof calldata _stakingPoolProof,
+        dt.GlobalInfo calldata _globalInfo,
         bytes32 _postStateRoot,
         Registry _registry
     ) private returns (string memory) {
@@ -185,17 +212,17 @@ contract TransitionDisputer {
         bool ok;
         bytes memory returnData;
 
-        dt.AccountInfo[] memory accountInfos = new dt.AccountInfo[](_inputs.accountProofs.length);
-        for (uint256 i = 0; i < _inputs.accountProofs.length; i++) {
-            accountInfos[i] = _inputs.accountProofs[i].value;
+        dt.AccountInfo[] memory accountInfos = new dt.AccountInfo[](_accountProofs.length);
+        for (uint256 i = 0; i < _accountProofs.length; i++) {
+            accountInfos[i] = _accountProofs[i].value;
         }
 
         dt.EvaluateInfos memory infos =
             dt.EvaluateInfos({
                 accountInfos: accountInfos,
-                strategyInfo: _inputs.strategyProof.value,
-                stakingPoolInfo: _inputs.stakingPoolProof.value,
-                globalInfo: _inputs.globalInfo
+                strategyInfo: _strategyProof.value,
+                stakingPoolInfo: _stakingPoolProof.value,
+                globalInfo: _globalInfo
             });
         (
             // Make the external call
@@ -204,7 +231,7 @@ contract TransitionDisputer {
         ) = address(transitionEvaluator).call(
             abi.encodeWithSelector(
                 transitionEvaluator.evaluateTransition.selector,
-                _inputs.invalidTransitionProof.transition,
+                _invalidTransitionProof.transition,
                 infos,
                 _registry
             )
@@ -220,9 +247,9 @@ contract TransitionDisputer {
         ok = _updateAndVerify(
             _postStateRoot,
             outputs,
-            _inputs.accountProofs,
-            _inputs.strategyProof,
-            _inputs.stakingPoolProof
+            _accountProofs,
+            _strategyProof,
+            _stakingPoolProof
         );
         if (!ok) {
             // revert the block because we found an invalid post state root
