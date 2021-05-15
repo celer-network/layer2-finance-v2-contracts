@@ -145,7 +145,7 @@ contract TransitionDisputer {
             );
         }
 
-        // ------ #5: verify deposit account id mapping
+        // ------ #5: verify deposit and transfer account id mapping
         uint8 transitionType = tn.extractTransitionType(_invalidTransitionProof.transition);
         if (transitionType == tn.TN_TYPE_DEPOSIT) {
             dt.DepositTransition memory transition =
@@ -153,6 +153,26 @@ contract TransitionDisputer {
             if (
                 _accountProofs[0].value.account == transition.account &&
                 _accountProofs[0].value.accountId != dsi.accountId
+            ) {
+                // same account address with different id
+                return "bad account id";
+            }
+        } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
+            dt.TransferAssetTransition memory transition =
+                tn.decodePackedTransferAssetTransition(_invalidTransitionProof.transition);
+            if (
+                _accountProofs[1].value.account == transition.toAccount &&
+                _accountProofs[1].value.accountId != dsi.accountIdDest
+            ) {
+                // same account address with different id
+                return "bad account id";
+            }
+        } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
+            dt.TransferShareTransition memory transition =
+                tn.decodePackedTransferShareTransition(_invalidTransitionProof.transition);
+            if (
+                _accountProofs[1].value.account == transition.toAccount &&
+                _accountProofs[1].value.accountId != dsi.accountIdDest
             ) {
                 // same account address with different id
                 return "bad account id";

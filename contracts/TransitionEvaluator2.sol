@@ -23,6 +23,7 @@ contract TransitionEvaluator2 {
     string constant REQ_BAD_TS = "old timestamp";
     string constant REQ_NO_PEND = "no pending info";
     string constant REQ_BAD_AGGR = "wrong aggregate ID";
+    string constant REQ_ACCT_NOT_EMPTY = "account not empty";
 
     uint128 public constant UINT128_MAX = 2**128 - 1;
 
@@ -321,8 +322,7 @@ contract TransitionEvaluator2 {
             keccak256(
                 abi.encodePacked(
                     _transition.transitionType,
-                    _transition.fromAccountId,
-                    _transition.toAccountId,
+                    _transition.toAccount,
                     _transition.assetId,
                     _transition.amount,
                     _transition.fee,
@@ -334,9 +334,22 @@ contract TransitionEvaluator2 {
                 _accountInfo.account,
             REQ_BAD_SIG
         );
-
         require(_accountInfo.accountId == _transition.fromAccountId, REQ_BAD_ACCT);
-        require(_accountInfoDest.accountId == _transition.toAccountId, REQ_BAD_ACCT);
+
+        if (_accountInfoDest.account == address(0)) {
+            // transfer to a new account
+            require(_accountInfoDest.accountId == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.idleAssets.length == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.shares.length == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.pending.length == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.timestamp == 0, REQ_ACCT_NOT_EMPTY);
+            _accountInfoDest.account = _transition.toAccount;
+            _accountInfoDest.accountId = _transition.toAccountId;
+        } else {
+            require(_accountInfoDest.account == _transition.toAccount, REQ_BAD_ACCT);
+            require(_accountInfoDest.accountId == _transition.toAccountId, REQ_BAD_ACCT);
+        }
+
         require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
@@ -387,8 +400,7 @@ contract TransitionEvaluator2 {
                 abi.encodePacked(
                     _transition.transitionType,
                     _transition.fromAccountId,
-                    _transition.toAccountId,
-                    _transition.strategyId,
+                    _transition.toAccount,
                     _transition.shares,
                     _transition.fee,
                     _transition.timestamp
@@ -399,9 +411,22 @@ contract TransitionEvaluator2 {
                 _accountInfo.account,
             REQ_BAD_SIG
         );
-
         require(_accountInfo.accountId == _transition.fromAccountId, REQ_BAD_ACCT);
-        require(_accountInfoDest.accountId == _transition.toAccountId, REQ_BAD_ACCT);
+
+        if (_accountInfoDest.account == address(0)) {
+            // transfer to a new account
+            require(_accountInfoDest.accountId == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.idleAssets.length == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.shares.length == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.pending.length == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.timestamp == 0, REQ_ACCT_NOT_EMPTY);
+            _accountInfoDest.account = _transition.toAccount;
+            _accountInfoDest.accountId = _transition.toAccountId;
+        } else {
+            require(_accountInfoDest.account == _transition.toAccount, REQ_BAD_ACCT);
+            require(_accountInfoDest.accountId == _transition.toAccountId, REQ_BAD_ACCT);
+        }
+
         require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
