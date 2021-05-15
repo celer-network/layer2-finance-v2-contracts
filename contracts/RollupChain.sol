@@ -344,8 +344,8 @@ contract RollupChain is Ownable, Pausable {
         dt.StakingPoolProof calldata _stakingPoolProof,
         dt.GlobalInfo calldata _globalInfo
     ) external {
-        dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
         dt.Block memory prevTransitionBlock = blocks[_prevTransitionProof.blockId];
+        dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
         require(invalidTransitionBlock.blockTime + blockChallengePeriod > block.number, REQ_BAD_CHALLENGE);
 
         bool success;
