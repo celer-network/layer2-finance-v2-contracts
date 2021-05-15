@@ -5,23 +5,12 @@ pragma abicoder v2;
 
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
+import "./libraries/ErrMsg.sol";
 import "./libraries/MerkleTree.sol";
 import "./TransitionEvaluator.sol";
 import "./Registry.sol";
 
 contract TransitionDisputer {
-    // require() error messages
-    string constant REQ_NO_FRAUD = "no fraud found";
-    string constant REQ_ONE_ACCT = "need 1 account";
-    string constant REQ_TWO_ACCT = "need 2 accounts";
-    string constant REQ_BAD_NTREE = "bad n-tree verify";
-    string constant REQ_BAD_SROOT = "state roots not equal";
-    string constant REQ_BAD_INDEX = "wrong proof index";
-    string constant REQ_BAD_PREV_TN = "invalid prev tn";
-    string constant REQ_TN_NOT_IN = "tn not in block";
-    string constant REQ_TN_NOT_SEQ = "tns not sequential";
-    string constant REQ_BAD_MERKLE = "failed Merkle proof check";
-
     // state root of empty account, strategy, or staking pool set
     bytes32 public constant INIT_TRANSITION_STATE_ROOT =
         bytes32(0xcf277fb80a82478460e8988570b718f1e083ceb76f7e271a1a1497e5975f53ae);
@@ -71,9 +60,9 @@ contract TransitionDisputer {
         dt.Block calldata _invalidTransitionBlock,
         Registry _registry
     ) external returns (string memory) {
-        require(_accountProofs.length > 0, REQ_ONE_ACCT);
+        require(_accountProofs.length > 0, ErrMsg.REQ_ONE_ACCT);
         if (_invalidTransitionProof.blockId == 0 && _invalidTransitionProof.index == 0) {
-            require(_invalidInitTransition(_invalidTransitionProof, _invalidTransitionBlock), REQ_NO_FRAUD);
+            require(_invalidInitTransition(_invalidTransitionProof, _invalidTransitionBlock), ErrMsg.REQ_NO_FRAUD);
             return "bad init tn";
         }
 
@@ -96,9 +85,9 @@ contract TransitionDisputer {
         }
 
         if ((dsi.accountId > 0) && (dsi.accountIdDest > 0)) {
-            require(_accountProofs.length == 2, REQ_TWO_ACCT);
+            require(_accountProofs.length == 2, ErrMsg.REQ_TWO_ACCT);
         } else if (dsi.accountId > 0) {
-            require(_accountProofs.length == 1, REQ_ONE_ACCT);
+            require(_accountProofs.length == 1, ErrMsg.REQ_ONE_ACCT);
         }
 
         // ------ #3: verify transition stateRoot == hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
@@ -111,10 +100,10 @@ contract TransitionDisputer {
                 _stakingPoolProof.stateRoot,
                 transitionEvaluator.getGlobalInfoHash(_globalInfo)
             ),
-            REQ_BAD_NTREE
+            ErrMsg.REQ_BAD_NTREE
         );
         for (uint256 i = 1; i < _accountProofs.length; i++) {
-            require(_accountProofs[i].stateRoot == _accountProofs[0].stateRoot, REQ_BAD_SROOT);
+            require(_accountProofs[i].stateRoot == _accountProofs[0].stateRoot, ErrMsg.REQ_BAD_SROOT);
         }
 
         // ------ #4: verify account, strategy and staking pool inclusion
@@ -181,16 +170,16 @@ contract TransitionDisputer {
 
         // ------ #6: verify transition account, strategy, staking pool indexes
         if (dsi.accountId > 0) {
-            require(_accountProofs[0].index == dsi.accountId, REQ_BAD_INDEX);
+            require(_accountProofs[0].index == dsi.accountId, ErrMsg.REQ_BAD_INDEX);
             if (dsi.accountIdDest > 0) {
-                require(_accountProofs[1].index == dsi.accountIdDest, REQ_BAD_INDEX);
+                require(_accountProofs[1].index == dsi.accountIdDest, ErrMsg.REQ_BAD_INDEX);
             }
         }
         if (dsi.strategyId > 0) {
-            require(_strategyProof.index == dsi.strategyId, REQ_BAD_INDEX);
+            require(_strategyProof.index == dsi.strategyId, ErrMsg.REQ_BAD_INDEX);
         }
         if (dsi.stakingPoolId > 0) {
-            require(_stakingPoolProof.index == dsi.stakingPoolId, REQ_BAD_INDEX);
+            require(_stakingPoolProof.index == dsi.stakingPoolId, ErrMsg.REQ_BAD_INDEX);
         }
 
         // ------ #7: evaluate transition and verify new state root
@@ -303,7 +292,7 @@ contract TransitionDisputer {
         );
 
         // Make sure the call was successful
-        require(success, REQ_BAD_PREV_TN);
+        require(success, ErrMsg.REQ_BAD_PREV_TN);
         (preStateRoot, , , , ) = abi.decode((returnData), (bytes32, uint32, uint32, uint32, uint32));
 
         // Now that we have the prestateRoot, let's decode the postState
@@ -337,7 +326,7 @@ contract TransitionDisputer {
         private
         returns (bool)
     {
-        require(_checkTransitionInclusion(_initTransitionProof, _firstBlock), REQ_TN_NOT_IN);
+        require(_checkTransitionInclusion(_initTransitionProof, _firstBlock), ErrMsg.REQ_TN_NOT_IN);
         (bool success, bytes memory returnData) =
             address(transitionEvaluator).call(
                 abi.encodeWithSelector(
@@ -368,23 +357,23 @@ contract TransitionDisputer {
         // Start by checking if they are in the same block
         if (_tp0.blockId == _tp1.blockId) {
             // If the blocknumber is the same, check that tp0 precedes tp1
-            require(_tp0.index + 1 == _tp1.index, REQ_TN_NOT_SEQ);
-            require(_tp1.index < _invalidTransitionBlock.blockSize, REQ_TN_NOT_SEQ);
+            require(_tp0.index + 1 == _tp1.index, ErrMsg.REQ_TN_NOT_SEQ);
+            require(_tp1.index < _invalidTransitionBlock.blockSize, ErrMsg.REQ_TN_NOT_SEQ);
         } else {
             // If not in the same block, check that:
             // 0) the blocks are one after another
-            require(_tp0.blockId + 1 == _tp1.blockId, REQ_TN_NOT_SEQ);
+            require(_tp0.blockId + 1 == _tp1.blockId, ErrMsg.REQ_TN_NOT_SEQ);
 
             // 1) the index of tp0 is the last in its block
-            require(_tp0.index == _prevTransitionBlock.blockSize - 1, REQ_TN_NOT_SEQ);
+            require(_tp0.index == _prevTransitionBlock.blockSize - 1, ErrMsg.REQ_TN_NOT_SEQ);
 
             // 2) the index of tp1 is the first in its block
-            require(_tp1.index == 0, REQ_TN_NOT_SEQ);
+            require(_tp1.index == 0, ErrMsg.REQ_TN_NOT_SEQ);
         }
 
         // Verify inclusion
-        require(_checkTransitionInclusion(_tp0, _prevTransitionBlock), REQ_TN_NOT_IN);
-        require(_checkTransitionInclusion(_tp1, _invalidTransitionBlock), REQ_TN_NOT_IN);
+        require(_checkTransitionInclusion(_tp0, _prevTransitionBlock), ErrMsg.REQ_TN_NOT_IN);
+        require(_checkTransitionInclusion(_tp1, _invalidTransitionBlock), ErrMsg.REQ_TN_NOT_IN);
 
         return true;
     }
@@ -428,7 +417,7 @@ contract TransitionDisputer {
         bytes32[] memory _siblings
     ) private pure {
         bool ok = MerkleTree.verify(_stateRoot, _leafHash, _index, _siblings);
-        require(ok, REQ_BAD_MERKLE);
+        require(ok, ErrMsg.REQ_BAD_MERKLE);
     }
 
     /**
