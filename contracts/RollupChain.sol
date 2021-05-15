@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.8.0 <0.9.0;
-pragma experimental ABIEncoderV2;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
+import "./libraries/ErrMsg.sol";
 import "./libraries/MerkleTree.sol";
 import "./Registry.sol";
 import "./TransitionDisputer.sol";
@@ -18,21 +19,6 @@ import "./strategies/interfaces/IStrategy.sol";
 import "./interfaces/IWETH.sol";
 
 contract RollupChain is Ownable, Pausable {
-    // require() error messages
-    string constant REQ_NOT_OPER = "caller not operator";
-    string constant REQ_BAD_AMOUNT = "invalid amount";
-    string constant REQ_NO_WITHDRAW = "withdraw failed";
-    string constant REQ_BAD_BLOCKID = "invalid block ID";
-    string constant REQ_BAD_CHALLENGE = "challenge period error";
-    string constant REQ_BAD_HASH = "invalid data hash";
-    string constant REQ_BAD_LEN = "invalid data length";
-    string constant REQ_NO_DRAIN = "drain failed";
-    string constant REQ_BAD_ASSET = "invalid asset";
-    string constant REQ_BAD_ST = "invalid strategy";
-    string constant REQ_OVER_LIMIT = "exceeds limit";
-    string constant REQ_BAD_DEP_TN = "invalid deposit tn";
-    string constant REQ_BAD_EXECRES_TN = "invalid execRes tn";
-
     using SafeERC20 for IERC20;
 
     // All intents in a block have been executed.
@@ -138,7 +124,7 @@ contract RollupChain is Ownable, Pausable {
     }
 
     modifier onlyOperator() {
-        require(msg.sender == operator, REQ_NOT_OPER);
+        require(msg.sender == operator, ErrMsg.REQ_NOT_OPER);
         _;
     }
 
@@ -168,7 +154,7 @@ contract RollupChain is Ownable, Pausable {
      * @param _weth The address for WETH.
      */
     function depositETH(address _weth, uint256 _amount) external payable whenNotPaused {
-        require(msg.value == _amount, REQ_BAD_AMOUNT);
+        require(msg.value == _amount, ErrMsg.REQ_BAD_AMOUNT);
         _deposit(_weth, _amount);
         IWETH(_weth).deposit{value: _amount}();
     }
@@ -194,7 +180,7 @@ contract RollupChain is Ownable, Pausable {
         uint256 amount = _withdraw(_account, _weth);
         IWETH(_weth).withdraw(amount);
         (bool sent, ) = _account.call{value: amount}("");
-        require(sent, REQ_NO_WITHDRAW);
+        require(sent, ErrMsg.REQ_NO_WITHDRAW);
     }
 
     /**
@@ -204,7 +190,7 @@ contract RollupChain is Ownable, Pausable {
      * @param _transitions List of layer-2 transitions
      */
     function commitBlock(uint256 _blockId, bytes[] calldata _transitions) external whenNotPaused onlyOperator {
-        require(_blockId == blocks.length, REQ_BAD_BLOCKID);
+        require(_blockId == blocks.length, ErrMsg.REQ_BAD_BLOCKID);
 
         bytes32[] memory leafs = new bytes32[](_transitions.length);
         for (uint256 i = 0; i < _transitions.length; i++) {
@@ -280,8 +266,8 @@ contract RollupChain is Ownable, Pausable {
         bytes[] calldata _intents,
         uint32 _execLen
     ) external whenNotPaused {
-        require(_blockId == countExecuted, REQ_BAD_BLOCKID);
-        require(blocks[_blockId].blockTime + blockChallengePeriod < block.number, REQ_BAD_CHALLENGE);
+        require(_blockId == countExecuted, ErrMsg.REQ_BAD_BLOCKID);
+        require(blocks[_blockId].blockTime + blockChallengePeriod < block.number, ErrMsg.REQ_BAD_CHALLENGE);
         uint32 intentExecCount = blocks[_blockId].intentExecCount;
 
         // Validate the input intent transitions.
@@ -291,10 +277,10 @@ contract RollupChain is Ownable, Pausable {
                 intentHash = keccak256(abi.encodePacked(intentHash, _intents[i]));
             }
         }
-        require(intentHash == blocks[_blockId].intentHash, REQ_BAD_HASH);
+        require(intentHash == blocks[_blockId].intentHash, ErrMsg.REQ_BAD_HASH);
 
         uint32 newIntentExecCount = intentExecCount + _execLen;
-        require(newIntentExecCount <= _intents.length, REQ_BAD_LEN);
+        require(newIntentExecCount <= _intents.length, ErrMsg.REQ_BAD_LEN);
 
         // In the first execution of any parts of this block, handle the pending deposit & withdraw records.
         if (intentExecCount == 0) {
@@ -346,7 +332,7 @@ contract RollupChain is Ownable, Pausable {
     ) external {
         dt.Block memory prevTransitionBlock = blocks[_prevTransitionProof.blockId];
         dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
-        require(invalidTransitionBlock.blockTime + blockChallengePeriod > block.number, REQ_BAD_CHALLENGE);
+        require(invalidTransitionBlock.blockTime + blockChallengePeriod > block.number, ErrMsg.REQ_BAD_CHALLENGE);
 
         bool success;
         bytes memory returnData;
@@ -424,7 +410,7 @@ contract RollupChain is Ownable, Pausable {
      */
     function drainETH(uint256 _amount) external whenPaused onlyOwner {
         (bool sent, ) = msg.sender.call{value: _amount}("");
-        require(sent, REQ_NO_DRAIN);
+        require(sent, ErrMsg.REQ_NO_DRAIN);
     }
 
     /**
@@ -459,7 +445,7 @@ contract RollupChain is Ownable, Pausable {
      */
     function setNetDepositLimit(address _asset, uint256 _limit) external onlyOwner {
         uint32 assetId = registry.assetAddressToIndex(_asset);
-        require(assetId != 0, REQ_BAD_ASSET);
+        require(assetId != 0, ErrMsg.REQ_BAD_ASSET);
         netDepositLimits[_asset] = _limit;
     }
 
@@ -483,10 +469,10 @@ contract RollupChain is Ownable, Pausable {
      */
     function _deposit(address _asset, uint256 _amount) private {
         uint32 assetId = registry.assetAddressToIndex(_asset);
-        require(assetId > 0, REQ_BAD_ASSET);
+        require(assetId > 0, ErrMsg.REQ_BAD_ASSET);
 
         uint256 netDeposit = netDeposits[_asset] + _amount;
-        require(netDeposit <= netDepositLimits[_asset], REQ_OVER_LIMIT);
+        require(netDeposit <= netDepositLimits[_asset], ErrMsg.REQ_OVER_LIMIT);
         netDeposits[_asset] = netDeposit;
 
         // Add a pending deposit record.
@@ -510,10 +496,10 @@ contract RollupChain is Ownable, Pausable {
      */
     function _withdraw(address _account, address _asset) private returns (uint256) {
         uint32 assetId = registry.assetAddressToIndex(_asset);
-        require(assetId > 0, REQ_BAD_ASSET);
+        require(assetId > 0, ErrMsg.REQ_BAD_ASSET);
 
         uint256 amount = pendingWithdraws[_account][assetId];
-        require(amount > 0, REQ_BAD_AMOUNT);
+        require(amount > 0, ErrMsg.REQ_BAD_AMOUNT);
 
         if (netDeposits[_asset] < amount) {
             netDeposits[_asset] = 0;
@@ -534,10 +520,10 @@ contract RollupChain is Ownable, Pausable {
     function _checkPendingDeposit(dt.DepositTransition memory _dp, uint256 _blockId) private {
         EventQueuePointer memory queuePointer = depositQueuePointer;
         uint64 depositId = queuePointer.commitHead;
-        require(depositId < queuePointer.tail, REQ_BAD_DEP_TN);
+        require(depositId < queuePointer.tail, ErrMsg.REQ_BAD_DEP_TN);
 
         bytes32 ehash = keccak256(abi.encodePacked(_dp.account, _dp.assetId, _dp.amount));
-        require(pendingDeposits[depositId].ehash == ehash, REQ_BAD_HASH);
+        require(pendingDeposits[depositId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
 
         pendingDeposits[depositId].status = PendingEventStatus.Done;
         pendingDeposits[depositId].blockId = uint64(_blockId); // "done": block holding the transition
@@ -553,13 +539,13 @@ contract RollupChain is Ownable, Pausable {
     function _checkPendingExecutionResult(dt.ExecutionResultTransition memory _er, uint256 _blockId) private {
         EventQueuePointer memory queuePointer = execResultQueuePointers[_er.strategyId];
         uint64 aggregateId = queuePointer.commitHead;
-        require(aggregateId < queuePointer.tail, REQ_BAD_EXECRES_TN);
+        require(aggregateId < queuePointer.tail, ErrMsg.REQ_BAD_EXECRES_TN);
 
         bytes32 ehash =
             keccak256(
                 abi.encodePacked(_er.strategyId, _er.aggregateId, _er.success, _er.sharesFromBuy, _er.amountFromSell)
             );
-        require(pendingExecResults[_er.strategyId][aggregateId].ehash == ehash, REQ_BAD_HASH);
+        require(pendingExecResults[_er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
 
         pendingExecResults[_er.strategyId][aggregateId].status = PendingEventStatus.Done;
         pendingExecResults[_er.strategyId][aggregateId].blockId = uint64(_blockId); // "done": block holding the transition
@@ -575,7 +561,7 @@ contract RollupChain is Ownable, Pausable {
     function _executeAggregation(dt.AggregateOrdersTransition memory _aggregation, uint256 _blockId) private {
         uint32 strategyId = _aggregation.strategyId;
         address strategyAddr = registry.strategyIndexToAddress(strategyId);
-        require(strategyAddr != address(0), REQ_BAD_ST);
+        require(strategyAddr != address(0), ErrMsg.REQ_BAD_ST);
         // TODO: reset allowance to zero after strategy interaction?
         IERC20(strategyAddr).safeIncreaseAllowance(strategyAddr, _aggregation.buyAmount);
         (bool success, bytes memory returnData) =

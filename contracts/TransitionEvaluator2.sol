@@ -4,27 +4,18 @@
 // Note: only put transitions not directly needed by the RollupChain contract.
 
 pragma solidity >=0.8.0 <0.9.0;
-pragma experimental ABIEncoderV2;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
+import "./libraries/ErrMsg.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
 
 contract TransitionEvaluator2 {
-    // require() error messages
-    string constant REQ_ST_NOT_EMPTY = "strategy not empty";
-    string constant REQ_BAD_ACCT = "wrong account";
-    string constant REQ_BAD_ST = "wrong strategy";
-    string constant REQ_BAD_SIG = "invalid signature";
-    string constant REQ_BAD_TS = "old timestamp";
-    string constant REQ_NO_PEND = "no pending info";
-    string constant REQ_BAD_AGGR = "wrong aggregate ID";
-    string constant REQ_ACCT_NOT_EMPTY = "account not empty";
-
     uint128 public constant UINT128_MAX = 2**128 - 1;
 
     /**********************
@@ -69,19 +60,19 @@ contract TransitionEvaluator2 {
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
-            REQ_BAD_SIG
+            ErrMsg.REQ_BAD_SIG
         );
 
-        require(_accountInfo.accountId == _transition.accountId, REQ_BAD_ACCT);
-        require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
+        require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
         if (_strategyInfo.assetId == 0) {
             // first time commit of new strategy
-            require(_strategyInfo.shareSupply == 0, REQ_ST_NOT_EMPTY);
-            require(_strategyInfo.nextAggregateId == 0, REQ_ST_NOT_EMPTY);
-            require(_strategyInfo.lastExecAggregateId == 0, REQ_ST_NOT_EMPTY);
-            require(_strategyInfo.pending.length == 0, REQ_ST_NOT_EMPTY);
+            require(_strategyInfo.shareSupply == 0, ErrMsg.REQ_ST_NOT_EMPTY);
+            require(_strategyInfo.nextAggregateId == 0, ErrMsg.REQ_ST_NOT_EMPTY);
+            require(_strategyInfo.lastExecAggregateId == 0, ErrMsg.REQ_ST_NOT_EMPTY);
+            require(_strategyInfo.pending.length == 0, ErrMsg.REQ_ST_NOT_EMPTY);
 
             address strategyAddr = _registry.strategyIndexToAddress(_transition.strategyId);
             address assetAddr = IStrategy(strategyAddr).getAssetAddress();
@@ -167,11 +158,11 @@ contract TransitionEvaluator2 {
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
-            REQ_BAD_SIG
+            ErrMsg.REQ_BAD_SIG
         );
 
-        require(_accountInfo.accountId == _transition.accountId, REQ_BAD_ACCT);
-        require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
+        require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint256 npend = _strategyInfo.pending.length;
@@ -238,12 +229,12 @@ contract TransitionEvaluator2 {
         uint32 stId = _transition.strategyId;
         uint32 assetId = _strategyInfo.assetId;
         uint64 aggrId = _transition.aggregateId;
-        require(aggrId <= _strategyInfo.lastExecAggregateId, REQ_BAD_AGGR);
-        require(_strategyInfo.pending.length > 0, REQ_NO_PEND);
-        require(aggrId == _strategyInfo.pending[0].aggregateId, REQ_BAD_AGGR);
-        require(_accountInfo.pending.length > stId, REQ_BAD_ST);
-        require(_accountInfo.pending[stId].length > 0, REQ_NO_PEND);
-        require(aggrId == _accountInfo.pending[stId][0].aggregateId, REQ_BAD_AGGR);
+        require(aggrId <= _strategyInfo.lastExecAggregateId, ErrMsg.REQ_BAD_AGGR);
+        require(_strategyInfo.pending.length > 0, ErrMsg.REQ_NO_PEND);
+        require(aggrId == _strategyInfo.pending[0].aggregateId, ErrMsg.REQ_BAD_AGGR);
+        require(_accountInfo.pending.length > stId, ErrMsg.REQ_BAD_ST);
+        require(_accountInfo.pending[stId].length > 0, ErrMsg.REQ_NO_PEND);
+        require(aggrId == _accountInfo.pending[stId][0].aggregateId, ErrMsg.REQ_BAD_AGGR);
 
         dt.PendingStrategyInfo memory stPend = _strategyInfo.pending[0];
         dt.PendingAccountInfo memory acctPend = _accountInfo.pending[stId][0];
@@ -332,25 +323,25 @@ contract TransitionEvaluator2 {
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
-            REQ_BAD_SIG
+            ErrMsg.REQ_BAD_SIG
         );
-        require(_accountInfo.accountId == _transition.fromAccountId, REQ_BAD_ACCT);
+        require(_accountInfo.accountId == _transition.fromAccountId, ErrMsg.REQ_BAD_ACCT);
 
         if (_accountInfoDest.account == address(0)) {
             // transfer to a new account
-            require(_accountInfoDest.accountId == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.idleAssets.length == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.shares.length == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.pending.length == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.timestamp == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.accountId == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.idleAssets.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.shares.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.pending.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.timestamp == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
             _accountInfoDest.account = _transition.toAccount;
             _accountInfoDest.accountId = _transition.toAccountId;
         } else {
-            require(_accountInfoDest.account == _transition.toAccount, REQ_BAD_ACCT);
-            require(_accountInfoDest.accountId == _transition.toAccountId, REQ_BAD_ACCT);
+            require(_accountInfoDest.account == _transition.toAccount, ErrMsg.REQ_BAD_ACCT);
+            require(_accountInfoDest.accountId == _transition.toAccountId, ErrMsg.REQ_BAD_ACCT);
         }
 
-        require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 assetId = _transition.assetId;
@@ -409,25 +400,25 @@ contract TransitionEvaluator2 {
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
-            REQ_BAD_SIG
+            ErrMsg.REQ_BAD_SIG
         );
-        require(_accountInfo.accountId == _transition.fromAccountId, REQ_BAD_ACCT);
+        require(_accountInfo.accountId == _transition.fromAccountId, ErrMsg.REQ_BAD_ACCT);
 
         if (_accountInfoDest.account == address(0)) {
             // transfer to a new account
-            require(_accountInfoDest.accountId == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.idleAssets.length == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.shares.length == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.pending.length == 0, REQ_ACCT_NOT_EMPTY);
-            require(_accountInfoDest.timestamp == 0, REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.accountId == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.idleAssets.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.shares.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.pending.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.timestamp == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
             _accountInfoDest.account = _transition.toAccount;
             _accountInfoDest.accountId = _transition.toAccountId;
         } else {
-            require(_accountInfoDest.account == _transition.toAccount, REQ_BAD_ACCT);
-            require(_accountInfoDest.accountId == _transition.toAccountId, REQ_BAD_ACCT);
+            require(_accountInfoDest.account == _transition.toAccount, ErrMsg.REQ_BAD_ACCT);
+            require(_accountInfoDest.accountId == _transition.toAccountId, ErrMsg.REQ_BAD_ACCT);
         }
 
-        require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 stId = _transition.strategyId;

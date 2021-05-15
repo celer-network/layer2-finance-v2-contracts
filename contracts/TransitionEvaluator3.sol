@@ -4,22 +4,18 @@
 // Note: only put transitions not directly needed by the RollupChain contract.
 
 pragma solidity >=0.8.0 <0.9.0;
-pragma experimental ABIEncoderV2;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
+import "./libraries/ErrMsg.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
 
 contract TransitionEvaluator3 {
-    // require() error messages
-    string constant REQ_BAD_ACCT = "wrong account";
-    string constant REQ_BAD_SIG = "invalid signature";
-    string constant REQ_BAD_TS = "old timestamp";
-
     uint256 public constant STAKING_SCALE_FACTOR = 1e12;
 
     /**********************
@@ -103,11 +99,11 @@ contract TransitionEvaluator3 {
                 _transition.r,
                 _transition.s
             ) == _accountInfo.account,
-            REQ_BAD_SIG
+            ErrMsg.REQ_BAD_SIG
         );
 
-        require(_accountInfo.accountId == _transition.accountId, REQ_BAD_ACCT);
-        require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
+        require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
@@ -191,11 +187,11 @@ contract TransitionEvaluator3 {
                 _transition.r,
                 _transition.s
             ) == _accountInfo.account,
-            REQ_BAD_SIG
+            ErrMsg.REQ_BAD_SIG
         );
 
-        require(_accountInfo.accountId == _transition.accountId, REQ_BAD_ACCT);
-        require(_accountInfo.timestamp < _transition.timestamp, REQ_BAD_TS);
+        require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
 
         _accountInfo.timestamp = _transition.timestamp;
 

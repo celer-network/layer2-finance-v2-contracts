@@ -47,8 +47,8 @@ gen_dtHelper() {
   cat > $SOLFILE << EOF
 // SPDX-License-Identifier: MIT
 // Auto generated. DO NOT MODIFY MAUALLY
-pragma solidity >=0.6.0;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.8.0;
+pragma abicoder v2;
 import {DataTypes as dt} from "./$DTFILE";
 contract $CTRNAME {
 EOF
