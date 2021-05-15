@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-// 2nd part of the transition evaluator due to contract size restrictions
-// Note: only put transitions not directly needed by the RollupChain contract.
+// 1st part of the transition applier due to contract size restrictions
 
 pragma solidity >=0.8.0 <0.9.0;
 pragma abicoder v2;
