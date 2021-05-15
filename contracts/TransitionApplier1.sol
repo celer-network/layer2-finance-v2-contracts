@@ -15,7 +15,7 @@ import "./libraries/ErrMsg.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
 
-contract TransitionEvaluator2 {
+contract TransitionApplier1 {
     uint128 public constant UINT128_MAX = 2**128 - 1;
 
     /**********************

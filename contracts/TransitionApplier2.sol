@@ -15,7 +15,7 @@ import "./libraries/ErrMsg.sol";
 import "./Registry.sol";
 import "./strategies/interfaces/IStrategy.sol";
 
-contract TransitionEvaluator3 {
+contract TransitionApplier2 {
     uint256 public constant STAKING_SCALE_FACTOR = 1e12;
 
     /**********************

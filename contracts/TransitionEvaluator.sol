@@ -9,19 +9,19 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
-import "./TransitionEvaluator2.sol";
-import "./TransitionEvaluator3.sol";
+import "./TransitionApplier1.sol";
+import "./TransitionApplier2.sol";
 import "./Registry.sol";
 
 contract TransitionEvaluator {
-    TransitionEvaluator2 transitionEvaluator2;
-    TransitionEvaluator3 transitionEvaluator3;
+    TransitionApplier1 transitionApplier1;
+    TransitionApplier2 transitionApplier2;
 
     // Transition evaluation is split across 3 contracts, this one is the main entry point.
     // In turn, it needs to access the other two contracts to evaluate the other transitions.
-    constructor(TransitionEvaluator2 _transitionEvaluator2, TransitionEvaluator3 _transitionEvaluator3) {
-        transitionEvaluator2 = _transitionEvaluator2;
-        transitionEvaluator3 = _transitionEvaluator3;
+    constructor(TransitionApplier1 _transitionApplier1, TransitionApplier2 _transitionApplier2) {
+        transitionApplier1 = _transitionApplier1;
+        transitionApplier2 = _transitionApplier2;
     }
 
     /**********************
@@ -53,12 +53,12 @@ contract TransitionEvaluator {
         if (transitionType == tn.TN_TYPE_DEPOSIT) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.DepositTransition memory deposit = tn.decodePackedDepositTransition(_transition);
-            updatedInfos.accountInfos[0] = transitionEvaluator2.applyDepositTransition(deposit, _infos.accountInfos[0]);
+            updatedInfos.accountInfos[0] = transitionApplier1.applyDepositTransition(deposit, _infos.accountInfos[0]);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.WithdrawTransition memory withdraw = tn.decodePackedWithdrawTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionEvaluator2.applyWithdrawTransition(
+            (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionApplier1.applyWithdrawTransition(
                 withdraw,
                 _infos.accountInfos[0],
                 _infos.globalInfo
@@ -68,7 +68,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_BUY) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.BuyTransition memory buy = tn.decodePackedBuyTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionEvaluator2
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
                 .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo, _registry);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
@@ -76,7 +76,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_SELL) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SellTransition memory sell = tn.decodePackedSellTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionEvaluator2
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
                 .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
@@ -84,7 +84,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
             require(_infos.accountInfos.length == 2, ErrMsg.REQ_TWO_ACCT);
             dt.TransferAssetTransition memory xfer = tn.decodePackedTransferAssetTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionEvaluator2
+            (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionApplier1
                 .applyAssetTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[1] = getAccountInfoHash(updatedInfos.accountInfos[1]);
@@ -92,7 +92,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
             require(_infos.accountInfos.length == 2, ErrMsg.REQ_TWO_ACCT);
             dt.TransferShareTransition memory xfer = tn.decodePackedTransferShareTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionEvaluator2
+            (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionApplier1
                 .applyShareTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[1] = getAccountInfoHash(updatedInfos.accountInfos[1]);
@@ -100,17 +100,17 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_AGGREGATE_ORDER) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.AggregateOrdersTransition memory aggr = tn.decodePackedAggregateOrdersTransition(_transition);
-            updatedInfos.strategyInfo = transitionEvaluator3.applyAggregateOrdersTransition(aggr, _infos.strategyInfo);
+            updatedInfos.strategyInfo = transitionApplier2.applyAggregateOrdersTransition(aggr, _infos.strategyInfo);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
         } else if (transitionType == tn.TN_TYPE_EXEC_RESULT) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.ExecutionResultTransition memory res = tn.decodePackedExecutionResultTransition(_transition);
-            updatedInfos.strategyInfo = transitionEvaluator3.applyExecutionResultTransition(res, _infos.strategyInfo);
+            updatedInfos.strategyInfo = transitionApplier2.applyExecutionResultTransition(res, _infos.strategyInfo);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
         } else if (transitionType == tn.TN_TYPE_SETTLE) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SettlementTransition memory settle = tn.decodePackedSettlementTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionEvaluator2
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
                 .applySettlementTransition(settle, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
@@ -118,7 +118,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_STAKE) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.StakeTransition memory stake = tn.decodePackedStakeTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionEvaluator3
+            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionApplier2
                 .applyStakeTransition(stake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
@@ -126,7 +126,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_UNSTAKE) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.UnstakeTransition memory unstake = tn.decodePackedUnstakeTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionEvaluator3
+            (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionApplier2
                 .applyUnstakeTransition(unstake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
@@ -134,7 +134,7 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.UpdatePoolInfoTransition memory updatePoolInfo = tn.decodeUpdatePoolInfoTransition(_transition);
-            updatedInfos.stakingPoolInfo = transitionEvaluator3.applyUpdatePoolInfoTransition(
+            updatedInfos.stakingPoolInfo = transitionApplier2.applyUpdatePoolInfoTransition(
                 updatePoolInfo,
                 _infos.stakingPoolInfo,
                 _infos.globalInfo
@@ -143,12 +143,12 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.WithdrawProtocolFeeTransition memory wpf = tn.decodeWithdrawProtocolFeeTransition(_transition);
-            updatedInfos.globalInfo = transitionEvaluator3.applyWithdrawProtocolFeeTransition(wpf, _infos.globalInfo);
+            updatedInfos.globalInfo = transitionApplier2.applyWithdrawProtocolFeeTransition(wpf, _infos.globalInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_OP_FEE) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.TransferOperatorFeeTransition memory tof = tn.decodeTransferOperatorFeeTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionEvaluator3
+            (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionApplier2
                 .applyTransferOperatorFeeTransition(tof, _infos.accountInfos[0], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
