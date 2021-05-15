@@ -23,6 +23,82 @@ contract TransitionEvaluator3 {
      **********************/
 
     /**
+     * @notice Apply an AggregateOrdersTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _strategyInfo The involved strategy from the previous transition.
+     * @return new strategy info after applying the disputed transition
+     */
+    function applyAggregateOrdersTransition(
+        dt.AggregateOrdersTransition memory _transition,
+        dt.StrategyInfo memory _strategyInfo
+    ) public pure returns (dt.StrategyInfo memory) {
+        uint256 npend = _strategyInfo.pending.length;
+        require(npend > 0, ErrMsg.REQ_NO_PEND);
+        dt.PendingStrategyInfo memory psi = _strategyInfo.pending[npend - 1];
+        require(_transition.buyAmount == psi.buyAmount, ErrMsg.REQ_BAD_AMOUNT);
+        require(_transition.sellShares == psi.sellShares, ErrMsg.REQ_BAD_SHARES);
+
+        uint256 minSharesFromBuy = (_transition.buyAmount * 1e18) / psi.maxSharePriceForBuy;
+        uint256 minAmountFromSell = (_transition.sellShares * psi.minSharePriceForSell) / 1e18;
+        require(_transition.minSharesFromBuy == minSharesFromBuy, ErrMsg.REQ_BAD_SHARES);
+        require(_transition.minAmountFromSell == minAmountFromSell, ErrMsg.REQ_BAD_AMOUNT);
+
+        _strategyInfo.nextAggregateId++;
+
+        return _strategyInfo;
+    }
+
+    /**
+     * @notice Apply a ExecutionResultTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _strategyInfo The involved strategy from the previous transition.
+     * @return new strategy info after applying the disputed transition
+     */
+    function applyExecutionResultTransition(
+        dt.ExecutionResultTransition memory _transition,
+        dt.StrategyInfo memory _strategyInfo
+    ) public pure returns (dt.StrategyInfo memory) {
+        uint256 idx;
+        bool found = false;
+        for (uint256 i = 0; i < _strategyInfo.pending.length; i++) {
+            if (_strategyInfo.pending[i].aggregateId == _transition.aggregateId) {
+                idx = i;
+                found = true;
+                break;
+            }
+        }
+        require(found, ErrMsg.REQ_BAD_AGGR);
+
+        if (_transition.success) {
+            _strategyInfo.pending[idx].sharesFromBuy = _transition.sharesFromBuy;
+            _strategyInfo.pending[idx].amountFromSell = _transition.amountFromSell;
+        }
+        _strategyInfo.pending[idx].executionSucceed = _transition.success;
+        _strategyInfo.pending[idx].unsettledBuyAmount = _strategyInfo.pending[idx].buyAmount;
+        _strategyInfo.pending[idx].unsettledSellShares = _strategyInfo.pending[idx].sellShares;
+        _strategyInfo.lastExecAggregateId = _transition.aggregateId;
+
+        return _strategyInfo;
+    }
+
+    /**
+     * @notice Apply a WithdrawProtocolFeeTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _globalInfo The involved global info from the previous transition.
+     * @return new global info after applying the disputed transition
+     */
+    function applyWithdrawProtocolFeeTransition(
+        dt.WithdrawProtocolFeeTransition memory _transition,
+        dt.GlobalInfo memory _globalInfo
+    ) public pure returns (dt.GlobalInfo memory) {
+        tn.updateProtoFee(_globalInfo, false, false, _transition.assetId, _transition.amount);
+        return _globalInfo;
+    }
+
+    /**
      * @notice Apply a TransferOperatorFeeTransition.
      *
      * @param _transition The disputed transition.
