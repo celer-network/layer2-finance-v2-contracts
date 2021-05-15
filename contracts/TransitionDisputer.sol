@@ -48,6 +48,14 @@ contract TransitionDisputer {
     /**
      * @notice Dispute a transition.
      *
+     * @param _prevTransitionProof The inclusion proof of the transition immediately before the fraudulent transition.
+     * @param _invalidTransitionProof The inclusion proof of the fraudulent transition.
+     * @param _accountProofs The inclusion proofs of one or two accounts involved.
+     * @param _strategyProof The inclusion proof of the strategy involved.
+     * @param _stakingPoolProof The inclusion proof of the staking pool involved.
+     * @param _globalInfo The global info.
+     * @param _prevTransitionBlock The previous transition block
+     * @param _invalidTransitionBlock The invalid transition block
      * @param _registry The address of the Registry contract.
      *
      * @return reason of the transition being determined as invalid

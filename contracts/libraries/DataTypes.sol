@@ -291,17 +291,6 @@ library DataTypes {
         bytes32[] siblings;
     }
 
-    struct DisputeInputs {
-        TransitionProof prevTransitionProof;
-        TransitionProof invalidTransitionProof;
-        AccountProof[] accountProofs;
-        StrategyProof strategyProof;
-        StakingPoolProof stakingPoolProof;
-        GlobalInfo globalInfo;
-        Block prevTransitionBlock;
-        Block invalidTransitionBlock;
-    }
-
     struct EvaluateInfos {
         AccountInfo[] accountInfos;
         StrategyInfo strategyInfo;
