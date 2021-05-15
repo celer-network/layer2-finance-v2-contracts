@@ -16,8 +16,8 @@ solFiles=(
   Registry
   TransitionDisputer
   TransitionEvaluator
-  TransitionEvaluator2
-  TransitionEvaluator3
+  TransitionApplier1
+  TransitionApplier2
   RollupChain
   # strategies
   strategies/interfaces/IStrategy
