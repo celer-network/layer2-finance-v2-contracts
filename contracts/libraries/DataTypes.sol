@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.0 <0.9.0;
+pragma solidity >=0.8.0 <0.9.0;
 
 library DataTypes {
     struct Block {
@@ -289,17 +289,6 @@ library DataTypes {
         StakingPoolInfo value;
         uint32 index;
         bytes32[] siblings;
-    }
-
-    struct DisputeInputs {
-        TransitionProof prevTransitionProof;
-        TransitionProof invalidTransitionProof;
-        AccountProof[] accountProofs;
-        StrategyProof strategyProof;
-        StakingPoolProof stakingPoolProof;
-        GlobalInfo globalInfo;
-        Block prevTransitionBlock;
-        Block invalidTransitionBlock;
     }
 
     struct EvaluateInfos {

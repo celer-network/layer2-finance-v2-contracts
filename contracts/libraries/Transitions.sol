@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.0 <0.9.0;
+pragma solidity >=0.8.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 import "../libraries/DataTypes.sol";
@@ -25,6 +25,9 @@ library Transitions {
     uint8 public constant TN_TYPE_STAKE = 13;
     uint8 public constant TN_TYPE_UNSTAKE = 14;
     uint8 public constant TN_TYPE_UPDATE_POOL_INFO = 15;
+
+    // fee encoding
+    uint128 public constant UINT128_HIBIT = 2**127;
 
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
@@ -460,6 +463,123 @@ library Transitions {
         DataTypes.TransferOperatorFeeTransition memory transition =
             DataTypes.TransferOperatorFeeTransition(transitionType, stateRoot, accountId);
         return transition;
+    }
+
+    /**
+     * Helper to expand the account array of idle assets if needed.
+     */
+    function adjustAccountIdleAssetEntries(DataTypes.AccountInfo memory _accountInfo, uint32 assetId) internal pure {
+        uint32 n = uint32(_accountInfo.idleAssets.length);
+        if (n <= assetId) {
+            uint256[] memory arr = new uint256[](assetId + 1);
+            for (uint32 i = 0; i < n; i++) {
+                arr[i] = _accountInfo.idleAssets[i];
+            }
+            for (uint32 i = n; i <= assetId; i++) {
+                arr[i] = 0;
+            }
+            _accountInfo.idleAssets = arr;
+        }
+    }
+
+    /**
+     * Helper to expand the account array of shares if needed.
+     */
+    function adjustAccountShareEntries(DataTypes.AccountInfo memory _accountInfo, uint32 stId) internal pure {
+        uint32 n = uint32(_accountInfo.shares.length);
+        if (n <= stId) {
+            uint256[] memory arr = new uint256[](stId + 1);
+            for (uint32 i = 0; i < n; i++) {
+                arr[i] = _accountInfo.shares[i];
+            }
+            for (uint32 i = n; i <= stId; i++) {
+                arr[i] = 0;
+            }
+            _accountInfo.shares = arr;
+        }
+    }
+
+    /**
+     * Helper to expand the chosen protocol fee array (if needed) and add or subtract a given fee.
+     * If "_pending" is true, use the pending fee array, otherwise use the received fee array.
+     */
+    function updateProtoFee(
+        DataTypes.GlobalInfo memory _globalInfo,
+        bool _add,
+        bool _pending,
+        uint32 _assetId,
+        uint256 _fee
+    ) internal pure {
+        if (_pending) {
+            _globalInfo.protoFees.pending = adjustUint256Array(_globalInfo.protoFees.pending, _assetId);
+            if (_add) {
+                _globalInfo.protoFees.pending[_assetId] += _fee;
+            } else {
+                _globalInfo.protoFees.pending[_assetId] -= _fee;
+            }
+        } else {
+            _globalInfo.protoFees.received = adjustUint256Array(_globalInfo.protoFees.received, _assetId);
+            if (_add) {
+                _globalInfo.protoFees.received[_assetId] += _fee;
+            } else {
+                _globalInfo.protoFees.received[_assetId] -= _fee;
+            }
+        }
+    }
+
+    /**
+     * Helper to expand the chosen operator fee array (if needed) and add a given fee.
+     * If "_assets" is true, use the assets fee array, otherwise use the shares fee array.
+     */
+    function updateOpFee(
+        DataTypes.GlobalInfo memory _globalInfo,
+        bool _assets,
+        uint32 _idx,
+        uint256 _fee
+    ) internal pure {
+        if (_assets) {
+            _globalInfo.opFees.assets = adjustUint256Array(_globalInfo.opFees.assets, _idx);
+            _globalInfo.opFees.assets[_idx] += _fee;
+        } else {
+            _globalInfo.opFees.shares = adjustUint256Array(_globalInfo.opFees.shares, _idx);
+            _globalInfo.opFees.shares[_idx] += _fee;
+        }
+    }
+
+    /**
+     * Helper to expand an array of uint256, e.g. the various fee arrays in globalInfo.
+     * Takes the array and the needed index and returns the unchanged array or a new expanded one.
+     */
+    function adjustUint256Array(uint256[] memory _array, uint32 _idx) internal pure returns (uint256[] memory) {
+        uint32 n = uint32(_array.length);
+        if (_idx < n) {
+            return _array;
+        }
+
+        uint256[] memory newArray = new uint256[](_idx + 1);
+        for (uint32 i = 0; i < n; i++) {
+            newArray[i] = _array[i];
+        }
+        for (uint32 i = n; i <= _idx; i++) {
+            newArray[i] = 0;
+        }
+
+        return newArray;
+    }
+
+    /**
+     * Helper to get the fee type and handle any fee reduction.
+     * Returns (isCelr, fee).
+     */
+    function getFeeInfo(uint128 _fee, uint128 _reducedFee) internal pure returns (bool, uint256) {
+        bool isCelr = _fee & UINT128_HIBIT == UINT128_HIBIT;
+        if (_reducedFee & UINT128_HIBIT == UINT128_HIBIT) {
+            _reducedFee = _reducedFee ^ UINT128_HIBIT;
+            if (_reducedFee < _fee) {
+                _fee = _reducedFee;
+            }
+        }
+        return (isCelr, uint256(_fee));
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {

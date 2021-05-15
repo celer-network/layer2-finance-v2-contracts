@@ -24,7 +24,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-pragma solidity >0.5.0 <0.9.0;
+pragma solidity >=0.8.0 <0.9.0;
 
 /**
  * @title MerkleTree
@@ -55,7 +55,7 @@ library MerkleTree {
      * @return Merkle root of the leaves, with zero hashes for non-powers-of-two (see above).
      */
     function getMerkleRoot(bytes32[] memory _elements) internal pure returns (bytes32) {
-        require(_elements.length > 0, "MerkleTree: Must provide at least one leaf hash.");
+        require(_elements.length > 0, "Merkle: no leaves");
 
         if (_elements.length == 1) {
             return _elements[0];
@@ -214,10 +214,10 @@ library MerkleTree {
         bytes32[] memory _siblings1,
         bytes32[] memory _siblings2
     ) internal pure returns (bytes32) {
-        require(_index1 != _index2, "MerkleTree: leaf nodes must be different");
+        require(_index1 != _index2, "Merkle: same leaf nodes");
         require(
             _siblings1.length > 0 && _siblings2.length > 0 && _siblings1.length == _siblings2.length,
-            "MerkleTree: invalid lengths of leaf nodes sibling paths"
+            "Merkle: bad sibling len"
         );
 
         // Compute the Merkle path for the 1st leaf remembering the intermediate nodes.
