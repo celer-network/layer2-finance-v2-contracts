@@ -20,7 +20,6 @@ library Transitions {
     uint8 public constant TN_TYPE_SETTLE = 10;
     uint8 public constant TN_TYPE_WITHDRAW_PROTO_FEE = 11;
     uint8 public constant TN_TYPE_XFER_OP_FEE = 12;
-
     // Liquidity Mining
     uint8 public constant TN_TYPE_STAKE = 13;
     uint8 public constant TN_TYPE_UNSTAKE = 14;

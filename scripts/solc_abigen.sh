@@ -17,6 +17,7 @@ solFiles=(
   TransitionDisputer
   TransitionEvaluator
   TransitionEvaluator2
+  TransitionEvaluator3
   RollupChain
   # strategies
   strategies/interfaces/IStrategy
@@ -63,11 +64,10 @@ EOF
 
 # MUST run this under repo root
 # will generate a single combined.json under $CNTRDIR
-# TODO: add --optimize back after `Stack too deep when compiling inline assembly: Variable tail is 1 slot(s) too deep inside the stack.` resolved
 run_solc() {
   pushd $CNTRDIR
   gen_dtHelper
-  solc --base-path $PWD --allow-paths . --overwrite --pretty-json --combined-json abi,bin -o . '@openzeppelin/'=$OPENZEPPELIN/ \
+  solc --base-path $PWD --allow-paths . --overwrite --optimize --pretty-json --combined-json abi,bin -o . '@openzeppelin/'=$OPENZEPPELIN/ \
   $(for f in ${solFiles[@]}; do echo -n "$f.sol "; done)
   no_openzeppelin combined.json # combined.json file name is hardcoded in solc
   popd

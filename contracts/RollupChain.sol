@@ -326,7 +326,7 @@ contract RollupChain is Ownable, Pausable {
      *
      * stateRoot = hash(accountStateRoot, strategyStateRoot, stakingPoolStateRoot, globalInfoHash)
      *
-     * Thus all 3 components of the hash are needed to validate the input data.
+     * Thus all 4 components of the hash are needed to validate the input data.
      * If the transition is invalid, prune the chain from that invalid block.
      *
      * @param _prevTransitionProof The inclusion proof of the transition immediately before the fraudulent transition.
