@@ -345,24 +345,23 @@ contract RollupChain is Ownable, Pausable {
         dt.GlobalInfo calldata _globalInfo
     ) external {
         dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
+        dt.Block memory prevTransitionBlock = blocks[_prevTransitionProof.blockId];
         require(invalidTransitionBlock.blockTime + blockChallengePeriod > block.number, REQ_BAD_CHALLENGE);
 
-        dt.DisputeInputs memory inputs =
-            dt.DisputeInputs(
+        bool success;
+        bytes memory returnData;
+        (success, returnData) = address(transitionDisputer).call(
+            abi.encodeWithSelector(
+                transitionDisputer.disputeTransition.selector,
                 _prevTransitionProof,
                 _invalidTransitionProof,
                 _accountProofs,
                 _strategyProof,
                 _stakingPoolProof,
                 _globalInfo,
-                blocks[_prevTransitionProof.blockId],
+                prevTransitionBlock,
                 invalidTransitionBlock
-            );
-
-        bool success;
-        bytes memory returnData;
-        (success, returnData) = address(transitionDisputer).call(
-            abi.encodeWithSelector(transitionDisputer.disputeTransition.selector, inputs, registry)
+            )
         );
 
         if (success) {
