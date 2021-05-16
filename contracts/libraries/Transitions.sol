@@ -24,6 +24,7 @@ library Transitions {
     uint8 public constant TN_TYPE_STAKE = 13;
     uint8 public constant TN_TYPE_UNSTAKE = 14;
     uint8 public constant TN_TYPE_UPDATE_POOL_INFO = 15;
+    uint8 public constant TN_TYPE_DEPOSIT_REWARD = 16;
 
     // fee encoding
     uint128 public constant UINT128_HIBIT = 2**127;
@@ -440,6 +441,18 @@ library Transitions {
                 rewardPerEpoch,
                 stakeAdjustmentFactor
             );
+        return transition;
+    }
+
+    function decodeDepositRewardTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.DepositRewardTransition memory)
+    {
+        (uint8 transitionType, bytes32 stateRoot, uint32 assetId, uint256 amount) =
+            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256));
+        DataTypes.DepositRewardTransition memory transition =
+            DataTypes.DepositRewardTransition(transitionType, stateRoot, assetId, amount);
         return transition;
     }
 

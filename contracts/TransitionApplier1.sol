@@ -33,6 +33,7 @@ contract TransitionApplier1 {
         pure
         returns (dt.AccountInfo memory)
     {
+        require(_transition.account != address(0), ErrMsg.REQ_BAD_ACCT);
         if (_accountInfo.account == address(0)) {
             // first time deposit of this account
             require(_accountInfo.accountId == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);

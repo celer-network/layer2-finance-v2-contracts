@@ -312,7 +312,12 @@ contract TransitionApplier2 {
                     STAKING_SCALE_FACTOR;
             uint256 pendingReward = (accumulatedReward - _accountInfo.rewardDebts[poolId][rewardTokenId]);
             _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
-            _accountInfo.idleAssets[_stakingPoolInfo.rewardAssetIds[rewardTokenId]] += pendingReward;
+            uint32 assetId = _stakingPoolInfo.rewardAssetIds[rewardTokenId];
+            if (pendingReward > _globalInfo.rewards[assetId]) {
+                pendingReward = _globalInfo.rewards[assetId];
+            }
+            _accountInfo.idleAssets[assetId] += pendingReward;
+            _globalInfo.rewards[assetId] -= pendingReward;
         }
         tn.adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
         _accountInfo.shares[_stakingPoolInfo.strategyId] += _transition.shares - feeInShares;
@@ -340,6 +345,22 @@ contract TransitionApplier2 {
         _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
         _stakingPoolInfo.stakeAdjustmentFactor = _transition.stakeAdjustmentFactor;
         return _stakingPoolInfo;
+    }
+
+    /**
+     * @notice Apply a DepositRewardTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _globalInfo The involved global info from the previous transition.
+     * @return new global info after applying the disputed transition
+     */
+    function applyDepositRewardTransition(
+        dt.DepositRewardTransition memory _transition,
+        dt.GlobalInfo memory _globalInfo
+    ) public pure returns (dt.GlobalInfo memory) {
+        _globalInfo.rewards = tn.adjustUint256Array(_globalInfo.rewards, _transition.assetId);
+        _globalInfo.rewards[_transition.assetId] += _transition.amount;
+        return _globalInfo;
     }
 
     /*********************
