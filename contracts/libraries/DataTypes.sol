@@ -199,6 +199,7 @@ library DataTypes {
         OperatorFees opFees; // fee owned by operator
         // TODO: update currEpoch somewhere
         uint256 currEpoch; // liquidity mining epoch
+        uint256[] idleRewards; // assetId -> idle reward amount
     }
 
     // Pending account actions (buy/sell) per account, strategy, aggregateId.

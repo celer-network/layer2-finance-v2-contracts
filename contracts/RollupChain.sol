@@ -40,7 +40,7 @@ contract RollupChain is Ownable, Pausable {
     // - commitBlock() moves it to "done" status
     // - fraudulent block moves it back to "pending" status
     // - executeBlock() deletes it
-    enum PendingEventStatus {Init, Pending, Done}
+    enum PendingEventStatus {Pending, Done}
     struct PendingEvent {
         bytes32 ehash;
         uint64 blockId; // rollup block; "pending": baseline of censorship, "done": block holding L2 transition
@@ -143,7 +143,7 @@ contract RollupChain is Ownable, Pausable {
      * @param _amount The amount;
      */
     function deposit(address _asset, uint256 _amount) external whenNotPaused {
-        _deposit(_asset, _amount);
+        _deposit(_asset, _amount, msg.sender);
         IERC20(_asset).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
@@ -155,8 +155,19 @@ contract RollupChain is Ownable, Pausable {
      */
     function depositETH(address _weth, uint256 _amount) external payable whenNotPaused {
         require(msg.value == _amount, ErrMsg.REQ_BAD_AMOUNT);
-        _deposit(_weth, _amount);
+        _deposit(_weth, _amount, msg.sender);
         IWETH(_weth).deposit{value: _amount}();
+    }
+
+    /**
+     * @notice Deposits ERC20 asset for staking reward.
+     *
+     * @param _asset The asset address;
+     * @param _amount The amount;
+     */
+    function depositReward(address _asset, uint256 _amount) external whenNotPaused {
+        _deposit(_asset, _amount, address(0));
+        IERC20(_asset).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
     /**
@@ -467,7 +478,7 @@ contract RollupChain is Ownable, Pausable {
      * @param _asset The asset token address.
      * @param _amount The asset token amount.
      */
-    function _deposit(address _asset, uint256 _amount) private {
+    function _deposit(address _asset, uint256 _amount, address account) private {
         uint32 assetId = registry.assetAddressToIndex(_asset);
         require(assetId > 0, ErrMsg.REQ_BAD_ASSET);
 
@@ -477,14 +488,14 @@ contract RollupChain is Ownable, Pausable {
 
         // Add a pending deposit record.
         uint64 depositId = depositQueuePointer.tail++;
-        bytes32 ehash = keccak256(abi.encodePacked(msg.sender, assetId, _amount));
+        bytes32 ehash = keccak256(abi.encodePacked(account, assetId, _amount));
         pendingDeposits[depositId] = PendingEvent({
             ehash: ehash,
             blockId: uint64(blocks.length), // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
 
-        emit AssetDeposited(msg.sender, assetId, _amount, depositId);
+        emit AssetDeposited(account, assetId, _amount, depositId);
     }
 
     /**
