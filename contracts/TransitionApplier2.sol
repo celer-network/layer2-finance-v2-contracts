@@ -314,11 +314,11 @@ contract TransitionApplier2 {
             uint256 pendingReward = (accumulatedReward - _accountInfo.rewardDebts[poolId][rewardTokenId]);
             _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
             uint32 assetId = _stakingPoolInfo.rewardAssetIds[rewardTokenId];
-            if (pendingReward > _globalInfo.idleRewards[assetId]) {
-                pendingReward = _globalInfo.idleRewards[assetId];
+            if (pendingReward > _globalInfo.rewards[assetId]) {
+                pendingReward = _globalInfo.rewards[assetId];
             }
             _accountInfo.idleAssets[assetId] += pendingReward;
-            _globalInfo.idleRewards[assetId] -= pendingReward;
+            _globalInfo.rewards[assetId] -= pendingReward;
         }
         tn.adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
         _accountInfo.shares[_stakingPoolInfo.strategyId] += _transition.shares - feeInShares;
@@ -359,8 +359,8 @@ contract TransitionApplier2 {
         dt.DepositRewardTransition memory _transition,
         dt.GlobalInfo memory _globalInfo
     ) public pure returns (dt.GlobalInfo memory) {
-        _globalInfo.idleRewards = tn.adjustUint256Array(_globalInfo.idleRewards, _transition.assetId);
-        _globalInfo.idleRewards[_transition.assetId] += _transition.amount;
+        _globalInfo.rewards = tn.adjustUint256Array(_globalInfo.rewards, _transition.assetId);
+        _globalInfo.rewards[_transition.assetId] += _transition.amount;
         return _globalInfo;
     }
 
