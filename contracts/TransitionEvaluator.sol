@@ -140,6 +140,11 @@ contract TransitionEvaluator {
                 _infos.globalInfo
             );
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
+        } else if (transitionType == tn.TN_TYPE_DEPOSIT_REWARD) {
+            require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
+            dt.DepositRewardTransition memory dr = tn.decodeDepositRewardTransition(_transition);
+            updatedInfos.globalInfo = transitionApplier2.applyDepositRewardTransition(dr, _infos.globalInfo);
+            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.WithdrawProtocolFeeTransition memory wpf = tn.decodeWithdrawProtocolFeeTransition(_transition);
@@ -237,6 +242,9 @@ contract TransitionEvaluator {
             dt.UpdatePoolInfoTransition memory transition = tn.decodeUpdatePoolInfoTransition(rawTransition);
             stateRoot = transition.stateRoot;
             stakingPoolId = transition.poolId;
+        } else if (transitionType == tn.TN_TYPE_DEPOSIT_REWARD) {
+            dt.DepositRewardTransition memory transition = tn.decodeDepositRewardTransition(rawTransition);
+            stateRoot = transition.stateRoot;
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
             dt.WithdrawProtocolFeeTransition memory transition = tn.decodeWithdrawProtocolFeeTransition(rawTransition);
             stateRoot = transition.stateRoot;

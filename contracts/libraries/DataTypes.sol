@@ -171,6 +171,14 @@ library DataTypes {
         uint256[] rewardPerEpoch;
         uint256 stakeAdjustmentFactor;
     }
+
+    struct DepositRewardTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 assetId;
+        uint256 amount;
+    }
+
     struct WithdrawProtocolFeeTransition {
         uint8 transitionType;
         bytes32 stateRoot;
@@ -199,6 +207,7 @@ library DataTypes {
         OperatorFees opFees; // fee owned by operator
         // TODO: update currEpoch somewhere
         uint256 currEpoch; // liquidity mining epoch
+        uint256[] rewards; // assetId -> avaliable reward amount
     }
 
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
