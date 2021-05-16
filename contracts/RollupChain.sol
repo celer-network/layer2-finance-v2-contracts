@@ -228,7 +228,7 @@ contract RollupChain is Ownable, Pausable {
             } else if (tnType == tn.TN_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
                 dt.DepositTransition memory dp = tn.decodePackedDepositTransition(_transitions[i]);
-                _checkPendingDeposit(dp, _blockId);
+                _checkPendingDeposit(dp.account, dp.assetId, dp.amount, _blockId);
             } else if (tnType == tn.TN_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = tn.decodePackedWithdrawTransition(_transitions[i]);
@@ -246,6 +246,10 @@ contract RollupChain is Ownable, Pausable {
                 pendingWithdrawCommits[_blockId].push(
                     PendingWithdrawCommit({account: owner(), assetId: wf.assetId, amount: wf.amount})
                 );
+            } else if (tnType == tn.TN_TYPE_DEPOSIT_REWARD) {
+                // Update the pending deposit record.
+                dt.DepositRewardTransition memory dp = tn.decodeDepositRewardTransition(_transitions[i]);
+                _checkPendingDeposit(address(0), dp.assetId, dp.amount, _blockId);
             }
         }
 
@@ -478,7 +482,11 @@ contract RollupChain is Ownable, Pausable {
      * @param _asset The asset token address.
      * @param _amount The asset token amount.
      */
-    function _deposit(address _asset, uint256 _amount, address account) private {
+    function _deposit(
+        address _asset,
+        uint256 _amount,
+        address account
+    ) private {
         uint32 assetId = registry.assetAddressToIndex(_asset);
         require(assetId > 0, ErrMsg.REQ_BAD_ASSET);
 
@@ -525,15 +533,22 @@ contract RollupChain is Ownable, Pausable {
 
     /**
      * @notice Check and update the pending deposit record.
-     * @param _dp The deposit transition.
+     * @param _account The deposit account address.
+     * @param _assetId The deposit asset Id.
+     * @param _amount The deposit amount.
      * @param _blockId Commit block Id.
      */
-    function _checkPendingDeposit(dt.DepositTransition memory _dp, uint256 _blockId) private {
+    function _checkPendingDeposit(
+        address _account,
+        uint32 _assetId,
+        uint256 _amount,
+        uint256 _blockId
+    ) private {
         EventQueuePointer memory queuePointer = depositQueuePointer;
         uint64 depositId = queuePointer.commitHead;
         require(depositId < queuePointer.tail, ErrMsg.REQ_BAD_DEP_TN);
 
-        bytes32 ehash = keccak256(abi.encodePacked(_dp.account, _dp.assetId, _dp.amount));
+        bytes32 ehash = keccak256(abi.encodePacked(_account, _assetId, _amount));
         require(pendingDeposits[depositId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
 
         pendingDeposits[depositId].status = PendingEventStatus.Done;

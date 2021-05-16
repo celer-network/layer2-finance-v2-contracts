@@ -343,6 +343,22 @@ contract TransitionApplier2 {
         return _stakingPoolInfo;
     }
 
+    /**
+     * @notice Apply a DepositRewardTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _globalInfo The involved global info from the previous transition.
+     * @return new global info after applying the disputed transition
+     */
+    function applyDepositRewardTransition(
+        dt.DepositRewardTransition memory _transition,
+        dt.GlobalInfo memory _globalInfo
+    ) public pure returns (dt.GlobalInfo memory) {
+        _globalInfo.idleRewards = tn.adjustUint256Array(_globalInfo.idleRewards, _transition.assetId);
+        _globalInfo.idleRewards[_transition.assetId] += _transition.amount;
+        return _globalInfo;
+    }
+
     /*********************
      * Private Functions *
      *********************/
