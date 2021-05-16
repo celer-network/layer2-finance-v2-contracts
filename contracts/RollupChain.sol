@@ -481,11 +481,12 @@ contract RollupChain is Ownable, Pausable {
      *
      * @param _asset The asset token address.
      * @param _amount The asset token amount.
+     * @param _account The account who owns the deposit (zero for reward).
      */
     function _deposit(
         address _asset,
         uint256 _amount,
-        address account
+        address _account
     ) private {
         uint32 assetId = registry.assetAddressToIndex(_asset);
         require(assetId > 0, ErrMsg.REQ_BAD_ASSET);
@@ -496,14 +497,14 @@ contract RollupChain is Ownable, Pausable {
 
         // Add a pending deposit record.
         uint64 depositId = depositQueuePointer.tail++;
-        bytes32 ehash = keccak256(abi.encodePacked(account, assetId, _amount));
+        bytes32 ehash = keccak256(abi.encodePacked(_account, assetId, _amount));
         pendingDeposits[depositId] = PendingEvent({
             ehash: ehash,
             blockId: uint64(blocks.length), // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
 
-        emit AssetDeposited(account, assetId, _amount, depositId);
+        emit AssetDeposited(_account, assetId, _amount, depositId);
     }
 
     /**
