@@ -3,6 +3,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 library ErrMsg {
+    // err message for `require` checks
     string internal constant REQ_NOT_OPER = "caller not operator";
     string internal constant REQ_BAD_AMOUNT = "invalid amount";
     string internal constant REQ_NO_WITHDRAW = "withdraw failed";
@@ -35,4 +36,10 @@ library ErrMsg {
     string internal constant REQ_TN_NOT_IN = "tn not in block";
     string internal constant REQ_TN_NOT_SEQ = "tns not sequential";
     string internal constant REQ_BAD_MERKLE = "failed Merkle proof check";
+    // err message for dispute success reasons
+    string internal constant RSN_BAD_INIT_TN = "invalid init tn";
+    string internal constant RSN_BAD_ENCODING = "invalid encoding";
+    string internal constant RSN_BAD_ACCT_ID = "invalid account id";
+    string internal constant RSN_EVAL_FAILURE = "failed to evaluate";
+    string internal constant RSN_BAD_POST_SROOT = "invalid post-state root";
 }
