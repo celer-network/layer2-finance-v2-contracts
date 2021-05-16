@@ -313,7 +313,12 @@ contract TransitionApplier2 {
                     STAKING_SCALE_FACTOR;
             uint256 pendingReward = (accumulatedReward - _accountInfo.rewardDebts[poolId][rewardTokenId]);
             _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
-            _accountInfo.idleAssets[_stakingPoolInfo.rewardAssetIds[rewardTokenId]] += pendingReward;
+            uint32 assetId = _stakingPoolInfo.rewardAssetIds[rewardTokenId];
+            if (pendingReward > _globalInfo.idleRewards[assetId]) {
+                pendingReward = _globalInfo.idleRewards[assetId];
+            }
+            _accountInfo.idleAssets[assetId] += pendingReward;
+            _globalInfo.idleRewards[assetId] -= pendingReward;
         }
         tn.adjustAccountShareEntries(_accountInfo, _stakingPoolInfo.strategyId);
         _accountInfo.shares[_stakingPoolInfo.strategyId] += _transition.shares - feeInShares;
