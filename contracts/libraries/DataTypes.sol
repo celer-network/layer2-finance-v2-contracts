@@ -79,6 +79,7 @@ library DataTypes {
         bytes32 stateRoot;
         uint32 fromAccountId;
         uint32 toAccountId;
+        address toAccount;
         uint32 assetId;
         uint256 amount;
         uint128 fee; // user signed [1bit-type]:[127bit-amt]
@@ -94,6 +95,7 @@ library DataTypes {
         bytes32 stateRoot;
         uint32 fromAccountId;
         uint32 toAccountId;
+        address toAccount;
         uint32 strategyId;
         uint256 shares;
         uint128 fee; // user signed [1bit-type]:[127bit-amt]
@@ -370,6 +372,7 @@ library DataTypes {
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
+        address toAccount;
         uint256 amt; // asset or share amount
         uint128 fee;
         bytes32 r;

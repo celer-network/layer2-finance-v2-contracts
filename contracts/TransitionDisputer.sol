@@ -63,7 +63,7 @@ contract TransitionDisputer {
         require(_accountProofs.length > 0, ErrMsg.REQ_ONE_ACCT);
         if (_invalidTransitionProof.blockId == 0 && _invalidTransitionProof.index == 0) {
             require(_invalidInitTransition(_invalidTransitionProof, _invalidTransitionBlock), ErrMsg.REQ_NO_FRAUD);
-            return "bad init tn";
+            return ErrMsg.RSN_BAD_INIT_TN;
         }
 
         // ------ #1: verify sequential transitions
@@ -81,7 +81,7 @@ contract TransitionDisputer {
         // If not success something went wrong with the decoding...
         if (!ok) {
             // revert the block if it has an incorrectly encoded transition!
-            return "bad encoding";
+            return ErrMsg.RSN_BAD_ENCODING;
         }
 
         if ((dsi.accountId > 0) && (dsi.accountIdDest > 0)) {
@@ -134,7 +134,7 @@ contract TransitionDisputer {
             );
         }
 
-        // ------ #5: verify deposit account id mapping
+        // ------ #5: verify unique account id mapping for deposit and transfer tns
         uint8 transitionType = tn.extractTransitionType(_invalidTransitionProof.transition);
         if (transitionType == tn.TN_TYPE_DEPOSIT) {
             dt.DepositTransition memory transition =
@@ -143,8 +143,25 @@ contract TransitionDisputer {
                 _accountProofs[0].value.account == transition.account &&
                 _accountProofs[0].value.accountId != dsi.accountId
             ) {
-                // same account address with different id
-                return "bad account id";
+                return ErrMsg.RSN_BAD_ACCT_ID;
+            }
+        } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
+            dt.TransferAssetTransition memory transition =
+                tn.decodePackedTransferAssetTransition(_invalidTransitionProof.transition);
+            if (
+                _accountProofs[1].value.account == transition.toAccount &&
+                _accountProofs[1].value.accountId != dsi.accountIdDest
+            ) {
+                return ErrMsg.RSN_BAD_ACCT_ID;
+            }
+        } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
+            dt.TransferShareTransition memory transition =
+                tn.decodePackedTransferShareTransition(_invalidTransitionProof.transition);
+            if (
+                _accountProofs[1].value.account == transition.toAccount &&
+                _accountProofs[1].value.accountId != dsi.accountIdDest
+            ) {
+                return ErrMsg.RSN_BAD_ACCT_ID;
             }
         }
 
@@ -231,7 +248,7 @@ contract TransitionDisputer {
         );
         // Check if it was successful. If not, we've got to revert.
         if (!ok) {
-            return "failed to evaluate";
+            return ErrMsg.RSN_EVAL_FAILURE;
         }
         // It was successful so let's decode the outputs to get the new leaf nodes we'll have to insert
         bytes32[5] memory outputs = abi.decode((returnData), (bytes32[5]));
@@ -240,7 +257,7 @@ contract TransitionDisputer {
         ok = _updateAndVerify(_postStateRoot, outputs, _accountProofs, _strategyProof, _stakingPoolProof);
         if (!ok) {
             // revert the block because we found an invalid post state root
-            return "invalid post-state root";
+            return ErrMsg.RSN_BAD_POST_SROOT;
         }
 
         revert("No fraud detected");

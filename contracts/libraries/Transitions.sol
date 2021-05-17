@@ -192,8 +192,8 @@ library Transitions {
         pure
         returns (DataTypes.TransferAssetTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, address toAccount, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint128, bytes32, bytes32));
         (uint32 assetId, uint32 fromAccountId, uint32 toAccountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeTransferInfoCode(infoCode);
         DataTypes.TransferAssetTransition memory transition =
@@ -202,6 +202,7 @@ library Transitions {
                 stateRoot,
                 fromAccountId,
                 toAccountId,
+                toAccount,
                 assetId,
                 amount,
                 fee,
@@ -218,8 +219,8 @@ library Transitions {
         pure
         returns (DataTypes.TransferShareTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, address toAccount, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint128, bytes32, bytes32));
         (uint32 strategyId, uint32 fromAccountId, uint32 toAccountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeTransferInfoCode(infoCode);
         DataTypes.TransferShareTransition memory transition =
@@ -228,6 +229,7 @@ library Transitions {
                 stateRoot,
                 fromAccountId,
                 toAccountId,
+                toAccount,
                 strategyId,
                 shares,
                 fee,

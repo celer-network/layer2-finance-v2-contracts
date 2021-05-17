@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-// 2nd part of the transition evaluator due to contract size restrictions
-// Note: only put transitions not directly needed by the RollupChain contract.
+// 1st part of the transition applier due to contract size restrictions
 
 pragma solidity >=0.8.0 <0.9.0;
 pragma abicoder v2;
@@ -387,8 +386,7 @@ contract TransitionApplier1 {
             keccak256(
                 abi.encodePacked(
                     _transition.transitionType,
-                    _transition.fromAccountId,
-                    _transition.toAccountId,
+                    _transition.toAccount,
                     _transition.assetId,
                     _transition.amount,
                     _transition.fee,
@@ -400,9 +398,22 @@ contract TransitionApplier1 {
                 _accountInfo.account,
             ErrMsg.REQ_BAD_SIG
         );
-
         require(_accountInfo.accountId == _transition.fromAccountId, ErrMsg.REQ_BAD_ACCT);
-        require(_accountInfoDest.accountId == _transition.toAccountId, ErrMsg.REQ_BAD_ACCT);
+
+        if (_accountInfoDest.account == address(0)) {
+            // transfer to a new account
+            require(_accountInfoDest.accountId == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.idleAssets.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.shares.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.pending.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.timestamp == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            _accountInfoDest.account = _transition.toAccount;
+            _accountInfoDest.accountId = _transition.toAccountId;
+        } else {
+            require(_accountInfoDest.account == _transition.toAccount, ErrMsg.REQ_BAD_ACCT);
+            require(_accountInfoDest.accountId == _transition.toAccountId, ErrMsg.REQ_BAD_ACCT);
+        }
+
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
@@ -452,8 +463,7 @@ contract TransitionApplier1 {
             keccak256(
                 abi.encodePacked(
                     _transition.transitionType,
-                    _transition.fromAccountId,
-                    _transition.toAccountId,
+                    _transition.toAccount,
                     _transition.strategyId,
                     _transition.shares,
                     _transition.fee,
@@ -465,9 +475,22 @@ contract TransitionApplier1 {
                 _accountInfo.account,
             ErrMsg.REQ_BAD_SIG
         );
-
         require(_accountInfo.accountId == _transition.fromAccountId, ErrMsg.REQ_BAD_ACCT);
-        require(_accountInfoDest.accountId == _transition.toAccountId, ErrMsg.REQ_BAD_ACCT);
+
+        if (_accountInfoDest.account == address(0)) {
+            // transfer to a new account
+            require(_accountInfoDest.accountId == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.idleAssets.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.shares.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.pending.length == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            require(_accountInfoDest.timestamp == 0, ErrMsg.REQ_ACCT_NOT_EMPTY);
+            _accountInfoDest.account = _transition.toAccount;
+            _accountInfoDest.accountId = _transition.toAccountId;
+        } else {
+            require(_accountInfoDest.account == _transition.toAccount, ErrMsg.REQ_BAD_ACCT);
+            require(_accountInfoDest.accountId == _transition.toAccountId, ErrMsg.REQ_BAD_ACCT);
+        }
+
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
 
