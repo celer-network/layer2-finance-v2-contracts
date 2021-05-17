@@ -134,6 +134,7 @@ library DataTypes {
         bool success;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
+        uint64 currEpoch;
     }
 
     // decoded from calldata submitted as PackedStakingTransition
@@ -207,9 +208,8 @@ library DataTypes {
     struct GlobalInfo {
         ProtocolFees protoFees; // fee owned by contract owner (governance multi-sig account)
         OperatorFees opFees; // fee owned by operator
-        // TODO: update currEpoch somewhere
-        uint256 currEpoch; // liquidity mining epoch
-        uint256[] rewards; // assetId -> avaliable reward amount
+        uint64 currEpoch; // liquidity mining epoch
+        uint256[] rewards; // assetId -> available reward amount
     }
 
     // Pending account actions (buy/sell) per account, strategy, aggregateId.
@@ -266,7 +266,7 @@ library DataTypes {
         uint256 totalShares;
         uint256 totalStakes;
         uint256[] accumulatedRewardPerUnit; // reward asset index -> Accumulated reward per unit of stake, times 1e12 to avoid very small numbers
-        uint256 lastRewardEpoch; // Last epoch that reward distribution occurs. Initially set by the first UpdatePoolInfoTransition
+        uint64 lastRewardEpoch; // Last epoch that reward distribution occurs. Initially set by the first UpdatePoolInfoTransition
         uint256 stakeAdjustmentFactor; // A fraction to dilute whales. i.e. (0, 1) * 1e12
     }
 
@@ -408,12 +408,14 @@ library DataTypes {
     // calldata size: 4 x 32 bytes
     struct PackedExecutionResultTransition {
         /* infoCode packing:
-        64:127 [uint64 aggregateId]
-        32:63  [uint32 strategyId]
-        9:31   [0]
-        8:8    [bool success]
-        0:7    [uint8 tntype] */
-        uint128 infoCode;
+        192:255 [0]
+        128:191 [uint64 currEpoch]
+        64:127  [uint64 aggregateId]
+        32:63   [uint32 strategyId]
+        9:31    [0]
+        8:8     [bool success]
+        0:7     [uint8 tntype] */
+        uint256 infoCode;
         bytes32 stateRoot;
         uint256 sharesFromBuy;
         uint256 amountFromSell;

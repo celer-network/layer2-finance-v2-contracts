@@ -53,12 +53,14 @@ contract TransitionApplier2 {
      *
      * @param _transition The disputed transition.
      * @param _strategyInfo The involved strategy from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
      * @return new strategy info after applying the disputed transition
      */
     function applyExecutionResultTransition(
         dt.ExecutionResultTransition memory _transition,
-        dt.StrategyInfo memory _strategyInfo
-    ) public pure returns (dt.StrategyInfo memory) {
+        dt.StrategyInfo memory _strategyInfo,
+        dt.GlobalInfo memory _globalInfo
+    ) public pure returns (dt.StrategyInfo memory, dt.GlobalInfo memory) {
         uint256 idx;
         bool found = false;
         for (uint256 i = 0; i < _strategyInfo.pending.length; i++) {
@@ -79,7 +81,10 @@ contract TransitionApplier2 {
         _strategyInfo.pending[idx].unsettledSellShares = _strategyInfo.pending[idx].sellShares;
         _strategyInfo.lastExecAggregateId = _transition.aggregateId;
 
-        return _strategyInfo;
+        // Piggy-back the update to the global epoch
+        _globalInfo.currEpoch = _transition.currEpoch;
+
+        return (_strategyInfo, _globalInfo);
     }
 
     /**
@@ -377,7 +382,7 @@ contract TransitionApplier2 {
             _stakingPoolInfo.lastRewardEpoch = _globalInfo.currEpoch;
             return;
         }
-        uint256 numEpochs = _globalInfo.currEpoch - _stakingPoolInfo.lastRewardEpoch;
+        uint64 numEpochs = _globalInfo.currEpoch - _stakingPoolInfo.lastRewardEpoch;
         for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
             uint256 pendingReward = numEpochs * _stakingPoolInfo.rewardPerEpoch[rewardTokenId];
             _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId] += ((pendingReward * STAKING_SCALE_FACTOR) /

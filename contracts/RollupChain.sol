@@ -58,7 +58,7 @@ contract RollupChain is Ownable, Pausable {
     EventQueuePointer public depositQueuePointer;
 
     // strategyId -> (aggregateId -> PendingExecResult)
-    // ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell))
+    // ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, currEpoch))
     mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResults;
     // strategyId -> execResultQueuePointer
     mapping(uint32 => EventQueuePointer) public execResultQueuePointers;
@@ -105,7 +105,8 @@ contract RollupChain is Ownable, Pausable {
         uint64 aggregateId,
         bool success,
         uint256 sharesFromBuy,
-        uint256 amountFromSell
+        uint256 amountFromSell,
+        uint64 currEpoch
     );
     event OperatorChanged(address previousOperator, address newOperator);
 
@@ -570,7 +571,14 @@ contract RollupChain is Ownable, Pausable {
 
         bytes32 ehash =
             keccak256(
-                abi.encodePacked(_er.strategyId, _er.aggregateId, _er.success, _er.sharesFromBuy, _er.amountFromSell)
+                abi.encodePacked(
+                    _er.strategyId,
+                    _er.aggregateId,
+                    _er.success,
+                    _er.sharesFromBuy,
+                    _er.amountFromSell,
+                    _er.currEpoch
+                )
             );
         require(pendingExecResults[_er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
 
@@ -609,13 +617,15 @@ contract RollupChain is Ownable, Pausable {
 
         EventQueuePointer memory queuePointer = execResultQueuePointers[strategyId];
         uint64 aggregateId = queuePointer.tail++;
-        bytes32 ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell));
+        uint64 epoch = uint64(block.number);
+        bytes32 ehash =
+            keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch));
         pendingExecResults[strategyId][aggregateId] = PendingEvent({
             ehash: ehash,
             blockId: uint64(blocks.length), // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
-        emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell);
+        emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch);
 
         // Delete pending execution result finalized by this or previous block.
         while (queuePointer.executeHead < queuePointer.commitHead) {

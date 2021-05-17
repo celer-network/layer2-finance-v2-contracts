@@ -336,9 +336,9 @@ library Transitions {
         pure
         returns (DataTypes.ExecutionResultTransition memory)
     {
-        (uint128 infoCode, bytes32 stateRoot, uint256 sharesFromBuy, uint256 amountFromSell) =
-            abi.decode((_rawBytes), (uint128, bytes32, uint256, uint256));
-        (uint64 aggregateId, uint32 strategyId, bool success, uint8 transitionType) =
+        (uint256 infoCode, bytes32 stateRoot, uint256 sharesFromBuy, uint256 amountFromSell) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256));
+        (uint64 currEpoch, uint64 aggregateId, uint32 strategyId, bool success, uint8 transitionType) =
             decodeExecutionResultInfoCode(infoCode);
         DataTypes.ExecutionResultTransition memory transition =
             DataTypes.ExecutionResultTransition(
@@ -348,26 +348,30 @@ library Transitions {
                 aggregateId,
                 success,
                 sharesFromBuy,
-                amountFromSell
+                amountFromSell,
+                currEpoch
             );
         return transition;
     }
 
-    function decodeExecutionResultInfoCode(uint128 _infoCode)
+    function decodeExecutionResultInfoCode(uint256 _infoCode)
         internal
         pure
         returns (
+            uint64, // currEpoch,
             uint64, // aggregateId
             uint32, // strategyId
             bool, // success
             uint8 // transitionType
         )
     {
-        (uint64 aggregateId, uint64 low) = splitUint128(_infoCode);
-        (uint32 strategyId, uint32 low2) = splitUint64(low);
-        uint8 transitionType = uint8(low2);
-        bool success = uint8(low2 >> 8) == 1;
-        return (aggregateId, strategyId, success, transitionType);
+        (uint128 high, uint128 low) = splitUint256(_infoCode);
+        (, uint64 currEpoch) = splitUint128(high);
+        (uint64 aggregateId, uint64 low2) = splitUint128(low);
+        (uint32 strategyId, uint32 low3) = splitUint64(low2);
+        uint8 transitionType = uint8(low3);
+        bool success = uint8(low3 >> 8) == 1;
+        return (currEpoch, aggregateId, strategyId, success, transitionType);
     }
 
     function decodePackedStakeTransition(bytes memory _rawBytes)
