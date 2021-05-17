@@ -105,8 +105,13 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_EXEC_RESULT) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.ExecutionResultTransition memory res = tn.decodePackedExecutionResultTransition(_transition);
-            updatedInfos.strategyInfo = transitionApplier2.applyExecutionResultTransition(res, _infos.strategyInfo);
+            (updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier2.applyExecutionResultTransition(
+                res,
+                _infos.strategyInfo,
+                _infos.globalInfo
+            );
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
+            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_SETTLE) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SettlementTransition memory settle = tn.decodePackedSettlementTransition(_transition);
