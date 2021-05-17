@@ -463,8 +463,8 @@ contract TransitionApplier1 {
             keccak256(
                 abi.encodePacked(
                     _transition.transitionType,
-                    _transition.fromAccountId,
                     _transition.toAccount,
+                    _transition.strategyId,
                     _transition.shares,
                     _transition.fee,
                     _transition.timestamp
