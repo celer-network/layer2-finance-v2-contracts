@@ -331,8 +331,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         address account;
-        uint256 amount;
-        uint128 fee;
+        uint256 amtfee; // [128bit-amount]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
@@ -348,8 +347,7 @@ library DataTypes {
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
-        uint256 amt; // asset or share amount
-        uint128 fee;
+        uint256 amtfee; // [128bit-share/amount]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
@@ -368,8 +366,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         address toAccount;
-        uint256 amt; // asset or share amount
-        uint128 fee;
+        uint256 amtfee; // [128bit-share/amount]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
@@ -429,8 +426,7 @@ library DataTypes {
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
-        uint256 shares;
-        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        uint256 sharefee; // [128bit-share]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
