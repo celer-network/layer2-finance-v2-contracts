@@ -98,7 +98,7 @@ contract TransitionApplier2 {
         dt.WithdrawProtocolFeeTransition memory _transition,
         dt.GlobalInfo memory _globalInfo
     ) public pure returns (dt.GlobalInfo memory) {
-        tn.updateProtoFee(_globalInfo, false, false, _transition.assetId, _transition.amount);
+        tn.removeProtoFee(_globalInfo, _transition.assetId, _transition.amount);
         return _globalInfo;
     }
 

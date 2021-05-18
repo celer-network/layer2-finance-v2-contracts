@@ -195,18 +195,13 @@ library DataTypes {
         uint32 accountId; // destination account Id
     }
 
-    struct ProtocolFees {
-        uint256[] received; // assetId -> collected asset fees. CELR has assetId 1.
-        uint256[] pending; // assetId -> pending buy/sell transition fees
-    }
-
     struct OperatorFees {
         uint256[] assets; // assetId -> collected asset fees. CELR has assetId 1.
         uint256[] shares; // strategyId -> collected strategy share fees.
     }
 
     struct GlobalInfo {
-        ProtocolFees protoFees; // fee owned by contract owner (governance multi-sig account)
+        uint256[] protoFees; // assetId -> collected asset fees owned by contract owner (governance multi-sig account)
         OperatorFees opFees; // fee owned by operator
         uint64 currEpoch; // liquidity mining epoch
         uint256[] rewards; // assetId -> available reward amount

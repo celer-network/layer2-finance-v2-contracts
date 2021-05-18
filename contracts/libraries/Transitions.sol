@@ -535,31 +535,26 @@ library Transitions {
     }
 
     /**
-     * Helper to expand the chosen protocol fee array (if needed) and add or subtract a given fee.
-     * If "_pending" is true, use the pending fee array, otherwise use the received fee array.
+     * Helper to expand the chosen protocol fee array (if needed) and add given fee.
      */
-    function updateProtoFee(
+    function addProtoFee(
         DataTypes.GlobalInfo memory _globalInfo,
-        bool _add,
-        bool _pending,
         uint32 _assetId,
         uint256 _fee
     ) internal pure {
-        if (_pending) {
-            _globalInfo.protoFees.pending = adjustUint256Array(_globalInfo.protoFees.pending, _assetId);
-            if (_add) {
-                _globalInfo.protoFees.pending[_assetId] += _fee;
-            } else {
-                _globalInfo.protoFees.pending[_assetId] -= _fee;
-            }
-        } else {
-            _globalInfo.protoFees.received = adjustUint256Array(_globalInfo.protoFees.received, _assetId);
-            if (_add) {
-                _globalInfo.protoFees.received[_assetId] += _fee;
-            } else {
-                _globalInfo.protoFees.received[_assetId] -= _fee;
-            }
-        }
+        _globalInfo.protoFees = adjustUint256Array(_globalInfo.protoFees, _assetId);
+        _globalInfo.protoFees[_assetId] += _fee;
+    }
+
+    /**
+     * remove given proto fee.
+     */
+    function removeProtoFee(
+        DataTypes.GlobalInfo memory _globalInfo,
+        uint32 _assetId,
+        uint256 _fee
+    ) internal pure {
+        _globalInfo.protoFees[_assetId] -= _fee;
     }
 
     /**
