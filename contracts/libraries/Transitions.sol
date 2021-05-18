@@ -553,17 +553,6 @@ library Transitions {
     }
 
     /**
-     * remove given proto fee.
-     */
-    function removeProtoFee(
-        DataTypes.GlobalInfo memory _globalInfo,
-        uint32 _assetId,
-        uint256 _fee
-    ) internal pure {
-        _globalInfo.protoFees[_assetId] -= _fee;
-    }
-
-    /**
      * Helper to expand the chosen operator fee array (if needed) and add a given fee.
      * If "_assets" is true, use the assets fee array, otherwise use the shares fee array.
      */
