@@ -98,7 +98,7 @@ contract TransitionApplier2 {
         dt.WithdrawProtocolFeeTransition memory _transition,
         dt.GlobalInfo memory _globalInfo
     ) public pure returns (dt.GlobalInfo memory) {
-        tn.updateProtoFee(_globalInfo, false, false, _transition.assetId, _transition.amount);
+        _globalInfo.protoFees[_transition.assetId] -= _transition.amount;
         return _globalInfo;
     }
 
@@ -188,7 +188,7 @@ contract TransitionApplier2 {
 
         uint32 poolId = _transition.poolId;
         uint256 feeInShares;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, 0);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
@@ -277,7 +277,7 @@ contract TransitionApplier2 {
 
         uint32 poolId = _transition.poolId;
         uint256 feeInShares;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, 0);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;

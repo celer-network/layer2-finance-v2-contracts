@@ -90,7 +90,7 @@ contract TransitionApplier1 {
         _accountInfo.timestamp = _transition.timestamp;
 
         _accountInfo.idleAssets[_transition.assetId] -= _transition.amount;
-        tn.updateProtoFee(_globalInfo, true, false, _transition.assetId, _transition.fee);
+        tn.addProtoFee(_globalInfo, _transition.assetId, _transition.fee);
 
         return (_accountInfo, _globalInfo);
     }
@@ -168,16 +168,14 @@ contract TransitionApplier1 {
         }
 
         uint256 amount = _transition.amount;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, _transition.reducedFee);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
-            tn.updateProtoFee(_globalInfo, true, true, 1, fee);
         } else {
             amount -= fee;
             tn.adjustAccountIdleAssetEntries(_accountInfo, _strategyInfo.assetId);
             _accountInfo.idleAssets[_strategyInfo.assetId] -= amount;
-            tn.updateProtoFee(_globalInfo, true, true, _strategyInfo.assetId, fee);
         }
 
         _strategyInfo.pending[npend - 1].buyAmount += amount;
@@ -253,11 +251,10 @@ contract TransitionApplier1 {
             _strategyInfo.pending[npend - 1].minSharePriceForSell = _transition.minSharePrice;
         }
 
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, _transition.reducedFee);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
-            tn.updateProtoFee(_globalInfo, true, true, 1, fee);
         }
 
         uint32 stId = _transition.strategyId;
@@ -336,14 +333,14 @@ contract TransitionApplier1 {
                     fee = amount;
                 }
                 amount -= fee;
-                tn.updateProtoFee(_globalInfo, true, false, assetId, fee);
+                tn.addProtoFee(_globalInfo, assetId, fee);
                 _accountInfo.idleAssets[assetId] += amount;
                 stPend.unsettledSellShares -= acctPend.sellShares;
             }
             _accountInfo.idleAssets[assetId] += assetRefund;
-            tn.updateProtoFee(_globalInfo, true, false, assetId, acctPend.buyFees - assetRefund);
+            tn.addProtoFee(_globalInfo, assetId, acctPend.buyFees - assetRefund);
             _accountInfo.idleAssets[1] += celrRefund;
-            tn.updateProtoFee(_globalInfo, true, false, 1, acctPend.celrFees - celrRefund);
+            tn.addProtoFee(_globalInfo, 1, acctPend.celrFees - celrRefund);
         } else {
             if (acctPend.buyAmount > 0) {
                 tn.adjustAccountIdleAssetEntries(_accountInfo, assetId);
@@ -358,9 +355,6 @@ contract TransitionApplier1 {
             _accountInfo.idleAssets[assetId] += acctPend.buyFees;
             _accountInfo.idleAssets[1] += acctPend.celrFees;
         }
-
-        tn.updateProtoFee(_globalInfo, false, true, assetId, acctPend.buyFees);
-        tn.updateProtoFee(_globalInfo, false, true, 1, acctPend.celrFees);
 
         _popHeadAccountPendingEntries(_accountInfo, stId);
         if (stPend.unsettledBuyAmount == 0 && stPend.unsettledSellShares == 0) {
@@ -430,7 +424,7 @@ contract TransitionApplier1 {
 
         uint32 assetId = _transition.assetId;
         uint256 amount = _transition.amount;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, 0);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
@@ -507,7 +501,7 @@ contract TransitionApplier1 {
 
         uint32 stId = _transition.strategyId;
         uint256 shares = _transition.shares;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, 0);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;

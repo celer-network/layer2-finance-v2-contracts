@@ -50,7 +50,6 @@ library DataTypes {
         uint256 amount;
         uint128 maxSharePrice;
         uint128 fee; // user signed [1bit-type]:[127bit-amt]
-        uint128 reducedFee; // operator proposed [1bit-flag]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -66,7 +65,6 @@ library DataTypes {
         uint256 shares;
         uint128 minSharePrice;
         uint128 fee; // user signed [1bit-type]:[127bit-amt]
-        uint128 reducedFee; // operator proposed [1bit-flag]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -197,18 +195,13 @@ library DataTypes {
         uint32 accountId; // destination account Id
     }
 
-    struct ProtocolFees {
-        uint256[] received; // assetId -> collected asset fees. CELR has assetId 1.
-        uint256[] pending; // assetId -> pending buy/sell transition fees
-    }
-
     struct OperatorFees {
         uint256[] assets; // assetId -> collected asset fees. CELR has assetId 1.
         uint256[] shares; // strategyId -> collected strategy share fees.
     }
 
     struct GlobalInfo {
-        ProtocolFees protoFees; // fee owned by contract owner (governance multi-sig account)
+        uint256[] protoFees; // assetId -> collected asset fees owned by contract owner (governance multi-sig account)
         OperatorFees opFees; // fee owned by operator
         uint64 currEpoch; // liquidity mining epoch
         uint256[] rewards; // assetId -> available reward amount
@@ -338,8 +331,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         address account;
-        uint256 amount;
-        uint128 fee;
+        uint256 amtfee; // [128bit-amount]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
@@ -355,8 +347,7 @@ library DataTypes {
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
-        uint256 amt; // asset or share amount
-        uint256 fee; // [128bit-reducedFee]:[128bit-signedfee]
+        uint256 amtfee; // [128bit-share/amount]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
@@ -375,8 +366,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         address toAccount;
-        uint256 amt; // asset or share amount
-        uint128 fee;
+        uint256 amtfee; // [128bit-share/amount]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }
@@ -436,8 +426,7 @@ library DataTypes {
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;
-        uint256 shares;
-        uint128 fee; // user signed [1bit-type]:[127bit-amt]
+        uint256 sharefee; // [128bit-share]:[128bit-fee] uint128 is large enough
         bytes32 r;
         bytes32 s;
     }

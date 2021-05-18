@@ -76,10 +76,11 @@ library Transitions {
         pure
         returns (DataTypes.WithdrawTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, address account, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, address account, uint256 amtfee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 assetId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeWithdrawInfoCode(infoCode);
+        (uint128 amount, uint128 fee) = splitUint256(amtfee);
         DataTypes.WithdrawTransition memory transition =
             DataTypes.WithdrawTransition(
                 transitionType,
@@ -116,11 +117,11 @@ library Transitions {
     }
 
     function decodePackedBuyTransition(bytes memory _rawBytes) internal pure returns (DataTypes.BuyTransition memory) {
-        (uint256 infoCode, bytes32 stateRoot, uint256 amount, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 amtfee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 maxSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
-        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
+        (uint128 amount, uint128 fee) = splitUint256(amtfee);
         DataTypes.BuyTransition memory transition =
             DataTypes.BuyTransition(
                 transitionType,
@@ -129,8 +130,7 @@ library Transitions {
                 strategyId,
                 amount,
                 maxSharePrice,
-                signedFee,
-                reducedFee,
+                fee,
                 timestamp,
                 r,
                 s,
@@ -144,11 +144,11 @@ library Transitions {
         pure
         returns (DataTypes.SellTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 sharefee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 minSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
-        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
+        (uint128 shares, uint128 fee) = splitUint256(sharefee);
         DataTypes.SellTransition memory transition =
             DataTypes.SellTransition(
                 transitionType,
@@ -157,8 +157,7 @@ library Transitions {
                 strategyId,
                 shares,
                 minSharePrice,
-                signedFee,
-                reducedFee,
+                fee,
                 timestamp,
                 r,
                 s,
@@ -192,10 +191,11 @@ library Transitions {
         pure
         returns (DataTypes.TransferAssetTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, address toAccount, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, address toAccount, uint256 amtfee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, bytes32, bytes32));
         (uint32 assetId, uint32 fromAccountId, uint32 toAccountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeTransferInfoCode(infoCode);
+        (uint128 amount, uint128 fee) = splitUint256(amtfee);
         DataTypes.TransferAssetTransition memory transition =
             DataTypes.TransferAssetTransition(
                 transitionType,
@@ -219,10 +219,11 @@ library Transitions {
         pure
         returns (DataTypes.TransferShareTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, address toAccount, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, address toAccount, uint256 sharefee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, address, uint256, bytes32, bytes32));
         (uint32 strategyId, uint32 fromAccountId, uint32 toAccountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeTransferInfoCode(infoCode);
+        (uint128 shares, uint128 fee) = splitUint256(sharefee);
         DataTypes.TransferShareTransition memory transition =
             DataTypes.TransferShareTransition(
                 transitionType,
@@ -400,10 +401,11 @@ library Transitions {
         pure
         returns (DataTypes.StakeTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 sharefee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, bytes32, bytes32));
         (uint32 poolId, uint32 accountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeStakingInfoCode(infoCode);
+        (uint128 shares, uint128 fee) = splitUint256(sharefee);
         DataTypes.StakeTransition memory transition =
             DataTypes.StakeTransition(transitionType, stateRoot, poolId, accountId, shares, fee, timestamp, r, s, v);
         return transition;
@@ -539,31 +541,15 @@ library Transitions {
     }
 
     /**
-     * Helper to expand the chosen protocol fee array (if needed) and add or subtract a given fee.
-     * If "_pending" is true, use the pending fee array, otherwise use the received fee array.
+     * Helper to expand protocol fee array (if needed) and add given fee.
      */
-    function updateProtoFee(
+    function addProtoFee(
         DataTypes.GlobalInfo memory _globalInfo,
-        bool _add,
-        bool _pending,
         uint32 _assetId,
         uint256 _fee
     ) internal pure {
-        if (_pending) {
-            _globalInfo.protoFees.pending = adjustUint256Array(_globalInfo.protoFees.pending, _assetId);
-            if (_add) {
-                _globalInfo.protoFees.pending[_assetId] += _fee;
-            } else {
-                _globalInfo.protoFees.pending[_assetId] -= _fee;
-            }
-        } else {
-            _globalInfo.protoFees.received = adjustUint256Array(_globalInfo.protoFees.received, _assetId);
-            if (_add) {
-                _globalInfo.protoFees.received[_assetId] += _fee;
-            } else {
-                _globalInfo.protoFees.received[_assetId] -= _fee;
-            }
-        }
+        _globalInfo.protoFees = adjustUint256Array(_globalInfo.protoFees, _assetId);
+        _globalInfo.protoFees[_assetId] += _fee;
     }
 
     /**
@@ -607,18 +593,13 @@ library Transitions {
     }
 
     /**
-     * Helper to get the fee type and handle any fee reduction.
+     * Helper to get the fee type and amount.
      * Returns (isCelr, fee).
      */
-    function getFeeInfo(uint128 _fee, uint128 _reducedFee) internal pure returns (bool, uint256) {
+    function getFeeInfo(uint128 _fee) internal pure returns (bool, uint256) {
         bool isCelr = _fee & UINT128_HIBIT == UINT128_HIBIT;
-        if (_reducedFee & UINT128_HIBIT == UINT128_HIBIT) {
-            _reducedFee = _reducedFee ^ UINT128_HIBIT;
-            if (_reducedFee < _fee) {
-                _fee = _reducedFee;
-            }
-        }
-        return (isCelr, uint256(_fee));
+        uint128 fee = _fee ^ UINT128_HIBIT;
+        return (isCelr, uint256(fee));
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {
