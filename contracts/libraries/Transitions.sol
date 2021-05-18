@@ -541,7 +541,7 @@ library Transitions {
     }
 
     /**
-     * Helper to expand the chosen protocol fee array (if needed) and add given fee.
+     * Helper to expand protocol fee array (if needed) and add given fee.
      */
     function addProtoFee(
         DataTypes.GlobalInfo memory _globalInfo,
@@ -593,7 +593,7 @@ library Transitions {
     }
 
     /**
-     * Helper to get the fee type and handle any fee reduction.
+     * Helper to get the fee type and amount.
      * Returns (isCelr, fee).
      */
     function getFeeInfo(uint128 _fee) internal pure returns (bool, uint256) {
