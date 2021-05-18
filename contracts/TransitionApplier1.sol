@@ -314,6 +314,7 @@ contract TransitionApplier1 {
 
         if (stPend.executionSucceed) {
             uint256 assetRefund = _transition.assetRefund;
+            uint256 celrRefund = _transition.celrRefund;
             if (acctPend.buyAmount > 0) {
                 tn.adjustAccountShareEntries(_accountInfo, stId);
                 uint256 shares = (acctPend.buyAmount * stPend.sharesFromBuy) / stPend.buyAmount;
@@ -341,8 +342,8 @@ contract TransitionApplier1 {
             }
             _accountInfo.idleAssets[assetId] += assetRefund;
             tn.updateProtoFee(_globalInfo, true, false, assetId, acctPend.buyFees - assetRefund);
-            _accountInfo.idleAssets[1] += _transition.celrRefund;
-            tn.updateProtoFee(_globalInfo, true, false, 1, acctPend.celrFees - _transition.celrRefund);
+            _accountInfo.idleAssets[1] += celrRefund;
+            tn.updateProtoFee(_globalInfo, true, false, 1, acctPend.celrFees - celrRefund);
         } else {
             if (acctPend.buyAmount > 0) {
                 tn.adjustAccountIdleAssetEntries(_accountInfo, assetId);
