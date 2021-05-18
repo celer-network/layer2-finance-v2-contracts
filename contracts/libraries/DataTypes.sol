@@ -112,6 +112,8 @@ library DataTypes {
         uint32 strategyId;
         uint64 aggregateId;
         uint32 accountId;
+        uint128 celrRefund; // fee refund in celr
+        uint128 assetRefund; // fee refund in asset
     }
 
     // decoded from calldata submitted as PackedAggregateOrdersTransition
@@ -384,8 +386,9 @@ library DataTypes {
         /* infoCode packing:
         224:255 [uint32 accountId]
         192:223 [uint32 strategyId]
-        128:191 [uint64 aggregateId]
-        8:127   [0]
+        160:191 [uint32 aggregateId] // uint32 is enough for per-strategy aggregateId
+        104:159 [uint56 celrRefund] // celr refund in 9 decimal
+        8:103   [uint96 assetRefund] // asseet refund
         0:7     [uint8 tntype] */
         uint256 infoCode;
         bytes32 stateRoot;

@@ -313,6 +313,8 @@ contract TransitionApplier1 {
         dt.PendingAccountInfo memory acctPend = _accountInfo.pending[stId][0];
 
         if (stPend.executionSucceed) {
+            uint256 assetRefund = _transition.assetRefund;
+            uint256 celrRefund = _transition.celrRefund;
             if (acctPend.buyAmount > 0) {
                 tn.adjustAccountShareEntries(_accountInfo, stId);
                 uint256 shares = (acctPend.buyAmount * stPend.sharesFromBuy) / stPend.buyAmount;
@@ -323,6 +325,13 @@ contract TransitionApplier1 {
                 tn.adjustAccountIdleAssetEntries(_accountInfo, assetId);
                 uint256 amount = (acctPend.sellShares * stPend.amountFromSell) / stPend.sellShares;
                 uint256 fee = acctPend.sellFees;
+                if (fee < assetRefund) {
+                    fee = 0;
+                    assetRefund -= fee;
+                } else {
+                    fee -= assetRefund;
+                    assetRefund = 0;
+                }
                 if (amount < fee) {
                     fee = amount;
                 }
@@ -331,8 +340,10 @@ contract TransitionApplier1 {
                 _accountInfo.idleAssets[assetId] += amount;
                 stPend.unsettledSellShares -= acctPend.sellShares;
             }
-            tn.updateProtoFee(_globalInfo, true, false, assetId, acctPend.buyFees);
-            tn.updateProtoFee(_globalInfo, true, false, 1, acctPend.celrFees);
+            _accountInfo.idleAssets[assetId] += assetRefund;
+            tn.updateProtoFee(_globalInfo, true, false, assetId, acctPend.buyFees - assetRefund);
+            _accountInfo.idleAssets[1] += celrRefund;
+            tn.updateProtoFee(_globalInfo, true, false, 1, acctPend.celrFees - celrRefund);
         } else {
             if (acctPend.buyAmount > 0) {
                 tn.adjustAccountIdleAssetEntries(_accountInfo, assetId);

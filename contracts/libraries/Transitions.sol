@@ -267,10 +267,24 @@ library Transitions {
         returns (DataTypes.SettlementTransition memory)
     {
         (uint256 infoCode, bytes32 stateRoot) = abi.decode((_rawBytes), (uint256, bytes32));
-        (uint32 accountId, uint32 strategyId, uint64 aggregateId, uint8 transitionType) =
-            decodeSettlementInfoCode(infoCode);
+        (
+            uint32 accountId,
+            uint32 strategyId,
+            uint64 aggregateId,
+            uint128 celrRefund,
+            uint128 assetRefund,
+            uint8 transitionType
+        ) = decodeSettlementInfoCode(infoCode);
         DataTypes.SettlementTransition memory transition =
-            DataTypes.SettlementTransition(transitionType, stateRoot, strategyId, aggregateId, accountId);
+            DataTypes.SettlementTransition(
+                transitionType,
+                stateRoot,
+                strategyId,
+                aggregateId,
+                accountId,
+                celrRefund,
+                assetRefund
+            );
         return transition;
     }
 
@@ -281,14 +295,21 @@ library Transitions {
             uint32, // accountId
             uint32, // strategyId
             uint64, // aggregateId
+            uint128, // celrRefund
+            uint128, // assetRefund
             uint8 // transitionType
         )
     {
-        (uint128 high, uint128 low) = splitUint256(_infoCode);
-        (uint64 ids, uint64 aggregateId) = splitUint128(high);
-        (uint32 accountId, uint32 strategyId) = splitUint64(ids);
-        uint8 transitionType = uint8(low);
-        return (accountId, strategyId, aggregateId, transitionType);
+        uint128 ids = uint128(_infoCode >> 160);
+        uint64 aggregateId = uint32(ids);
+        ids = uint64(ids >> 32);
+        uint32 strategyId = uint32(ids);
+        uint32 accountId = uint32(ids >> 32);
+        uint256 refund = uint152(_infoCode >> 8);
+        uint128 assetRefund = uint128(refund);
+        uint128 celrRefund = uint128(refund >> 96) * 1e9;
+        uint8 transitionType = uint8(_infoCode);
+        return (accountId, strategyId, aggregateId, celrRefund, assetRefund, transitionType);
     }
 
     function decodePackedAggregateOrdersTransition(bytes memory _rawBytes)
