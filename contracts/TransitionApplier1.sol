@@ -168,7 +168,7 @@ contract TransitionApplier1 {
         }
 
         uint256 amount = _transition.amount;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, _transition.reducedFee);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
@@ -253,7 +253,7 @@ contract TransitionApplier1 {
             _strategyInfo.pending[npend - 1].minSharePriceForSell = _transition.minSharePrice;
         }
 
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, _transition.reducedFee);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
@@ -430,7 +430,7 @@ contract TransitionApplier1 {
 
         uint32 assetId = _transition.assetId;
         uint256 amount = _transition.amount;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, 0);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
@@ -507,7 +507,7 @@ contract TransitionApplier1 {
 
         uint32 stId = _transition.strategyId;
         uint256 shares = _transition.shares;
-        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee, 0);
+        (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
             tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;

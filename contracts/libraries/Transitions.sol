@@ -116,11 +116,10 @@ library Transitions {
     }
 
     function decodePackedBuyTransition(bytes memory _rawBytes) internal pure returns (DataTypes.BuyTransition memory) {
-        (uint256 infoCode, bytes32 stateRoot, uint256 amount, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 amount, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 maxSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
-        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
         DataTypes.BuyTransition memory transition =
             DataTypes.BuyTransition(
                 transitionType,
@@ -129,8 +128,7 @@ library Transitions {
                 strategyId,
                 amount,
                 maxSharePrice,
-                signedFee,
-                reducedFee,
+                fee,
                 timestamp,
                 r,
                 s,
@@ -144,11 +142,10 @@ library Transitions {
         pure
         returns (DataTypes.SellTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint256 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint256, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
         (uint32 accountId, uint32 strategyId, uint64 timestamp, uint128 minSharePrice, uint8 v, uint8 transitionType) =
             decodeBuySellInfoCode(infoCode);
-        (uint128 reducedFee, uint128 signedFee) = splitUint256(fee);
         DataTypes.SellTransition memory transition =
             DataTypes.SellTransition(
                 transitionType,
@@ -157,8 +154,7 @@ library Transitions {
                 strategyId,
                 shares,
                 minSharePrice,
-                signedFee,
-                reducedFee,
+                fee,
                 timestamp,
                 r,
                 s,
@@ -610,15 +606,10 @@ library Transitions {
      * Helper to get the fee type and handle any fee reduction.
      * Returns (isCelr, fee).
      */
-    function getFeeInfo(uint128 _fee, uint128 _reducedFee) internal pure returns (bool, uint256) {
+    function getFeeInfo(uint128 _fee) internal pure returns (bool, uint256) {
         bool isCelr = _fee & UINT128_HIBIT == UINT128_HIBIT;
-        if (_reducedFee & UINT128_HIBIT == UINT128_HIBIT) {
-            _reducedFee = _reducedFee ^ UINT128_HIBIT;
-            if (_reducedFee < _fee) {
-                _fee = _reducedFee;
-            }
-        }
-        return (isCelr, uint256(_fee));
+        uint128 fee = _fee ^ UINT128_HIBIT;
+        return (isCelr, uint256(fee));
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {

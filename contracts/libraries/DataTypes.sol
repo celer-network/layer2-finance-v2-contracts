@@ -50,7 +50,6 @@ library DataTypes {
         uint256 amount;
         uint128 maxSharePrice;
         uint128 fee; // user signed [1bit-type]:[127bit-amt]
-        uint128 reducedFee; // operator proposed [1bit-flag]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -66,7 +65,6 @@ library DataTypes {
         uint256 shares;
         uint128 minSharePrice;
         uint128 fee; // user signed [1bit-type]:[127bit-amt]
-        uint128 reducedFee; // operator proposed [1bit-flag]:[127bit-amt]
         uint64 timestamp; // Unix epoch (msec, UTC)
         bytes32 r; // signature r
         bytes32 s; // signature s
@@ -356,7 +354,7 @@ library DataTypes {
         uint256 infoCode;
         bytes32 stateRoot;
         uint256 amt; // asset or share amount
-        uint256 fee; // [128bit-reducedFee]:[128bit-signedfee]
+        uint128 fee;
         bytes32 r;
         bytes32 s;
     }
