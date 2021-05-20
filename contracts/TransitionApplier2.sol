@@ -117,20 +117,20 @@ contract TransitionApplier2 {
     ) external pure returns (dt.AccountInfo memory, dt.GlobalInfo memory) {
         require(_accountInfo.accountId == _transition.accountId, "account id not match");
 
-        for (uint256 i = 0; i < _globalInfo.opFees.assets.length; i++) {
-            uint256 assets = _globalInfo.opFees.assets[i];
-            if (assets > 0) {
-                tn.adjustAccountIdleAssetEntries(_accountInfo, uint32(i));
-                _accountInfo.idleAssets[i] += assets;
+        uint32 assetFeeLen = uint32(_globalInfo.opFees.assets.length);
+        if (assetFeeLen > 1) {
+            tn.adjustAccountIdleAssetEntries(_accountInfo, assetFeeLen - 1);
+            for (uint256 i = 1; i < assetFeeLen; i++) {
+                _accountInfo.idleAssets[i] += _globalInfo.opFees.assets[i];
                 _globalInfo.opFees.assets[i] = 0;
             }
         }
 
-        for (uint256 i = 0; i < _globalInfo.opFees.shares.length; i++) {
-            uint256 shares = _globalInfo.opFees.shares[i];
-            if (shares > 0) {
-                tn.adjustAccountShareEntries(_accountInfo, uint32(i));
-                _accountInfo.shares[i] += shares;
+        uint32 shareFeeLen = uint32(_globalInfo.opFees.shares.length);
+        if (shareFeeLen > 1) {
+            tn.adjustAccountShareEntries(_accountInfo, shareFeeLen - 1);
+            for (uint256 i = 1; i < shareFeeLen; i++) {
+                _accountInfo.shares[i] += _globalInfo.opFees.shares[i];
                 _globalInfo.opFees.shares[i] = 0;
             }
         }

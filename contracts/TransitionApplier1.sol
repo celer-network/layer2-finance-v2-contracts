@@ -101,22 +101,19 @@ contract TransitionApplier1 {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition.
      * @param _strategyInfo The involved strategy from the previous transition.
-     * @param _globalInfo The involved global info from the previous transition.
      * @return new account, strategy info, and global info after applying the disputed transition
      */
     function applyBuyTransition(
         dt.BuyTransition memory _transition,
         dt.AccountInfo memory _accountInfo,
         dt.StrategyInfo memory _strategyInfo,
-        dt.GlobalInfo memory _globalInfo,
         Registry _registry
     )
         public
         view
         returns (
             dt.AccountInfo memory,
-            dt.StrategyInfo memory,
-            dt.GlobalInfo memory
+            dt.StrategyInfo memory
         )
     {
         bytes32 txHash =
@@ -187,7 +184,7 @@ contract TransitionApplier1 {
             _accountInfo.pending[_transition.strategyId][npend - 1].buyFees += fee;
         }
 
-        return (_accountInfo, _strategyInfo, _globalInfo);
+        return (_accountInfo, _strategyInfo);
     }
 
     /**
@@ -196,21 +193,18 @@ contract TransitionApplier1 {
      * @param _transition The disputed transition.
      * @param _accountInfo The involved account from the previous transition.
      * @param _strategyInfo The involved strategy from the previous transition.
-     * @param _globalInfo The involved global info from the previous transition.
      * @return new account, strategy info, and global info after applying the disputed transition
      */
     function applySellTransition(
         dt.SellTransition memory _transition,
         dt.AccountInfo memory _accountInfo,
-        dt.StrategyInfo memory _strategyInfo,
-        dt.GlobalInfo memory _globalInfo
+        dt.StrategyInfo memory _strategyInfo
     )
         external
         pure
         returns (
             dt.AccountInfo memory,
-            dt.StrategyInfo memory,
-            dt.GlobalInfo memory
+            dt.StrategyInfo memory
         )
     {
         bytes32 txHash =
@@ -267,7 +261,7 @@ contract TransitionApplier1 {
             _accountInfo.pending[stId][npend - 1].sellFees += fee;
         }
 
-        return (_accountInfo, _strategyInfo, _globalInfo);
+        return (_accountInfo, _strategyInfo);
     }
 
     /**

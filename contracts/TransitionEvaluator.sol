@@ -55,6 +55,7 @@ contract TransitionEvaluator {
             dt.DepositTransition memory deposit = tn.decodePackedDepositTransition(_transition);
             updatedInfos.accountInfos[0] = transitionApplier1.applyDepositTransition(deposit, _infos.accountInfos[0]);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
+            outputs[4] = getGlobalInfoHash(_infos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.WithdrawTransition memory withdraw = tn.decodePackedWithdrawTransition(_transition);
@@ -68,19 +69,19 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_BUY) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.BuyTransition memory buy = tn.decodePackedBuyTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
-                .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo, _registry);
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1
+                .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _registry);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
-            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
+            outputs[4] = getGlobalInfoHash(_infos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_SELL) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SellTransition memory sell = tn.decodePackedSellTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
-                .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1
+                .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
-            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
+            outputs[4] = getGlobalInfoHash(_infos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
             require(_infos.accountInfos.length == 2, ErrMsg.REQ_TWO_ACCT);
             dt.TransferAssetTransition memory xfer = tn.decodePackedTransferAssetTransition(_transition);
@@ -102,6 +103,7 @@ contract TransitionEvaluator {
             dt.AggregateOrdersTransition memory aggr = tn.decodePackedAggregateOrdersTransition(_transition);
             updatedInfos.strategyInfo = transitionApplier2.applyAggregateOrdersTransition(aggr, _infos.strategyInfo);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
+            outputs[4] = getGlobalInfoHash(_infos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_EXEC_RESULT) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.ExecutionResultTransition memory res = tn.decodePackedExecutionResultTransition(_transition);
@@ -145,6 +147,7 @@ contract TransitionEvaluator {
                 _infos.globalInfo
             );
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
+            outputs[4] = getGlobalInfoHash(_infos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_DEPOSIT_REWARD) {
             require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.DepositRewardTransition memory dr = tn.decodeDepositRewardTransition(_transition);
