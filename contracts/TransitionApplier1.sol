@@ -139,6 +139,7 @@ contract TransitionApplier1 {
         require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
+        _accountInfo.idleAssets[_strategyInfo.assetId] -= _transition.amount;
 
         if (_strategyInfo.assetId == 0) {
             // first time commit of new strategy
@@ -167,22 +168,19 @@ contract TransitionApplier1 {
             _strategyInfo.pending[npend - 1].maxSharePriceForBuy = _transition.maxSharePrice;
         }
 
-        uint256 amount = _transition.amount;
+        uint256 buyAmount = _transition.amount;
         (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
-            tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
         } else {
-            amount -= fee;
-            tn.adjustAccountIdleAssetEntries(_accountInfo, _strategyInfo.assetId);
-            _accountInfo.idleAssets[_strategyInfo.assetId] -= amount;
+            buyAmount -= fee;
         }
 
-        _strategyInfo.pending[npend - 1].buyAmount += amount;
+        _strategyInfo.pending[npend - 1].buyAmount += buyAmount;
 
         _adjustAccountPendingEntries(_accountInfo, _transition.strategyId, _strategyInfo.nextAggregateId);
         npend = _accountInfo.pending[_transition.strategyId].length;
-        _accountInfo.pending[_transition.strategyId][npend - 1].buyAmount += amount;
+        _accountInfo.pending[_transition.strategyId][npend - 1].buyAmount += buyAmount;
         if (isCelr) {
             _accountInfo.pending[_transition.strategyId][npend - 1].celrFees += fee;
         } else {
@@ -253,7 +251,6 @@ contract TransitionApplier1 {
 
         (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
-            tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
         }
 
@@ -426,7 +423,6 @@ contract TransitionApplier1 {
         uint256 amount = _transition.amount;
         (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
-            tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             tn.updateOpFee(_globalInfo, true, 1, fee);
         } else {
@@ -503,7 +499,6 @@ contract TransitionApplier1 {
         uint256 shares = _transition.shares;
         (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
-            tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             tn.updateOpFee(_globalInfo, true, 1, fee);
         } else {
