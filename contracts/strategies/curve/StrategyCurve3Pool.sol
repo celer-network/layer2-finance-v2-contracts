@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../interfaces/IStrategy.sol";
 
-contract StrategyCurveEthPool is IStrategy, Ownable {
+contract StrategyCurve3Pool is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -18,18 +18,20 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
     address public controller;
 
     // contract addresses
-    address public ethPool; // Curve ETH/? swap pool
+    address public triPool; // Curve 3 token swap pool
     address public gauge; // Curve gauge
     address public mintr; // Curve minter
     address public uniswap; // UniswapV2
 
-    // supply token (WETH) params
-    uint8 public ethIndexInPool = 0; // ETH - 0, Other - 1
+    // supply token params
+    uint8 public supplyTokenDecimals;
+    uint8 public supplyTokenIndexInPool = 0;
 
     // token addresses
-    address public lpToken; // LP token
-    address public crv; // CRV token
-    address public weth; // WETH token
+    address public supplyToken;
+    address public lpToken; // LP token (triCrv)
+    address public crv;
+    address public weth;
 
     // slippage tolerance settings
     uint256 public constant DENOMINATOR = 10000;
@@ -37,8 +39,10 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
     constructor(
         address _controller,
-        uint8 _ethIndexInPool,
-        address _ethPool,
+        address _supplyToken,
+        uint8 _supplyTokenDecimals,
+        uint8 _supplyTokenIndexInPool,
+        address _triPool,
         address _lpToken,
         address _gauge,
         address _mintr,
@@ -47,7 +51,10 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
         address _uniswap
     ) {
         controller = _controller;
-        ethIndexInPool = _ethIndexInPool;
+        supplyToken = _supplyToken;
+        supplyTokenDecimals = _supplyTokenDecimals;
+        supplyTokenIndexInPool = _supplyTokenIndexInPool;
+        triPool = _triPool;
         lpToken = _lpToken;
         gauge = _gauge;
         mintr = _mintr;
@@ -78,9 +85,11 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
     ) external override onlyController returns (uint256, uint256) {
         require(msg.sender == controller, "Not controller");
 
-        uint256 price = ICurveFi(ethPool).get_virtual_price();
-        uint256 amountDerivedFromSellShares = _sellShares.div(1e18).mul(price); // amount to be obtained from selling LP Token
-        uint256 sharesDerivedFromBuyAmount = _buyAmount.mul(1e18).div(price); // LP Token to get obtained from buying with ETH
+        uint256 price = ICurveFi(triPool).get_virtual_price();
+        uint256 amountDerivedFromSellShares =
+            _sellShares.div(1e18).div(1e18).div(10**(18 - supplyTokenDecimals)).mul(price); // amount to be obtained from selling LP Token
+        uint256 sharesDerivedFromBuyAmount =
+            _buyAmount.mul(1e18).mul(1e18).mul(10**(18 - supplyTokenDecimals)).div(price); // LP Token to get obtained from buying with supply token
 
         uint256 sharesBought; // bought shares from share sellers and/or curvefi
         uint256 amountSoldFor; // ETH for which the sellers' shares are sold
@@ -89,11 +98,10 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             // LP Token amount to sell in this batch can't cover the share amount of LP tokens people want to buy
             // therefore we need buy more LP Tokens to cover the demand for more LP Tokens.
             uint256 buyAmount = _buyAmount - amountDerivedFromSellShares;
-            IERC20(weth).safeTransferFrom(msg.sender, address(this), buyAmount);
-            IWETH(weth).withdraw(buyAmount);
+            IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), buyAmount);
             uint256[2] memory amounts;
-            amounts[ethIndexInPool] = buyAmount;
-            ICurveFi(ethPool).add_liquidity{value: buyAmount}(
+            amounts[supplyTokenIndexInPool] = buyAmount;
+            ICurveFi(triPool).add_liquidity{value: buyAmount}(
                 amounts,
                 sharesDerivedFromBuyAmount.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
             );
@@ -108,10 +116,10 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             // LP Token to be obtained from buying in this batch can't cover the LP Token amount people want to sell
             // therefore we need sell more LP Tokens to cover the need for more ETH.
             uint256 sellShares = _sellShares - sharesDerivedFromBuyAmount;
-            IERC20(weth).safeTransferFrom(msg.sender, address(this), sellShares);
-            ICurveFi(ethPool).remove_liquidity_one_coin(
+            IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), sellShares);
+            ICurveFi(triPool).remove_liquidity_one_coin(
                 sellShares,
-                ethIndexInPool,
+                supplyTokenIndexInPool,
                 amountDerivedFromSellShares.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
             );
             uint256 ethBalance = address(this).balance;
@@ -129,44 +137,44 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
     }
 
     function syncPrice() external view override returns (uint256) {
-        return ICurveFi(ethPool).get_virtual_price();
+        return ICurveFi(triPool).get_virtual_price();
     }
 
     function harvest() external override onlyOwnerOrController {
+        // Harvest CRV
         IMintr(mintr).mint(gauge);
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
-
         if (crvBalance > 0) {
             // Sell CRV for more supply token
             IERC20(crv).safeIncreaseAllowance(uniswap, crvBalance);
 
-            address[] memory path = new address[](2);
-            path[0] = crv;
-            path[1] = weth;
+            address[] memory paths = new address[](3);
+            paths[0] = crv;
+            paths[1] = weth;
+            paths[2] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForETH(
+            IUniswapV2(uniswap).swapExactTokensForTokens(
                 crvBalance,
                 uint256(0),
-                path,
+                paths,
                 address(this),
                 block.timestamp.add(1800)
             );
 
-            // Re-invest supply token to obtain more lpToken
-            uint256 obtainedEthAmount = address(this).balance;
+            // Re-invest supply token to obtain more 3CRV
+            uint256 obtainedSupplyTokenAmount = IERC20(supplyToken).balanceOf(address(this));
+            IERC20(supplyToken).safeIncreaseAllowance(triPool, obtainedSupplyTokenAmount);
             uint256 minMintAmount =
-                obtainedEthAmount
-                    .mul(1e18)
-                    .div(ICurveFi(ethPool).get_virtual_price())
-                    .mul(DENOMINATOR.sub(slippage))
-                    .div(DENOMINATOR);
-            uint256[2] memory amounts;
-            amounts[ethIndexInPool] = obtainedEthAmount;
-            ICurveFi(ethPool).add_liquidity{value: obtainedEthAmount}(amounts, minMintAmount);
+                obtainedSupplyTokenAmount.mul(1e18).mul(10**(18 - supplyTokenDecimals)).div(
+                    ICurveFi(triPool).get_virtual_price()
+                );
+            uint256[3] memory amounts;
+            amounts[supplyTokenIndexInPool] = obtainedSupplyTokenAmount;
+            ICurveFi(triPool).add_liquidity(amounts, minMintAmount.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR));
 
-            // Stake lpToken in Gauge to farm more CRV
-            uint256 obtainedTriCrvBalance = IERC20(lpToken).balanceOf(address(this));
-            IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedTriCrvBalance);
+            // Stake 3CRV in Gauge to farm more CRV
+            uint256 obtainedTriCrvBalance = IERC20(triCrv).balanceOf(address(this));
+            IERC20(triCrv).safeIncreaseAllowance(gauge, obtainedTriCrvBalance);
             IGauge(gauge).deposit(obtainedTriCrvBalance);
         }
     }
