@@ -458,9 +458,9 @@ contract TransitionApplier2 {
      */
     function _getAdjustedStake(uint256 _stakedShares, uint256 _adjustmentFactor) private pure returns (uint256) {
         return
-            ((1 * STAKING_SCALE_FACTOR - _adjustmentFactor) *
+            ((STAKING_SCALE_FACTOR - _adjustmentFactor) *
                 _stakedShares +
-                _sqrt(STAKING_SCALE_FACTOR**2 * _adjustmentFactor * _stakedShares)) / STAKING_SCALE_FACTOR;
+                _sqrt(STAKING_SCALE_FACTOR * _adjustmentFactor * _stakedShares)) / STAKING_SCALE_FACTOR;
     }
 
     /**
