@@ -190,7 +190,6 @@ contract TransitionApplier2 {
         uint256 feeInShares;
         (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
-            tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             tn.updateOpFee(_globalInfo, true, 1, fee);
         } else {
@@ -279,7 +278,6 @@ contract TransitionApplier2 {
         uint256 feeInShares;
         (bool isCelr, uint256 fee) = tn.getFeeInfo(_transition.fee);
         if (isCelr) {
-            tn.adjustAccountIdleAssetEntries(_accountInfo, 1);
             _accountInfo.idleAssets[1] -= fee;
             tn.updateOpFee(_globalInfo, true, 1, fee);
         } else {
