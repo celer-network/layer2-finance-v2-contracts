@@ -431,7 +431,7 @@ contract TransitionApplier1 {
         }
 
         tn.adjustAccountIdleAssetEntries(_accountInfoDest, assetId);
-        _accountInfo.idleAssets[assetId] -= amount;
+        _accountInfo.idleAssets[assetId] -= _transition.amount;
         _accountInfoDest.idleAssets[assetId] += amount;
 
         return (_accountInfo, _accountInfoDest, _globalInfo);
@@ -507,7 +507,7 @@ contract TransitionApplier1 {
         }
 
         tn.adjustAccountShareEntries(_accountInfoDest, stId);
-        _accountInfo.shares[stId] -= shares;
+        _accountInfo.shares[stId] -= _transition.shares;
         _accountInfoDest.shares[stId] += shares;
 
         return (_accountInfo, _accountInfoDest, _globalInfo);
