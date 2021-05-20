@@ -31,12 +31,11 @@ contract TransitionEvaluator {
     /**
      * @notice Evaluate a transition.
      * @dev Note: most transitions involve one account; the transfer transitions involve two (src, dest).
-     * @dev Always returns 4 hashes: accountHash (src), destAccountHash, strategyHash, globalInfoHash
      *
      * @param _transition The disputed transition.
      * @param _infos The involved infos at the start of the disputed transition.
      * @param _registry The address of the Registry contract.
-     * @return hashes of the accounts, strategy, staking pool and global info after applying the disputed transition.
+     * @return hashes of the accounts (src and dest), strategy, staking pool and global info after applying the disputed transition.
      */
     function evaluateTransition(
         bytes calldata _transition,
@@ -46,6 +45,7 @@ contract TransitionEvaluator {
         // Extract the transition type
         uint8 transitionType = tn.extractTransitionType(_transition);
         bytes32[5] memory outputs;
+        outputs[4] = getGlobalInfoHash(_infos.globalInfo);
         dt.EvaluateInfos memory updatedInfos;
         updatedInfos.accountInfos = new dt.AccountInfo[](2);
 
@@ -68,19 +68,17 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_BUY) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.BuyTransition memory buy = tn.decodePackedBuyTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
-                .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo, _registry);
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1
+                .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _registry);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
-            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_SELL) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SellTransition memory sell = tn.decodePackedSellTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
-                .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1
+                .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
-            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
             require(_infos.accountInfos.length == 2, ErrMsg.REQ_TWO_ACCT);
             dt.TransferAssetTransition memory xfer = tn.decodePackedTransferAssetTransition(_transition);
