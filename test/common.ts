@@ -1,6 +1,6 @@
+import fs from 'fs';
 import { Fixture } from 'ethereum-waffle';
 import { ethers, waffle } from 'hardhat';
-import fs from 'fs';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 

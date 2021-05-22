@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import fs from 'fs';
 import { ethers } from 'hardhat';
 
 import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
@@ -115,7 +114,7 @@ describe('DepositWithdraw', function () {
     expect(balanceAfter.sub(balanceBefore).add(gasSpent)).to.equal(withdrawAmount);
   });
 
-  it('should commit and execute blocks with multiple deposit transitions', async function () {
+  it('should handle deposit transition queue correctly', async function () {
     const { admin, registry, rollupChain, strategyDummy, strategyWeth, testERC20, weth } = await loadFixture(fixture);
     await registry.registerStrategy(strategyDummy.address);
     await registry.registerStrategy(strategyWeth.address);
