@@ -9,7 +9,7 @@
   {
     "Deposit": {
       "AccountId": 2,
-      "AssetId": 2,
+      "AssetId": 3,
       "Amount": 200
     }
   },
@@ -24,7 +24,7 @@
   {
     "Deposit": {
       "AccountId": 1,
-      "AssetId": 2,
+      "AssetId": 3,
       "Amount": 400
     }
   }

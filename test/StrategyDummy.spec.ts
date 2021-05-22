@@ -11,25 +11,25 @@ import { loadFixture } from './common';
 describe('StrategyDummy', function () {
   async function fixture([admin]: Wallet[]) {
     const testERC20Factory = (await ethers.getContractFactory('TestERC20')) as TestERC20__factory;
-    const testERC20 = await testERC20Factory.deploy();
-    await testERC20.deployed();
+    const erc20 = await testERC20Factory.deploy();
+    await erc20.deployed();
 
     const strategyDummyFactory = (await ethers.getContractFactory('StrategyDummy')) as StrategyDummy__factory;
     const strategyDummy = await strategyDummyFactory.deploy(
       admin.address,
-      testERC20.address,
+      erc20.address,
       admin.address,
       parseEther('1')
     );
     await strategyDummy.deployed();
 
-    await testERC20.approve(strategyDummy.address, parseEther('20'));
-    return { strategyDummy, testERC20 };
+    await erc20.approve(strategyDummy.address, parseEther('20'));
+    return { strategyDummy, erc20 };
   }
 
   it('should return asset address', async function () {
-    const { strategyDummy, testERC20 } = await loadFixture(fixture);
-    expect(await strategyDummy.getAssetAddress()).to.equal(testERC20.address);
+    const { strategyDummy, erc20 } = await loadFixture(fixture);
+    expect(await strategyDummy.getAssetAddress()).to.equal(erc20.address);
   });
 
   it('should aggregate orders correctly', async function () {
