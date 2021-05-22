@@ -28,6 +28,8 @@ const userPrivKeys = [
   '0x0168ea2aa71023864b1c8eb65997996d726e5068c12b20dea81076ef56380465'
 ];
 
+const DISPUTE_METHOD_SIG = '0xefe9f5b9';
+
 // Workaround for https://github.com/nomiclabs/hardhat/issues/849
 // TODO: Remove once fixed upstream.
 export function loadFixture<T>(fixture: Fixture<T>): Promise<T> {
@@ -133,17 +135,26 @@ export async function getUsers(admin: Wallet, assets: TestERC20[], num: number):
   return users;
 }
 
-export async function splitTns(tnData: string[]): Promise<string[][]> {
+interface Inputs {
+  tns: string[][];
+  disputeData: string;
+}
+
+export async function parseInput(rawInput: string[]): Promise<Inputs> {
   const tns: string[][] = [];
   tns.push([]);
-  let j = 0;
-  for (let i = 0; i < tnData.length; i++) {
-    if (tnData[i] == '') {
-      tns.push([]);
-      j++;
-    } else {
-      tns[j].push(tnData[i]);
+  tns.push([]);
+  let line
+  let disputeData = DISPUTE_METHOD_SIG
+  for (let i = 0; i < rawInput.length; i++) {
+    line = rawInput[i].trim();
+    if (line.startsWith('tn-')) {
+      let bid = parseInt(line.split('-')[1].split('-')[0]);
+      tns[bid].push(line.split(': ')[1])
+    } else if (line.startsWith('dispute-proof')) {
+      disputeData += line.split(': ')[1];
     }
   }
-  return tns;
+  
+  return {tns, disputeData};
 }
