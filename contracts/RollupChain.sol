@@ -94,9 +94,8 @@ contract RollupChain is Ownable, Pausable {
     address public operator;
 
     /* Events */
-    // TODO: do we need indexed event fields?
     event RollupBlockCommitted(uint256 blockId);
-    event RollupBlockExecuted(uint256 blockId, uint32 execLen, uint32 totalLen);
+    event RollupBlockExecuted(uint256 blockId, uint32 execLen);
     event RollupBlockReverted(uint256 blockId, string reason);
     event AssetDeposited(address account, uint32 assetId, uint256 amount, uint64 depositId);
     event AssetWithdrawn(address account, uint32 assetId, uint256 amount);
@@ -316,7 +315,7 @@ contract RollupChain is Ownable, Pausable {
         } else {
             blocks[_blockId].intentExecCount = newIntentExecCount;
         }
-        emit RollupBlockExecuted(_blockId, newIntentExecCount, uint32(_intents.length));
+        emit RollupBlockExecuted(_blockId, newIntentExecCount);
     }
 
     /**

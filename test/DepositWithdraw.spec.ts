@@ -166,7 +166,7 @@ describe('DepositWithdraw', function () {
     [, , status] = await rollupChain.pendingDeposits(3);
     expect(status).to.equal(1);
 
-    await expect(rollupChain.executeBlock(0, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(0, 0, 0);
+    await expect(rollupChain.executeBlock(0, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(0, 0);
 
     [ehash, blockId, status] = await rollupChain.pendingDeposits(2);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
@@ -179,7 +179,7 @@ describe('DepositWithdraw', function () {
     expect(blockId).to.equal(1);
     expect(status).to.equal(1);
 
-    await expect(rollupChain.executeBlock(1, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(1, 0, 0);
+    await expect(rollupChain.executeBlock(1, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(1, 0);
 
     [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
