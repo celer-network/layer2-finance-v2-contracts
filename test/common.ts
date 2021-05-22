@@ -41,10 +41,12 @@ interface DeploymentInfo {
   admin: Wallet;
   registry: Registry;
   rollupChain: RollupChain;
-  strategyDummy: StrategyDummy;
-  strategyWeth: StrategyDummy;
-  testERC20: TestERC20;
+  celr: TestERC20;
+  dai: TestERC20;
   weth: WETH9;
+  strategyDai1: StrategyDummy;
+  strategyDai2: StrategyDummy;
+  strategyWeth: StrategyDummy;
 }
 
 export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
@@ -90,23 +92,41 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   await rollupChain.deployed();
 
   const testERC20Factory = (await ethers.getContractFactory('TestERC20')) as TestERC20__factory;
-  const testERC20 = await testERC20Factory.deploy();
-  await testERC20.deployed();
+  const celr = await testERC20Factory.deploy();
+  await celr.deployed();
+  const dai = await testERC20Factory.deploy();
+  await dai.deployed();
 
   const wethFactory = (await ethers.getContractFactory('WETH9')) as WETH9__factory;
   const weth = await wethFactory.deploy();
   await weth.deployed();
   await weth.deposit({ value: parseEther('20') });
 
+  await registry.registerAsset(celr.address);
+  await registry.registerAsset(dai.address);
+  await registry.registerAsset(weth.address);
+  await rollupChain.setNetDepositLimit(celr.address, parseEther('10000'));
+  await rollupChain.setNetDepositLimit(dai.address, parseEther('10000'));
+  await rollupChain.setNetDepositLimit(weth.address, parseEther('10000'));
+
   const strategyDummyFactory = (await ethers.getContractFactory('StrategyDummy')) as StrategyDummy__factory;
-  const strategyDummy = await strategyDummyFactory.deploy(
+  const strategyDai1 = await strategyDummyFactory.deploy(
     rollupChain.address,
-    testERC20.address,
+    dai.address,
     admin.address,
     parseEther('1')
   );
-  await strategyDummy.deployed();
-  await testERC20.approve(strategyDummy.address, parseEther('1000'));
+  await strategyDai1.deployed();
+  await dai.approve(strategyDai1.address, parseEther('1000'));
+
+  const strategyDai2 = await strategyDummyFactory.deploy(
+    rollupChain.address,
+    dai.address,
+    admin.address,
+    parseEther('1')
+  );
+  await strategyDai2.deployed();
+  await dai.approve(strategyDai2.address, parseEther('1000'));
 
   const strategyWeth = await strategyDummyFactory.deploy(
     rollupChain.address,
@@ -117,7 +137,11 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   await strategyWeth.deployed();
   await weth.approve(strategyWeth.address, parseEther('1000'));
 
-  return { admin, registry, rollupChain, strategyDummy, strategyWeth, testERC20, weth };
+  await registry.registerStrategy(strategyDai1.address);
+  await registry.registerStrategy(strategyDai2.address);
+  await registry.registerStrategy(strategyWeth.address);
+
+  return { admin, registry, rollupChain, celr, dai, weth, strategyDai1, strategyDai2, strategyWeth };
 }
 
 export async function getUsers(admin: Wallet, assets: TestERC20[], num: number): Promise<Wallet[]> {

@@ -2,14 +2,14 @@
   {
     "Deposit": {
       "AccountId": 1,
-      "AssetId": 2,
+      "AssetId": 3,
       "Amount": 100
     }
   },
   {
     "Withdraw": {
       "AccountId": 1,
-      "AssetId": 2,
+      "AssetId": 3,
       "Amount": 50
     }
   }
