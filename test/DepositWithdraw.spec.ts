@@ -53,7 +53,7 @@ describe('DepositWithdraw', function () {
     );
 
     const rawInput = fs.readFileSync('test/input/data/deposit-withdraw.txt').toString().split('\n');
-    const {tns} = await parseInput(rawInput);
+    const { tns } = await parseInput(rawInput);
 
     await rollupChain.commitBlock(0, tns[0]);
 
@@ -80,12 +80,12 @@ describe('DepositWithdraw', function () {
     const wethAddress = weth.address;
     const depositAmount = 100;
     await expect(
-        rollupChain.connect(users[0]).depositETH(wethAddress, depositAmount, {
-          value: depositAmount
-        })
-      )
-        .to.emit(rollupChain, 'AssetDeposited')
-        .withArgs(users[0].address, 2, depositAmount, 0);
+      rollupChain.connect(users[0]).depositETH(wethAddress, depositAmount, {
+        value: depositAmount
+      })
+    )
+      .to.emit(rollupChain, 'AssetDeposited')
+      .withArgs(users[0].address, 2, depositAmount, 0);
 
     const [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
     const h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 2, depositAmount]);
@@ -94,7 +94,7 @@ describe('DepositWithdraw', function () {
     expect(status).to.equal(0);
 
     const rawInput = fs.readFileSync('test/input/data/deposit-withdraw-eth.txt').toString().split('\n');
-    const {tns} = await parseInput(rawInput);
+    const { tns } = await parseInput(rawInput);
 
     await rollupChain.commitBlock(0, tns[0]);
 
@@ -117,4 +117,76 @@ describe('DepositWithdraw', function () {
     expect(balanceAfter.sub(balanceBefore).add(gasSpent)).to.equal(withdrawAmount);
   });
 
+  it('should commit and execute blocks with multiple deposit transitions', async function () {
+    const { admin, registry, rollupChain, strategyDummy, strategyWeth, testERC20, weth } = await loadFixture(fixture);
+    await registry.registerStrategy(strategyDummy.address);
+    await registry.registerStrategy(strategyWeth.address);
+
+    const users = await getUsers(admin, [testERC20], 2);
+    await testERC20.connect(users[0]).approve(rollupChain.address, parseEther('1'));
+    await testERC20.connect(users[1]).approve(rollupChain.address, parseEther('1'));
+    await rollupChain.connect(users[0]).deposit(testERC20.address, 100);
+    await rollupChain.connect(users[1]).depositETH(weth.address, 200, { value: 200 });
+    await rollupChain.connect(users[1]).deposit(testERC20.address, 300);
+    await rollupChain.connect(users[0]).depositETH(weth.address, 400, { value: 400 });
+
+    let [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
+    let h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 1, 100]);
+    expect(ehash).to.equal(h);
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(1);
+    h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[1].address, 2, 200]);
+    expect(ehash).to.equal(h);
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(2);
+    h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[1].address, 1, 300]);
+    expect(ehash).to.equal(h);
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
+    h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 2, 400]);
+    expect(ehash).to.equal(h);
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    const rawInput = fs.readFileSync('test/input/data/deposit-queue.txt').toString().split('\n');
+    const { tns } = await parseInput(rawInput);
+
+    await expect(rollupChain.commitBlock(0, tns[1])).to.be.revertedWith('invalid data hash');
+    await rollupChain.commitBlock(0, tns[0]);
+
+    [, , status] = await rollupChain.pendingDeposits(2);
+    expect(status).to.equal(1);
+    [, , status] = await rollupChain.pendingDeposits(3);
+    expect(status).to.equal(0);
+
+    await rollupChain.commitBlock(1, tns[1]);
+    [, , status] = await rollupChain.pendingDeposits(3);
+    expect(status).to.equal(1);
+
+    await expect(rollupChain.executeBlock(0, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(0, 0, 0);
+
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(2);
+    expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
+    h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 2, 400]);
+    expect(ehash).to.equal(h);
+    expect(blockId).to.equal(1);
+    expect(status).to.equal(1);
+
+    await expect(rollupChain.executeBlock(1, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(1, 0, 0);
+
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
+    expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+  });
 });

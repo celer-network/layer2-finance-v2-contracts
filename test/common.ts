@@ -144,17 +144,17 @@ export async function parseInput(rawInput: string[]): Promise<Inputs> {
   const tns: string[][] = [];
   tns.push([]);
   tns.push([]);
-  let line
-  let disputeData = DISPUTE_METHOD_SIG
+  let line;
+  let disputeData = DISPUTE_METHOD_SIG;
   for (let i = 0; i < rawInput.length; i++) {
     line = rawInput[i].trim();
     if (line.startsWith('tn-')) {
       let bid = parseInt(line.split('-')[1].split('-')[0]);
-      tns[bid].push(line.split(': ')[1])
+      tns[bid].push(line.split(': ')[1]);
     } else if (line.startsWith('dispute-proof')) {
       disputeData += line.split(': ')[1];
     }
   }
-  
-  return {tns, disputeData};
+
+  return { tns, disputeData };
 }

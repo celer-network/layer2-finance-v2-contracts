@@ -1,16 +1,16 @@
 [
-    {
-      "Deposit": {
-        "AccountId": 1,
-        "AssetId": 1,
-        "Amount": 100
-      }
-    },
-    {
-      "Withdraw": {
-        "AccountId": 1,
-        "AssetId": 1,
-        "Amount": 50
-      }
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 100
     }
+  },
+  {
+    "Withdraw": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 50
+    }
+  }
 ]
