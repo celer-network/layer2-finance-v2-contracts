@@ -9,13 +9,13 @@ Use the `l2gen` tool to generate contract inputs from transition proto list
 #### Configs
 
 ```
-AssetId: 1, TestCELR
-AssetId: 2, TestDAI
-AssetId: 3, TestWETH
+assetId 1: testCELR
+assetId 2: testDAI
+assetId 3: testWETH
 
-StrategyId: 1, AssetId: 2
-StrategyId: 2, AssetId: 2
-StrategyId: 3, AssetId: 3
+strategyId 1: assetId 2
+strategyId 2: assetId 2
+strategyId 3: assetId 3
 ```
 
 #### Transition flags
