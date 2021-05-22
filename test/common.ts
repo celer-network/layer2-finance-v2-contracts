@@ -1,6 +1,6 @@
 import { Fixture } from 'ethereum-waffle';
 import { ethers, waffle } from 'hardhat';
-
+import fs from 'fs';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
@@ -140,7 +140,8 @@ interface Inputs {
   disputeData: string;
 }
 
-export async function parseInput(rawInput: string[]): Promise<Inputs> {
+export async function parseInput(filename: string): Promise<Inputs> {
+  const rawInput = fs.readFileSync(filename).toString().split('\n');
   const tns: string[][] = [];
   tns.push([]);
   tns.push([]);

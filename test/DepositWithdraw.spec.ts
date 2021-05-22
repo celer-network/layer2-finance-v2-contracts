@@ -52,8 +52,7 @@ describe('DepositWithdraw', function () {
       'invalid amount'
     );
 
-    const rawInput = fs.readFileSync('test/input/data/deposit-withdraw.txt').toString().split('\n');
-    const { tns } = await parseInput(rawInput);
+    const { tns } = await parseInput('test/input/data/deposit-withdraw.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
 
@@ -93,8 +92,7 @@ describe('DepositWithdraw', function () {
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    const rawInput = fs.readFileSync('test/input/data/deposit-withdraw-eth.txt').toString().split('\n');
-    const { tns } = await parseInput(rawInput);
+    const { tns } = await parseInput('test/input/data/deposit-withdraw-eth.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
 
@@ -154,8 +152,7 @@ describe('DepositWithdraw', function () {
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    const rawInput = fs.readFileSync('test/input/data/deposit-queue.txt').toString().split('\n');
-    const { tns } = await parseInput(rawInput);
+    const { tns } = await parseInput('test/input/data/deposit-queue.txt');
 
     await expect(rollupChain.commitBlock(0, tns[1])).to.be.revertedWith('invalid data hash');
     await rollupChain.commitBlock(0, tns[0]);
