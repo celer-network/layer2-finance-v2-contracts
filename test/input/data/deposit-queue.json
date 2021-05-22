@@ -1,0 +1,31 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 100
+    }
+  },
+  {
+    "Deposit": {
+      "AccountId": 2,
+      "AssetId": 2,
+      "Amount": 200
+    }
+  },
+  {
+    "Deposit": {
+      "AccountId": 2,
+      "AssetId": 1,
+      "Amount": 300
+    },
+    "Flag": 99
+  },
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 400
+    }
+  }
+]
