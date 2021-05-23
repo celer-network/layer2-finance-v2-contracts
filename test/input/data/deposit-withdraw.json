@@ -10,7 +10,8 @@
     "Withdraw": {
       "AccountId": 1,
       "AssetId": 1,
-      "Amount": 50
+      "Amount": 50,
+      "Timestamp": 1
     },
     "Flag": 99
   },
@@ -25,7 +26,8 @@
     "Withdraw": {
       "AccountId": 1,
       "AssetId": 3,
-      "Amount": 50
+      "Amount": 50,
+      "Timestamp": 2
     }
   }
 ]

@@ -14,7 +14,8 @@
       "AssetId": 2,
       "AccountId": 1,
       "Amount": 100000000000,
-      "Fee": 5
+      "Fee": 5,
+      "Timestamp": 1
     }
   },
   {
@@ -23,8 +24,10 @@
       "StrategyId": 1,
       "Amount": 20000000,
       "MaxSharePrice": 100000000,
-      "Fee": 5
-    }
+      "Fee": 5,
+      "Timestamp": 2
+    },
+    "Flag": 99
   },
   {
     "AggregateOrders": {
@@ -56,7 +59,8 @@
       "StrategyId": 1,
       "Shares": 1000000,
       "MinSharePrice": 1,
-      "Fee": 5
+      "Fee": 5,
+      "Timestamp": 3
     },
     "Flag": 2
   },
@@ -66,7 +70,8 @@
       "ToAccountId": 2,
       "AssetId": 2,
       "Amount": 500000,
-      "Fee": 5
+      "Fee": 5,
+      "Timestamp": 4
     }
   },
   {
@@ -75,7 +80,8 @@
       "ToAccountId": 3,
       "StrategyId": 1,
       "Shares": 300000,
-      "Fee": 5
+      "Fee": 5,
+      "Timestamp": 5
     }
   }
 ]

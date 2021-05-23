@@ -167,14 +167,15 @@ interface Inputs {
 export async function parseInput(filename: string): Promise<Inputs> {
   const rawInput = fs.readFileSync(filename).toString().split('\n');
   const tns: string[][] = [];
-  tns.push([]);
-  tns.push([]);
   let line;
   let disputeData = DISPUTE_METHOD_SIG;
   for (let i = 0; i < rawInput.length; i++) {
     line = rawInput[i].trim();
     if (line.startsWith('tn-')) {
       let bid = parseInt(line.split('-')[1].split('-')[0]);
+      if (bid > tns.length - 1) {
+        tns.push([]);
+      }
       tns[bid].push(line.split(': ')[1]);
     } else if (line.startsWith('dispute-proof')) {
       disputeData += line.split(': ')[1];
