@@ -22,14 +22,13 @@ describe('DepositWithdraw', function () {
   it('should deposit and withdraw ERC20 and ETH', async function () {
     const { admin, rollupChain, celr, weth } = await loadFixture(fixture);
     const users = await getUsers(admin, [celr], 1);
-    const tokenAddress = celr.address;
     const depositAmount = 100;
     const withdrawAmount = 50;
     const { tns } = await parseInput('test/input/data/deposit-withdraw.txt');
 
     // ERC20
     await celr.connect(users[0]).approve(rollupChain.address, depositAmount);
-    await expect(rollupChain.connect(users[0]).deposit(tokenAddress, depositAmount))
+    await expect(rollupChain.connect(users[0]).deposit(celr.address, depositAmount))
       .to.emit(rollupChain, 'AssetDeposited')
       .withArgs(users[0].address, 1, depositAmount, 0);
 
@@ -39,7 +38,7 @@ describe('DepositWithdraw', function () {
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    await expect(rollupChain.connect(users[0]).withdraw(users[0].address, tokenAddress)).to.be.revertedWith(
+    await expect(rollupChain.connect(users[0]).withdraw(users[0].address, celr.address)).to.be.revertedWith(
       'invalid amount'
     );
 
@@ -57,14 +56,13 @@ describe('DepositWithdraw', function () {
     expect(totalAmount).to.equal(withdrawAmount);
 
     let balanceBefore = await celr.balanceOf(users[0].address);
-    await rollupChain.withdraw(users[0].address, tokenAddress);
+    await rollupChain.withdraw(users[0].address, celr.address);
     let balanceAfter = await celr.balanceOf(users[0].address);
     expect(balanceAfter.sub(balanceBefore)).to.equal(withdrawAmount);
 
     // ETH
-    const wethAddress = weth.address;
     await expect(
-      rollupChain.connect(users[0]).depositETH(wethAddress, depositAmount, {
+      rollupChain.connect(users[0]).depositETH(weth.address, depositAmount, {
         value: depositAmount
       })
     )
@@ -76,7 +74,7 @@ describe('DepositWithdraw', function () {
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(1);
     expect(status).to.equal(0);
-    
+
     await rollupChain.commitBlock(1, tns[1]);
 
     [account, assetId, amount] = await rollupChain.pendingWithdrawCommits(1, 0);
