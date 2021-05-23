@@ -26,7 +26,8 @@
       "MaxSharePrice": 100000000,
       "Fee": 5,
       "Timestamp": 2
-    }
+    },
+    "Flag": 99
   },
   {
     "AggregateOrders": {
