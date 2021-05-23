@@ -34,7 +34,7 @@ describe('StrategyDummy', function () {
 
   it('should aggregate orders correctly', async function () {
     const { strategyDummy } = await loadFixture(fixture);
-    await expect(strategyDummy.aggregateOrders(parseEther('5'), parseEther('5'), parseEther('0'), parseEther('0')))
+    await expect(strategyDummy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('5'), parseEther('0')))
       .to.emit(strategyDummy, 'Buy')
       .withArgs(parseEther('5'), parseEther('5'));
 
@@ -42,7 +42,7 @@ describe('StrategyDummy', function () {
     expect(await strategyDummy.shares()).to.equal(parseEther('5'));
     expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
 
-    await expect(strategyDummy.aggregateOrders(parseEther('0'), parseEther('0'), parseEther('2'), parseEther('2')))
+    await expect(strategyDummy.aggregateOrders(parseEther('0'), parseEther('2'), parseEther('0'), parseEther('2')))
       .to.emit(strategyDummy, 'Sell')
       .withArgs(parseEther('2'), parseEther('2'));
 
@@ -50,7 +50,7 @@ describe('StrategyDummy', function () {
     expect(await strategyDummy.shares()).to.equal(parseEther('3'));
     expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
 
-    await expect(strategyDummy.aggregateOrders(parseEther('1'), parseEther('1'), parseEther('2'), parseEther('2')))
+    await expect(strategyDummy.aggregateOrders(parseEther('1'), parseEther('2'), parseEther('1'), parseEther('2')))
       .to.emit(strategyDummy, 'Buy')
       .withArgs(parseEther('1'), parseEther('1'))
       .to.emit(strategyDummy, 'Sell')
@@ -63,18 +63,18 @@ describe('StrategyDummy', function () {
   it('should fail if min share/asset amount requirement not met', async function () {
     const { strategyDummy } = await loadFixture(fixture);
     await expect(
-      strategyDummy.aggregateOrders(parseEther('5'), parseEther('6'), parseEther('0'), parseEther('0'))
+      strategyDummy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('6'), parseEther('0'))
     ).to.be.revertedWith('failed min shares from buy');
 
-    await strategyDummy.aggregateOrders(parseEther('5'), parseEther('5'), parseEther('0'), parseEther('0'));
+    await strategyDummy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('5'), parseEther('0'));
     await expect(
-      strategyDummy.aggregateOrders(parseEther('0'), parseEther('0'), parseEther('3'), parseEther('4'))
+      strategyDummy.aggregateOrders(parseEther('0'), parseEther('3'), parseEther('0'), parseEther('4'))
     ).to.be.revertedWith('failed min amount from sell');
   });
 
   it('should calculate price correctly', async function () {
     const { strategyDummy } = await loadFixture(fixture);
-    await strategyDummy.aggregateOrders(parseEther('2'), parseEther('2'), parseEther('0'), parseEther('0'));
+    await strategyDummy.aggregateOrders(parseEther('2'), parseEther('0'), parseEther('2'), parseEther('0'));
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('2'));
     expect(await strategyDummy.shares()).to.equal(parseEther('2'));
     expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
@@ -84,7 +84,7 @@ describe('StrategyDummy', function () {
     expect(await strategyDummy.shares()).to.equal(parseEther('2'));
     expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.5'));
 
-    await expect(strategyDummy.aggregateOrders(parseEther('6'), parseEther('4'), parseEther('1.5'), parseEther('2')))
+    await expect(strategyDummy.aggregateOrders(parseEther('6'), parseEther('1.5'), parseEther('4'), parseEther('2')))
       .to.emit(strategyDummy, 'Buy')
       .withArgs(parseEther('6'), parseEther('4'))
       .to.emit(strategyDummy, 'Sell')
@@ -99,7 +99,7 @@ describe('StrategyDummy', function () {
     expect(await strategyDummy.shares()).to.equal(parseEther('4.5'));
     expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.2'));
 
-    await expect(strategyDummy.aggregateOrders(parseEther('2.4'), parseEther('2'), parseEther('1'), parseEther('1.2')))
+    await expect(strategyDummy.aggregateOrders(parseEther('2.4'), parseEther('1'), parseEther('2'), parseEther('1.2')))
       .to.emit(strategyDummy, 'Buy')
       .withArgs(parseEther('2.4'), parseEther('2'))
       .to.emit(strategyDummy, 'Sell')

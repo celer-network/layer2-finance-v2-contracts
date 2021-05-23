@@ -57,8 +57,8 @@ contract StrategyDummy is IStrategy, Ownable {
 
     function aggregateOrders(
         uint256 _buyAmount,
-        uint256 _minSharesFromBuy,
         uint256 _sellShares,
+        uint256 _minSharesFromBuy,
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
         require(shares >= _sellShares, "not enough shares to sell");

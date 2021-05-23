@@ -24,15 +24,15 @@ interface IStrategy {
      * @notice aggregate orders to strategy per instructions from L2.
      *
      * @param _buyAmount The aggregated asset amount to buy.
-     * @param _minSharesFromBuy Minimal shares from buy.
      * @param _sellShares The aggregated shares to sell.
+     * @param _minSharesFromBuy Minimal shares from buy.
      * @param _minAmountFromSell Minimal asset amount from sell.
      * @return (sharesFromBuy, amountFromSell)
      */
     function aggregateOrders(
         uint256 _buyAmount,
-        uint256 _minSharesFromBuy,
         uint256 _sellShares,
+        uint256 _minSharesFromBuy,
         uint256 _minAmountFromSell
     ) external returns (uint256, uint256);
 
