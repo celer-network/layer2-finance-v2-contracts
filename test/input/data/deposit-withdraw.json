@@ -11,6 +11,21 @@
       "AccountId": 1,
       "AssetId": 1,
       "Amount": 50
+    },
+    "Flag": 99
+  },
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 3,
+      "Amount": 100
+    }
+  },
+  {
+    "Withdraw": {
+      "AccountId": 1,
+      "AssetId": 3,
+      "Amount": 50
     }
   }
 ]
