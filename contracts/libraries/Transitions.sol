@@ -598,8 +598,10 @@ library Transitions {
      */
     function getFeeInfo(uint128 _fee) internal pure returns (bool, uint256) {
         bool isCelr = _fee & UINT128_HIBIT == UINT128_HIBIT;
-        uint128 fee = _fee ^ UINT128_HIBIT;
-        return (isCelr, uint256(fee));
+        if (isCelr) {
+            _fee  = _fee ^ UINT128_HIBIT;
+        }
+        return (isCelr, uint256(_fee));
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {
