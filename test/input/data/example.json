@@ -28,11 +28,7 @@
   },
   {
     "AggregateOrders": {
-      "StrategyId": 1,
-      "BuyAmount": 20000000,
-      "SellShares": 0,
-      "MinSharesFromBuy": 20000000,
-      "MinAmountFromSell": 0
+      "StrategyId": 1
     }
   },
   {

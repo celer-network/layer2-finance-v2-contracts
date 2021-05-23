@@ -19,87 +19,79 @@ describe('DepositWithdraw', function () {
     };
   }
 
-  it('should deposit and withdraw ERC20', async function () {
-    const { admin, rollupChain, celr } = await loadFixture(fixture);
+  it('should deposit and withdraw ERC20 and ETH', async function () {
+    const { admin, rollupChain, celr, weth } = await loadFixture(fixture);
     const users = await getUsers(admin, [celr], 1);
-    const tokenAddress = celr.address;
     const depositAmount = 100;
+    const withdrawAmount = 50;
+    const { tns } = await parseInput('test/input/data/deposit-withdraw.txt');
+
+    // ERC20
     await celr.connect(users[0]).approve(rollupChain.address, depositAmount);
-    await expect(rollupChain.connect(users[0]).deposit(tokenAddress, depositAmount))
+    await expect(rollupChain.connect(users[0]).deposit(celr.address, depositAmount))
       .to.emit(rollupChain, 'AssetDeposited')
       .withArgs(users[0].address, 1, depositAmount, 0);
 
-    const [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
-    const h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 1, depositAmount]);
+    let [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
+    let h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 1, depositAmount]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    const withdrawAmount = 50;
-    await expect(rollupChain.connect(users[0]).withdraw(users[0].address, tokenAddress)).to.be.revertedWith(
+    await expect(rollupChain.connect(users[0]).withdraw(users[0].address, celr.address)).to.be.revertedWith(
       'invalid amount'
     );
 
-    const { tns } = await parseInput('test/input/data/deposit-withdraw.txt');
-
     await rollupChain.commitBlock(0, tns[0]);
 
-    const [account, assetId, amount] = await rollupChain.pendingWithdrawCommits(0, 0);
+    let [account, assetId, amount] = await rollupChain.pendingWithdrawCommits(0, 0);
     expect(account).to.equal(users[0].address);
     expect(assetId).to.equal(1);
     expect(amount).to.equal(withdrawAmount);
 
     await rollupChain.executeBlock(0, [], 0);
 
-    const totalAmount = await rollupChain.pendingWithdraws(users[0].address, assetId);
+    let totalAmount = await rollupChain.pendingWithdraws(users[0].address, assetId);
     expect(assetId).to.equal(1);
     expect(totalAmount).to.equal(withdrawAmount);
 
-    const balanceBefore = await celr.balanceOf(users[0].address);
-    await rollupChain.withdraw(users[0].address, tokenAddress);
-    const balanceAfter = await celr.balanceOf(users[0].address);
+    let balanceBefore = await celr.balanceOf(users[0].address);
+    await rollupChain.withdraw(users[0].address, celr.address);
+    let balanceAfter = await celr.balanceOf(users[0].address);
     expect(balanceAfter.sub(balanceBefore)).to.equal(withdrawAmount);
-  });
 
-  it('should deposit and withdraw ETH', async function () {
-    const { admin, rollupChain, weth } = await loadFixture(fixture);
-    const users = await getUsers(admin, [], 1);
-    const wethAddress = weth.address;
-    const depositAmount = 100;
+    // ETH
     await expect(
-      rollupChain.connect(users[0]).depositETH(wethAddress, depositAmount, {
+      rollupChain.connect(users[0]).depositETH(weth.address, depositAmount, {
         value: depositAmount
       })
     )
       .to.emit(rollupChain, 'AssetDeposited')
-      .withArgs(users[0].address, 3, depositAmount, 0);
+      .withArgs(users[0].address, 3, depositAmount, 1);
 
-    const [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
-    const h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 3, depositAmount]);
+    [ehash, blockId, status] = await rollupChain.pendingDeposits(1);
+    h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 3, depositAmount]);
     expect(ehash).to.equal(h);
-    expect(blockId).to.equal(0);
+    expect(blockId).to.equal(1);
     expect(status).to.equal(0);
 
-    const { tns } = await parseInput('test/input/data/deposit-withdraw-eth.txt');
+    await rollupChain.commitBlock(1, tns[1]);
 
-    await rollupChain.commitBlock(0, tns[0]);
-
-    const withdrawAmount = 50;
-    const [account, assetId, amount] = await rollupChain.pendingWithdrawCommits(0, 0);
+    [account, assetId, amount] = await rollupChain.pendingWithdrawCommits(1, 0);
     expect(account).to.equal(users[0].address);
     expect(assetId).to.equal(3);
     expect(amount).to.equal(withdrawAmount);
 
-    await rollupChain.executeBlock(0, [], 0);
+    await rollupChain.executeBlock(1, [], 0);
 
-    const totalAmount = await rollupChain.pendingWithdraws(users[0].address, assetId);
+    totalAmount = await rollupChain.pendingWithdraws(users[0].address, assetId);
     expect(assetId).to.equal(3);
     expect(totalAmount).to.equal(withdrawAmount);
 
-    const balanceBefore = await ethers.provider.getBalance(users[0].address);
+    balanceBefore = await ethers.provider.getBalance(users[0].address);
     const withdrawTx = await rollupChain.connect(users[0]).withdrawETH(users[0].address, weth.address);
     const gasSpent = (await withdrawTx.wait()).gasUsed.mul(withdrawTx.gasPrice);
-    const balanceAfter = await ethers.provider.getBalance(users[0].address);
+    balanceAfter = await ethers.provider.getBalance(users[0].address);
     expect(balanceAfter.sub(balanceBefore).add(gasSpent)).to.equal(withdrawAmount);
   });
 

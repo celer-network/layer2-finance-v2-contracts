@@ -596,8 +596,10 @@ contract RollupChain is Ownable, Pausable {
         uint32 strategyId = _aggregation.strategyId;
         address strategyAddr = registry.strategyIndexToAddress(strategyId);
         require(strategyAddr != address(0), ErrMsg.REQ_BAD_ST);
+        IStrategy strategy = IStrategy(strategyAddr);
+
         // TODO: reset allowance to zero after strategy interaction?
-        IERC20(strategyAddr).safeIncreaseAllowance(strategyAddr, _aggregation.buyAmount);
+        IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(strategyAddr, _aggregation.buyAmount);
         (bool success, bytes memory returnData) =
             strategyAddr.call(
                 abi.encodeWithSelector(

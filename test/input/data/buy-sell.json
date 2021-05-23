@@ -1,0 +1,37 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "Deposit": {
+      "AccountId": 2,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 1000000000000000000,
+      "MaxSharePrice": 1100000000000000000
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 2,
+      "StrategyId": 1,
+      "Amount": 4000000000000000000,
+      "MaxSharePrice": 1050000000000000000
+    }
+  },
+  {
+    "AggregateOrders": {
+      "StrategyId": 1
+    }
+  }
+]
