@@ -34,6 +34,31 @@
   {
     "AggregateOrders": {
       "StrategyId": 1
+    },
+    "Flag": 99
+  },
+  {
+    "ExecutionResult": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "Success": true,
+      "SharesFromBuy": 5000000000000000000,
+      "AmountFromSell": 0,
+      "currEpoch": 35
+    }
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "AccountId": 1
+    }
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "AccountId": 2
     }
   }
 ]
