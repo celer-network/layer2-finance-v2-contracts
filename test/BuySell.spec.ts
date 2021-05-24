@@ -34,5 +34,33 @@ describe('BuySell', function () {
     await expect(rollupChain.executeBlock(0, [tns[0][4]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
       .withArgs(1, 0, true, parseEther('5'), 0, 35);
+
+    let [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
+    let h = solidityKeccak256(
+      ['uint32', 'uint64', 'bool', 'uint256', 'uint256', 'uint64'],
+      [1, 0, true, parseEther('5'), 0, 35]
+    );
+    expect(ehash).to.equal(h);
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    [, , status] = await rollupChain.pendingExecResults(1, 0);
+    expect(status).to.equal(1);
+
+    await expect(rollupChain.executeBlock(1, [tns[1][5]], 1))
+      .to.emit(rollupChain, 'AggregationExecuted')
+      .withArgs(1, 1, true, 0, parseEther('2'), 37);
+
+    [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
+    expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
+    expect(blockId).to.equal(0);
+    expect(status).to.equal(0);
+
+    await rollupChain.commitBlock(2, tns[2]);
+
+    [, , status] = await rollupChain.pendingExecResults(1, 1);
+    expect(status).to.equal(1);
   });
 });

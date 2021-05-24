@@ -68,15 +68,22 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_BUY) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.BuyTransition memory buy = tn.decodePackedBuyTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1
-                .applyBuyTransition(buy, _infos.accountInfos[0], _infos.strategyInfo, _registry);
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1.applyBuyTransition(
+                buy,
+                _infos.accountInfos[0],
+                _infos.strategyInfo,
+                _registry
+            );
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
         } else if (transitionType == tn.TN_TYPE_SELL) {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SellTransition memory sell = tn.decodePackedSellTransition(_transition);
-            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1
-                .applySellTransition(sell, _infos.accountInfos[0], _infos.strategyInfo);
+            (updatedInfos.accountInfos[0], updatedInfos.strategyInfo) = transitionApplier1.applySellTransition(
+                sell,
+                _infos.accountInfos[0],
+                _infos.strategyInfo
+            );
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {

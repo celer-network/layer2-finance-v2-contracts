@@ -623,7 +623,7 @@ contract RollupChain is Ownable, Pausable {
             keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch));
         pendingExecResults[strategyId][aggregateId] = PendingEvent({
             ehash: ehash,
-            blockId: uint64(blocks.length), // "pending": baseline of censorship delay
+            blockId: uint64(blocks.length) - 1, // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
         emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch);

@@ -23,7 +23,7 @@
       "AccountId": 1,
       "StrategyId": 1,
       "Amount": 20000000,
-      "MaxSharePrice": 100000000,
+      "MaxSharePrice": 1100000000000000000,
       "Fee": 5,
       "Timestamp": 2
     },
@@ -58,7 +58,7 @@
       "AccountId": 1,
       "StrategyId": 1,
       "Shares": 1000000,
-      "MinSharePrice": 1,
+      "MinSharePrice": 900000000000000000,
       "Fee": 5,
       "Timestamp": 3
     },

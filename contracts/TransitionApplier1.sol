@@ -108,14 +108,7 @@ contract TransitionApplier1 {
         dt.AccountInfo memory _accountInfo,
         dt.StrategyInfo memory _strategyInfo,
         Registry _registry
-    )
-        public
-        view
-        returns (
-            dt.AccountInfo memory,
-            dt.StrategyInfo memory
-        )
-    {
+    ) public view returns (dt.AccountInfo memory, dt.StrategyInfo memory) {
         bytes32 txHash =
             keccak256(
                 abi.encodePacked(
@@ -199,14 +192,7 @@ contract TransitionApplier1 {
         dt.SellTransition memory _transition,
         dt.AccountInfo memory _accountInfo,
         dt.StrategyInfo memory _strategyInfo
-    )
-        external
-        pure
-        returns (
-            dt.AccountInfo memory,
-            dt.StrategyInfo memory
-        )
-    {
+    ) external pure returns (dt.AccountInfo memory, dt.StrategyInfo memory) {
         bytes32 txHash =
             keccak256(
                 abi.encodePacked(
