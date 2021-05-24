@@ -185,3 +185,12 @@ export async function parseInput(filename: string): Promise<Inputs> {
 
   return { tns, disputeData };
 }
+
+export async function advanceBlockNumberTo(target: number): Promise<void> {
+  const blockNumber = await ethers.provider.getBlockNumber();
+  const promises = [];
+  for (let i = blockNumber; i < target; i++) {
+    promises.push(ethers.provider.send('evm_mine', []));
+  }
+  await Promise.all(promises);
+}

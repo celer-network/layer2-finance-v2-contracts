@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
-import { deployContracts, getUsers, loadFixture, parseInput } from './common';
+import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('Staking', function () {
   async function fixture([admin]: Wallet[]) {
@@ -33,6 +33,7 @@ describe('Staking', function () {
     const { tns } = await parseInput('test/input/data/staking.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
+    await advanceBlockNumberTo(200 - 1);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     // NOTE: Enable to get aggregation epoch
     // const aggr = await rollupChain.queryFilter(
