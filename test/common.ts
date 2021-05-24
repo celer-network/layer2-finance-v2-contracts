@@ -1,6 +1,7 @@
-import fs from 'fs';
 import { Fixture } from 'ethereum-waffle';
+import fs from 'fs';
 import { ethers, waffle } from 'hardhat';
+
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
@@ -8,10 +9,10 @@ import { Registry__factory } from '../typechain';
 import { RollupChain__factory } from '../typechain/factories/RollupChain__factory';
 import { StrategyDummy__factory } from '../typechain/factories/StrategyDummy__factory';
 import { TestERC20__factory } from '../typechain/factories/TestERC20__factory';
-import { TransitionDisputer__factory } from '../typechain/factories/TransitionDisputer__factory';
-import { TransitionEvaluator__factory } from '../typechain/factories/TransitionEvaluator__factory';
 import { TransitionApplier1__factory } from '../typechain/factories/TransitionApplier1__factory';
 import { TransitionApplier2__factory } from '../typechain/factories/TransitionApplier2__factory';
+import { TransitionDisputer__factory } from '../typechain/factories/TransitionDisputer__factory';
+import { TransitionEvaluator__factory } from '../typechain/factories/TransitionEvaluator__factory';
 import { WETH9__factory } from '../typechain/factories/WETH9__factory';
 import { Registry } from '../typechain/Registry.d';
 import { RollupChain } from '../typechain/RollupChain.d';
@@ -172,11 +173,11 @@ export async function parseInput(filename: string): Promise<Inputs> {
   for (let i = 0; i < rawInput.length; i++) {
     line = rawInput[i].trim();
     if (line.startsWith('tn-')) {
-      let bid = parseInt(line.split('-')[1].split('-')[0]);
-      if (bid > tns.length - 1) {
+      const blockID = parseInt(line.split('-')[1].split('-')[0]);
+      if (blockID > tns.length - 1) {
         tns.push([]);
       }
-      tns[bid].push(line.split(': ')[1]);
+      tns[blockID].push(line.split(': ')[1]);
     } else if (line.startsWith('dispute-proof')) {
       disputeData += line.split(': ')[1];
     }

@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
 
 import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
 import { parseEther } from '@ethersproject/units';
@@ -36,7 +35,7 @@ describe('BuySell', function () {
       .withArgs(1, 0, true, parseEther('5'), 0, 35);
 
     let [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
-    let h = solidityKeccak256(
+    const h = solidityKeccak256(
       ['uint32', 'uint64', 'bool', 'uint256', 'uint256', 'uint64'],
       [1, 0, true, parseEther('5'), 0, 35]
     );
