@@ -341,11 +341,21 @@ contract TransitionApplier2 {
         dt.StakingPoolInfo memory _stakingPoolInfo,
         dt.GlobalInfo memory _globalInfo
     ) external pure returns (dt.StakingPoolInfo memory) {
+        require(
+            _transition.rewardAssetIds.length >= _stakingPoolInfo.rewardAssetIds.length &&
+                _transition.rewardAssetIds.length == _transition.rewardPerEpoch.length,
+            ErrMsg.REQ_BAD_LEN
+        );
+
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
         _stakingPoolInfo.strategyId = _transition.strategyId;
         _stakingPoolInfo.rewardAssetIds = _transition.rewardAssetIds;
         _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
+        _stakingPoolInfo.accumulatedRewardPerUnit = tn.adjustUint256Array(
+            _stakingPoolInfo.accumulatedRewardPerUnit,
+            uint32(_transition.rewardAssetIds.length)
+        );
         _stakingPoolInfo.stakeAdjustmentFactor = _transition.stakeAdjustmentFactor;
         return _stakingPoolInfo;
     }
@@ -436,18 +446,17 @@ contract TransitionApplier2 {
             }
             rewardDebts[poolId] = new uint256[](rewardTokenId + 1);
             _accountInfo.rewardDebts = rewardDebts;
-        } else {
-            uint32 nRewardTokens = uint32(_accountInfo.rewardDebts[poolId].length);
-            if (nRewardTokens <= rewardTokenId) {
-                uint256[] memory debts = new uint256[](rewardTokenId + 1);
-                for (uint32 i = 0; i < nRewardTokens; i++) {
-                    debts[i] = _accountInfo.rewardDebts[poolId][i];
-                }
-                for (uint32 i = nRewardTokens; i <= rewardTokenId; i++) {
-                    debts[i] = 0;
-                }
-                _accountInfo.rewardDebts[poolId] = debts;
+        }
+        uint32 nRewardTokens = uint32(_accountInfo.rewardDebts[poolId].length);
+        if (nRewardTokens <= rewardTokenId) {
+            uint256[] memory debts = new uint256[](rewardTokenId + 1);
+            for (uint32 i = 0; i < nRewardTokens; i++) {
+                debts[i] = _accountInfo.rewardDebts[poolId][i];
             }
+            for (uint32 i = nRewardTokens; i <= rewardTokenId; i++) {
+                debts[i] = 0;
+            }
+            _accountInfo.rewardDebts[poolId] = debts;
         }
     }
 
