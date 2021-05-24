@@ -1,11 +1,10 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
 
 import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
-import { deployContracts, getUsers, loadFixture, parseInput } from './common';
+import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('BuySell', function () {
   async function fixture([admin]: Wallet[]) {
@@ -31,14 +30,15 @@ describe('BuySell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
+    await advanceBlockNumberTo(50 - 1);
     await expect(rollupChain.executeBlock(0, [tns[0][4]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 0, true, parseEther('5'), 0, 35);
+      .withArgs(1, 0, true, parseEther('5'), 0, 50);
 
     let [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
-    let h = solidityKeccak256(
+    const h = solidityKeccak256(
       ['uint32', 'uint64', 'bool', 'uint256', 'uint256', 'uint64'],
-      [1, 0, true, parseEther('5'), 0, 35]
+      [1, 0, true, parseEther('5'), 0, 50]
     );
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
@@ -51,7 +51,7 @@ describe('BuySell', function () {
 
     await expect(rollupChain.executeBlock(1, [tns[1][5]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 1, true, 0, parseEther('2'), 37);
+      .withArgs(1, 1, true, 0, parseEther('2'), 52);
 
     [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
