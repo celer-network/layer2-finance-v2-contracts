@@ -605,7 +605,7 @@ library Transitions {
     }
 
     function splitUint16(uint16 _code) internal pure returns (uint8, uint8) {
-        uint8 high = uint8(_code >> 5);
+        uint8 high = uint8(_code >> 8);
         uint8 low = uint8(_code);
         return (high, low);
     }

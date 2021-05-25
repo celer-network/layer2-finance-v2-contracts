@@ -33,7 +33,7 @@ describe('Staking', function () {
     const { tns } = await parseInput('test/input/data/staking.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
-    await advanceBlockNumberTo(200 - 1);
+    await advanceBlockNumberTo(250 - 1);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     // NOTE: Enable to get aggregation epoch
     // const aggr = await rollupChain.queryFilter(

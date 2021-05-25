@@ -115,8 +115,8 @@ contract TransitionApplier1 {
                     _transition.transitionType,
                     _transition.strategyId,
                     _transition.amount,
-                    _transition.fee,
                     _transition.maxSharePrice,
+                    _transition.fee,
                     _transition.timestamp
                 )
             );
@@ -129,7 +129,6 @@ contract TransitionApplier1 {
         require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
         _accountInfo.timestamp = _transition.timestamp;
-        _accountInfo.idleAssets[_strategyInfo.assetId] -= _transition.amount;
 
         if (_strategyInfo.assetId == 0) {
             // first time commit of new strategy
@@ -142,6 +141,7 @@ contract TransitionApplier1 {
             address assetAddr = IStrategy(strategyAddr).getAssetAddress();
             _strategyInfo.assetId = _registry.assetAddressToIndex(assetAddr);
         }
+        _accountInfo.idleAssets[_strategyInfo.assetId] -= _transition.amount;
 
         uint256 npend = _strategyInfo.pending.length;
         if (npend == 0 || _strategyInfo.pending[npend - 1].aggregateId != _strategyInfo.nextAggregateId) {
@@ -199,8 +199,8 @@ contract TransitionApplier1 {
                     _transition.transitionType,
                     _transition.strategyId,
                     _transition.shares,
-                    _transition.fee,
                     _transition.minSharePrice,
+                    _transition.fee,
                     _transition.timestamp
                 )
             );

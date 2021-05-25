@@ -361,7 +361,8 @@ contract RollupChain is Ownable, Pausable {
                 _stakingPoolProof,
                 _globalInfo,
                 prevTransitionBlock,
-                invalidTransitionBlock
+                invalidTransitionBlock,
+                registry
             )
         );
 
