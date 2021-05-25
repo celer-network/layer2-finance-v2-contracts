@@ -341,17 +341,6 @@ contract TransitionEvaluator {
      * @param _globalInfo Global info
      */
     function getGlobalInfoHash(dt.GlobalInfo memory _globalInfo) public pure returns (bytes32) {
-        // If it's an empty struct, map it to 32 bytes of zeros (empty value)
-        if (
-            _globalInfo.protoFees.length == 0 &&
-            _globalInfo.opFees.assets.length == 0 &&
-            _globalInfo.opFees.shares.length == 0 &&
-            _globalInfo.currEpoch == 0 &&
-            _globalInfo.rewards.length == 0
-        ) {
-            return keccak256(abi.encodePacked(uint256(0)));
-        }
-
         return keccak256(abi.encode(_globalInfo));
     }
 }
