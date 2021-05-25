@@ -1,0 +1,17 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 100
+    }
+  },
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 100
+    },
+    "Flag": 2
+  }
+]
