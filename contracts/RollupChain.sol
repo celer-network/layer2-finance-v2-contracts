@@ -349,19 +349,6 @@ contract RollupChain is Ownable, Pausable {
         dt.Block memory invalidTransitionBlock = blocks[_invalidTransitionProof.blockId];
         require(invalidTransitionBlock.blockTime + blockChallengePeriod > block.number, ErrMsg.REQ_BAD_CHALLENGE);
 
-        transitionDisputer.disputeTransition(
-            _prevTransitionProof,
-            _invalidTransitionProof,
-            _accountProofs,
-            _strategyProof,
-            _stakingPoolProof,
-            _globalInfo,
-            prevTransitionBlock,
-            invalidTransitionBlock,
-            registry
-        );
-
-        /*
         bool success;
         bytes memory returnData;
         (success, returnData) = address(transitionDisputer).call(
@@ -385,7 +372,6 @@ contract RollupChain is Ownable, Pausable {
         } else {
             revert("Failed to dispute");
         }
-        */
     }
 
     /**

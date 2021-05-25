@@ -291,22 +291,7 @@ contract TransitionEvaluator {
             return keccak256(abi.encodePacked(uint256(0)));
         }
 
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _accountInfo.account,
-                    _accountInfo.accountId,
-                    _accountInfo.idleAssets,
-                    _accountInfo.shares,
-                    _accountInfo.pending,
-                    _accountInfo.stakedShares,
-                    _accountInfo.stakes,
-                    _accountInfo.rewardDebts,
-                    _accountInfo.timestamp
-                )
-            );
+        return keccak256(abi.encode(_accountInfo));
     }
 
     /**
@@ -326,19 +311,7 @@ contract TransitionEvaluator {
             return keccak256(abi.encodePacked(uint256(0)));
         }
 
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _strategyInfo.assetId,
-                    _strategyInfo.assetBalance,
-                    _strategyInfo.shareSupply,
-                    _strategyInfo.nextAggregateId,
-                    _strategyInfo.lastExecAggregateId,
-                    _strategyInfo.pending
-                )
-            );
+        return keccak256(abi.encode(_strategyInfo));
     }
 
     /**
@@ -360,21 +333,7 @@ contract TransitionEvaluator {
             return keccak256(abi.encodePacked(uint256(0)));
         }
 
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _stakingPoolInfo.strategyId,
-                    _stakingPoolInfo.rewardAssetIds,
-                    _stakingPoolInfo.rewardPerEpoch,
-                    _stakingPoolInfo.totalShares,
-                    _stakingPoolInfo.totalStakes,
-                    _stakingPoolInfo.accumulatedRewardPerUnit,
-                    _stakingPoolInfo.lastRewardEpoch,
-                    _stakingPoolInfo.stakeAdjustmentFactor
-                )
-            );
+        return keccak256(abi.encode(_stakingPoolInfo));
     }
 
     /**
@@ -393,17 +352,6 @@ contract TransitionEvaluator {
             return keccak256(abi.encodePacked(uint256(0)));
         }
 
-        // Here we don't use `abi.encode([struct])` because it's not clear
-        // how to generate that encoding client-side.
-        return
-            keccak256(
-                abi.encode(
-                    _globalInfo.protoFees,
-                    _globalInfo.opFees.assets,
-                    _globalInfo.opFees.shares,
-                    _globalInfo.currEpoch,
-                    _globalInfo.rewards
-                )
-            );
+        return keccak256(abi.encode(_globalInfo));
     }
 }
