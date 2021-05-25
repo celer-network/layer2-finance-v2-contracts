@@ -18,7 +18,7 @@ describe('DisputeBuySell', function () {
       dai
     };
   }
-/*
+
   it('should fail to dispute valid buy', async function () {
     const { admin, rollupChain, dai } = await loadFixture(fixture);
     const users = await getUsers(admin, [dai], 1);
@@ -35,8 +35,8 @@ describe('DisputeBuySell', function () {
       })
     ).to.be.revertedWith('Failed to dispute');
   });
-*/
-  it('should dispute buy with invalid rooot', async function () {
+
+  it('should dispute buy with invalid root', async function () {
     const { admin, rollupChain, dai } = await loadFixture(fixture);
     const users = await getUsers(admin, [dai], 1);
     await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
