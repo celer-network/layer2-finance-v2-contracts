@@ -54,4 +54,23 @@ describe('DisputeBuySell', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(0, 'invalid post-state root');
   });
+
+  it('should dispute buy with invalid amount', async function () {
+    const { admin, rollupChain, dai } = await loadFixture(fixture);
+    const users = await getUsers(admin, [dai], 1);
+    await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(dai.address, parseEther('1'));
+
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-amt.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(0, 'failed to evaluate');
+  });
 });
