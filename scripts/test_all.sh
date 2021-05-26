@@ -1,0 +1,9 @@
+# Run each test with a new network, so that block numbers won't be affected by each other
+
+set -e
+
+files=`ls test/*.spec.ts`
+for eachfile in $files
+do
+   hardhat test $eachfile
+done
