@@ -34,7 +34,7 @@ describe('DisputeDeposit', function () {
         to: rollupChain.address,
         data: disputeData
       })
-    ).to.be.revertedWith('Failed to dispute');
+    ).to.be.revertedWith('Failed to dispute--');
   });
 
   it('should dispute deposit with invalid root', async function () {
