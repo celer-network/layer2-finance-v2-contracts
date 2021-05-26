@@ -13,6 +13,33 @@
       "Amount": 1000000000000000000,
       "MaxSharePrice": 1100000000000000000,
       "Timestamp": 1
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 1000000000000000000,
+      "MaxSharePrice": 1100000000000000000,
+      "Timestamp": 2
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 1000000000000000000,
+      "MaxSharePrice": 1100000000000000000,
+      "Timestamp": 3
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 1000000000000000000,
+      "MaxSharePrice": 1100000000000000000,
+      "Timestamp": 4
     },
     "Flag": 2
   }
