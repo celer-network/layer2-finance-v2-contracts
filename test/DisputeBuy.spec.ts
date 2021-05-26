@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 
-import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
@@ -11,6 +10,10 @@ describe('DisputeBuySell', function () {
     const { rollupChain, celr, dai } = await deployContracts(admin);
     await rollupChain.setBlockChallengePeriod(10);
 
+    const users = await getUsers(admin, [dai], 1);
+    await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(dai.address, parseEther('100'));
+
     return {
       admin,
       rollupChain,
@@ -20,11 +23,7 @@ describe('DisputeBuySell', function () {
   }
 
   it('should fail to dispute valid buy', async function () {
-    const { admin, rollupChain, dai } = await loadFixture(fixture);
-    const users = await getUsers(admin, [dai], 1);
-    await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
-    await rollupChain.connect(users[0]).deposit(dai.address, parseEther('1'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-valid.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -37,11 +36,7 @@ describe('DisputeBuySell', function () {
   });
 
   it('should dispute buy with invalid root', async function () {
-    const { admin, rollupChain, dai } = await loadFixture(fixture);
-    const users = await getUsers(admin, [dai], 1);
-    await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
-    await rollupChain.connect(users[0]).deposit(dai.address, parseEther('1'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-root.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -56,11 +51,7 @@ describe('DisputeBuySell', function () {
   });
 
   it('should dispute buy with invalid amount', async function () {
-    const { admin, rollupChain, dai } = await loadFixture(fixture);
-    const users = await getUsers(admin, [dai], 1);
-    await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
-    await rollupChain.connect(users[0]).deposit(dai.address, parseEther('1'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-amt.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
