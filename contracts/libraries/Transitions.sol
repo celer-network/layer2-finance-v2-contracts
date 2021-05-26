@@ -416,10 +416,11 @@ library Transitions {
         pure
         returns (DataTypes.UnstakeTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 shares, uint128 fee, bytes32 r, bytes32 s) =
-            abi.decode((_rawBytes), (uint256, bytes32, uint256, uint128, bytes32, bytes32));
+        (uint256 infoCode, bytes32 stateRoot, uint256 sharefee, bytes32 r, bytes32 s) =
+            abi.decode((_rawBytes), (uint256, bytes32, uint256, bytes32, bytes32));
         (uint32 poolId, uint32 accountId, uint64 timestamp, uint8 v, uint8 transitionType) =
             decodeStakingInfoCode(infoCode);
+        (uint128 shares, uint128 fee) = splitUint256(sharefee);
         DataTypes.UnstakeTransition memory transition =
             DataTypes.UnstakeTransition(transitionType, stateRoot, poolId, accountId, shares, fee, timestamp, r, s, v);
         return transition;
