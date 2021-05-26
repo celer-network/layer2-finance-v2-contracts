@@ -1,0 +1,66 @@
+[
+  {
+    "DepositReward": {
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "UpdatePoolInfo": {
+      "PoolId": 1,
+      "StrategyId": 1,
+      "RewardAssetIds": [1],
+      "RewardPerEpoch": [1],
+      "StakeAdjustmentFactor": 500000000000
+    }
+  },
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 2000000000000000000,
+      "MaxSharePrice": 1100000000000000000,
+      "Timestamp": 1
+    }
+  },
+  {
+    "AggregateOrders": {
+      "StrategyId": 1
+    },
+    "Flag": 99
+  },
+  {
+    "ExecutionResult": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "Success": true,
+      "SharesFromBuy": 2000000000000000000,
+      "AmountFromSell": 0,
+      "currEpoch": 150
+    }
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "AccountId": 1
+    }
+  },
+  {
+    "Stake": {
+      "PoolId": 1,
+      "AccountId": 1,
+      "Shares": 2000000000000000001,
+      "Fee": 0,
+      "Timestamp": 2
+    },
+    "Flag": 1
+  }
+]
