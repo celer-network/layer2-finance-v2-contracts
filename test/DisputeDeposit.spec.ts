@@ -99,5 +99,4 @@ describe('DisputeDeposit', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(0, 'invalid account id');
   });
-
 });

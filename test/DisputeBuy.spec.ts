@@ -24,7 +24,6 @@ describe('DisputeBuySell', function () {
 
   it('should fail to dispute valid buy', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
-
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-valid.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -38,7 +37,6 @@ describe('DisputeBuySell', function () {
 
   it('should dispute buy with invalid root', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
-
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-root.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -54,7 +52,6 @@ describe('DisputeBuySell', function () {
 
   it('should dispute buy with invalid amount', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
-
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-amt.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
