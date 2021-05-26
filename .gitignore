@@ -9,6 +9,8 @@ typechain/
 
 *.pid
 *.log
+*.new
+*.bak
 
 .DS_Store
 
