@@ -54,7 +54,7 @@ describe('BuySell', function () {
       .withArgs(1, 1, true, 0, parseEther('2'), 52);
 
     [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
-    expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
