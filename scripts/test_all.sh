@@ -2,7 +2,6 @@
 
 set -e
 
-yarn compile
 files=`ls test/*.spec.ts`
 for eachfile in $files
 do

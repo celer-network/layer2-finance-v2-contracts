@@ -10,7 +10,7 @@
     "report-gas:summary": "REPORT_GAS=true yarn test",
     "size-contracts": "hardhat size-contracts > reports/contract_sizes.txt",
     "test": "hardhat compile && hardhat test",
-    "test-all": "sh ./scripts/test_all.sh"
+    "test-all": "yarn compile && sh ./scripts/test_all.sh"
   },
   "repository": {
     "type": "git",
