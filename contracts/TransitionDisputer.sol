@@ -234,11 +234,8 @@ contract TransitionDisputer {
                 stakingPoolInfo: _stakingPoolProof.value,
                 globalInfo: _globalInfo
             });
-        (
-            // Make the external call
-            ok,
-            returnData
-        ) = address(transitionEvaluator).call(
+        // Make the external call
+        (ok, returnData) = address(transitionEvaluator).call(
             abi.encodeWithSelector(
                 transitionEvaluator.evaluateTransition.selector,
                 _invalidTransitionProof.transition,
@@ -246,6 +243,7 @@ contract TransitionDisputer {
                 _registry
             )
         );
+
         // Check if it was successful. If not, we've got to revert.
         if (!ok) {
             return ErrMsg.RSN_EVAL_FAILURE;
