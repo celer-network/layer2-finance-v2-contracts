@@ -168,7 +168,6 @@ contract TransitionApplier2 {
                         abi.encodePacked(
                             _transition.transitionType,
                             _transition.poolId,
-                            _transition.accountId,
                             _transition.shares,
                             _transition.fee,
                             _transition.timestamp
@@ -255,7 +254,6 @@ contract TransitionApplier2 {
                         abi.encodePacked(
                             _transition.transitionType,
                             _transition.poolId,
-                            _transition.accountId,
                             _transition.shares,
                             _transition.fee,
                             _transition.timestamp
@@ -271,7 +269,6 @@ contract TransitionApplier2 {
 
         require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
-
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
@@ -466,10 +463,9 @@ contract TransitionApplier2 {
      * @param _adjustmentFactor The adjustment factor, a value from (0, 1) * STAKING_SCALE_FACTOR
      */
     function _getAdjustedStake(uint256 _stakedShares, uint256 _adjustmentFactor) private pure returns (uint256) {
-        return
-            ((STAKING_SCALE_FACTOR - _adjustmentFactor) *
-                _stakedShares +
-                _sqrt(STAKING_SCALE_FACTOR * _adjustmentFactor * _stakedShares)) / STAKING_SCALE_FACTOR;
+        return ((STAKING_SCALE_FACTOR - _adjustmentFactor) *
+            _stakedShares +
+            _sqrt(STAKING_SCALE_FACTOR * _adjustmentFactor * _stakedShares));
     }
 
     /**
