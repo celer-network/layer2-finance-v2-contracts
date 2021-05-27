@@ -426,10 +426,15 @@ contract TransitionDisputer {
         dt.StrategyProof memory _strategyProof,
         dt.StakingPoolProof memory _stakingPoolProof
     ) private pure returns (bool) {
-        if (_leafHashes[0] == bytes32(0) && _leafHashes[1] == bytes32(0)) {
+        if (
+            _leafHashes[0] == bytes32(0) &&
+            _leafHashes[1] == bytes32(0) &&
+            _leafHashes[2] == bytes32(0) &&
+            _leafHashes[3] == bytes32(0) &&
+            _leafHashes[4] == bytes32(0)
+        ) {
             return false;
         }
-
         // If there is an account update, compute its new Merkle tree root.
         // If there are two account updates (i.e. transfer), compute their combined new Merkle tree root.
         bytes32 accountStateRoot = _accountProofs[0].stateRoot;
