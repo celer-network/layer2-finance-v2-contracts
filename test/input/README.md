@@ -4,7 +4,13 @@ Use the `l2gen` tool to generate contract inputs from transition proto list
 
 #### Usage examples
 
-`./l2gen -f data/example.json > data/example.txt`: generate input to commit block and dispute transition.
+Generate input data to commit blocks and dispute transitions:
+
+`./l2gen -f data/example.json > data/example.txt` or `sh l2gen.sh data/example.json`
+
+Generate inputs for all tests:
+
+`sh l2gen-all.sh`
 
 #### Configs
 
