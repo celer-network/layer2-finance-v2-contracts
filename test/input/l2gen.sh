@@ -1,4 +1,6 @@
+#!/bin/bash
+
 file=$1
-echo $file
 out=${file/json/txt}
+echo $file '>' $out
 ./l2gen -f $file > $out
