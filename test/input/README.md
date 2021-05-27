@@ -1,4 +1,4 @@
-### Generate contract input
+### Generate contract testing inputs
 
 Use the `l2gen` tool to generate contract inputs from transition proto list
 
@@ -8,9 +8,7 @@ Generate input data to commit blocks and dispute transitions:
 
 `./l2gen -f data/example.json > data/example.txt` or `sh l2gen.sh data/example.json`
 
-Generate inputs for all tests:
-
-`sh l2gen-all.sh`
+Generate inputs for all tests: `sh l2gen-all.sh`
 
 #### Configs
 
