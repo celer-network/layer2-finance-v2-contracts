@@ -17,7 +17,6 @@ library ErrMsg {
     string internal constant REQ_OVER_LIMIT = "exceeds limit";
     string internal constant REQ_BAD_DEP_TN = "invalid deposit tn";
     string internal constant REQ_BAD_EXECRES_TN = "invalid execRes tn";
-    string internal constant REQ_ZERO_ACCT = "need 0 accounts";
     string internal constant REQ_ONE_ACCT = "need 1 account";
     string internal constant REQ_TWO_ACCT = "need 2 accounts";
     string internal constant REQ_ACCT_NOT_EMPTY = "account not empty";

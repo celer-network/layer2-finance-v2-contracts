@@ -103,12 +103,10 @@ contract TransitionEvaluator {
             outputs[1] = getAccountInfoHash(updatedInfos.accountInfos[1]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_AGGREGATE_ORDER) {
-            require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.AggregateOrdersTransition memory aggr = tn.decodePackedAggregateOrdersTransition(_transition);
             updatedInfos.strategyInfo = transitionApplier2.applyAggregateOrdersTransition(aggr, _infos.strategyInfo);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
         } else if (transitionType == tn.TN_TYPE_EXEC_RESULT) {
-            require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.ExecutionResultTransition memory res = tn.decodePackedExecutionResultTransition(_transition);
             (updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier2.applyExecutionResultTransition(
                 res,
@@ -142,7 +140,6 @@ contract TransitionEvaluator {
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
-            require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.UpdatePoolInfoTransition memory updatePoolInfo = tn.decodeUpdatePoolInfoTransition(_transition);
             updatedInfos.stakingPoolInfo = transitionApplier2.applyUpdatePoolInfoTransition(
                 updatePoolInfo,
@@ -151,12 +148,10 @@ contract TransitionEvaluator {
             );
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
         } else if (transitionType == tn.TN_TYPE_DEPOSIT_REWARD) {
-            require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.DepositRewardTransition memory dr = tn.decodeDepositRewardTransition(_transition);
             updatedInfos.globalInfo = transitionApplier2.applyDepositRewardTransition(dr, _infos.globalInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else if (transitionType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
-            require(_infos.accountInfos.length == 0, ErrMsg.REQ_ZERO_ACCT);
             dt.WithdrawProtocolFeeTransition memory wpf = tn.decodeWithdrawProtocolFeeTransition(_transition);
             updatedInfos.globalInfo = transitionApplier2.applyWithdrawProtocolFeeTransition(wpf, _infos.globalInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
