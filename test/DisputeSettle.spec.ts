@@ -5,7 +5,7 @@ import { Wallet } from '@ethersproject/wallet';
 
 import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
-describe('DisputeAggregateOrder', function () {
+describe('DisputeSettle', function () {
   async function fixture([admin]: Wallet[]) {
     const { rollupChain, celr, dai } = await deployContracts(admin);
     await rollupChain.setBlockChallengePeriod(10);
@@ -24,9 +24,9 @@ describe('DisputeAggregateOrder', function () {
     };
   }
 
-  it('should fail to dispute valid aggregate', async function () {
+  it('should fail to dispute valid settle', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
-    const { tns, disputeData } = await parseInput('test/input/data/dispute-aggr-valid.txt');
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-valid.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
 
@@ -34,6 +34,11 @@ describe('DisputeAggregateOrder', function () {
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(100 - 1);
+    await rollupChain.executeBlock(1, [tns[1][8]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
     await expect(
       admin.sendTransaction({
         to: rollupChain.address,
@@ -42,36 +47,21 @@ describe('DisputeAggregateOrder', function () {
     ).to.be.revertedWith('Failed to dispute');
   });
 
-  it('should dispute aggregate with invalid root', async function () {
+  it('should dispute settle with invalid root', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
-    const { tns, disputeData } = await parseInput('test/input/data/dispute-aggr-root.txt');
-
-    await rollupChain.commitBlock(0, tns[0]);
-
-    await advanceBlockNumberTo(100 - 1);
-    await rollupChain.executeBlock(0, [tns[0][4]], 1);
-
-    await rollupChain.commitBlock(1, tns[1]);
-    await expect(
-      admin.sendTransaction({
-        to: rollupChain.address,
-        data: disputeData
-      })
-    )
-      .to.emit(rollupChain, 'RollupBlockReverted')
-      .withArgs(1, 'invalid post-state root');
-  });
-
-  it('should dispute aggregate with invalid tn value', async function () {
-    const { admin, rollupChain } = await loadFixture(fixture);
-    const { tns, disputeData } = await parseInput('test/input/data/dispute-aggr-value.txt');
-
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-root.txt');
+  
     await rollupChain.commitBlock(0, tns[0]);
 
     await advanceBlockNumberTo(150 - 1);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(200 - 1);
+    await rollupChain.executeBlock(1, [tns[1][8]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
     await expect(
       admin.sendTransaction({
         to: rollupChain.address,
@@ -79,6 +69,6 @@ describe('DisputeAggregateOrder', function () {
       })
     )
       .to.emit(rollupChain, 'RollupBlockReverted')
-      .withArgs(1, 'failed to evaluate');
+      .withArgs(2, 'invalid post-state root');
   });
 });
