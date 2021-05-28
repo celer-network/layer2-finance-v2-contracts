@@ -24,7 +24,7 @@ describe('DisputeExecResult', function () {
     };
   }
 
-  it('should fail to dispute valid aggregate', async function () {
+  it('should fail to dispute valid execute result', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-exec-valid.txt');
 
@@ -42,7 +42,7 @@ describe('DisputeExecResult', function () {
     ).to.be.revertedWith('Failed to dispute');
   });
 
-  it('should dispute aggregate with invalid root', async function () {
+  it('should dispute execute result with invalid root', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-exec-root.txt');
 
