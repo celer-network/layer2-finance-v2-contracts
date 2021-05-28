@@ -14,20 +14,16 @@ describe('DisputeTransfer', function () {
     await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
     await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
     await rollupChain.connect(users[0]).deposit(dai.address, parseEther('100'));
+    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
 
     return {
       admin,
-      rollupChain,
-      celr,
-      dai,
-      users
+      rollupChain
     };
   }
 
   it('should fail to dispute valid asset transfer', async function () {
-    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
-    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-valid.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -40,9 +36,7 @@ describe('DisputeTransfer', function () {
   });
 
   it('should dispute asset transfer with invalid root', async function () {
-    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
-    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-root.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -57,9 +51,7 @@ describe('DisputeTransfer', function () {
   });
 
   it('should dispute asset transfer with invalid amount', async function () {
-    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
-    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-amt.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -74,9 +66,7 @@ describe('DisputeTransfer', function () {
   });
 
   it('should dispute asset transfer with invalid asset id', async function () {
-    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
-    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-id.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -91,8 +81,7 @@ describe('DisputeTransfer', function () {
   });
 
   it('should fail to dispute valid asset transfer to a new account', async function () {
-    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
-
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-new-acnt-valid.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
@@ -105,9 +94,7 @@ describe('DisputeTransfer', function () {
   });
 
   it('should dispute asset transfer with invalid amount', async function () {
-    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
-    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
-
+    const { admin, rollupChain} = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-sig.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
