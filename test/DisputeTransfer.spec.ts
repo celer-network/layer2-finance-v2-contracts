@@ -152,7 +152,7 @@ describe('DisputeTransfer', function () {
   });
 
   it('should dispute asset transfer with invalid signature', async function () {
-    const { admin, rollupChain} = await loadFixture(fixture);
+    const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-transfer-asset-sig.txt');
 
     await rollupChain.commitBlock(0, tns[0]);

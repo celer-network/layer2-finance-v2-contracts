@@ -50,7 +50,7 @@ describe('DisputeSettle', function () {
   it('should dispute settle with invalid root', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-root.txt');
-  
+
     await rollupChain.commitBlock(0, tns[0]);
 
     await advanceBlockNumberTo(150 - 1);
