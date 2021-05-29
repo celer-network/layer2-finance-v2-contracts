@@ -152,7 +152,7 @@ describe('DisputeSell', function () {
   });
 
   it('should dispute sell with celr fee with invalid root', async function () {
-    const { admin, rollupChain, celr, users  } = await loadFixture(fixture);
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
     await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
     await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
     const { tns, disputeData } = await parseInput('test/input/data/dispute-sell-fee-celr-root.txt');
@@ -174,7 +174,7 @@ describe('DisputeSell', function () {
   });
 
   it('should dispute sellwith invalid celr fee amt', async function () {
-    const { admin, rollupChain, celr, users  } = await loadFixture(fixture);
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
     await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
     await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
     const { tns, disputeData } = await parseInput('test/input/data/dispute-sell-fee-celr-amt.txt');
