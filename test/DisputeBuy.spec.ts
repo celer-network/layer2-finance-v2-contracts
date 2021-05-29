@@ -18,7 +18,8 @@ describe('DisputeBuySell', function () {
       admin,
       rollupChain,
       celr,
-      dai
+      dai,
+      users
     };
   }
 
@@ -97,6 +98,57 @@ describe('DisputeBuySell', function () {
   it('should dispute buy with invalid asset fee amt', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-asset-amt.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(0, 'failed to evaluate');
+  });
+
+  it('should fail to dispute valid buy with celr fee', async function () {
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
+    await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
+
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-celr-valid.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    ).to.be.revertedWith('Failed to dispute');
+  });
+
+  it('should dispute buy with celr fee with invalid root', async function () {
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
+    await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-celr-root.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(0, 'invalid post-state root');
+  });
+
+
+  it('should dispute buy with invalid celr fee amt', async function () {
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
+    await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-celr-amt.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
     await expect(
