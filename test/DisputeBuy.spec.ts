@@ -10,7 +10,7 @@ describe('DisputeBuySell', function () {
     const { rollupChain, celr, dai } = await deployContracts(admin);
     await rollupChain.setBlockChallengePeriod(10);
 
-    const users = await getUsers(admin, [dai], 1);
+    const users = await getUsers(admin, [celr, dai], 1);
     await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
     await rollupChain.connect(users[0]).deposit(dai.address, parseEther('100'));
 
@@ -53,6 +53,50 @@ describe('DisputeBuySell', function () {
   it('should dispute buy with invalid amount', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-amt.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(0, 'failed to evaluate');
+  });
+
+  it('should fail to dispute valid buy with asset fee', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-asset-valid.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    ).to.be.revertedWith('Failed to dispute');
+  });
+
+  it('should dispute buy with asset fee with invalid root', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-asset-root.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(0, 'invalid post-state root');
+  });
+
+
+  it('should dispute buy with invalid asset fee amt', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-asset-amt.txt');
 
     await rollupChain.commitBlock(0, tns[0]);
     await expect(
