@@ -94,7 +94,6 @@ describe('DisputeBuySell', function () {
       .withArgs(0, 'invalid post-state root');
   });
 
-
   it('should dispute buy with invalid asset fee amt', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-buy-fee-asset-amt.txt');
@@ -142,7 +141,6 @@ describe('DisputeBuySell', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(0, 'invalid post-state root');
   });
-
 
   it('should dispute buy with invalid celr fee amt', async function () {
     const { admin, rollupChain, celr, users } = await loadFixture(fixture);

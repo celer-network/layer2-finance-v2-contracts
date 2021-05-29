@@ -83,4 +83,42 @@ describe('DisputeSell', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(1, 'failed to evaluate');
   });
+
+  it('should fail to dispute valid sell with asset fee', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-sell-fee-asset-valid.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(200 - 1);
+    await rollupChain.executeBlock(0, [tns[0][2]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    ).to.be.revertedWith('Failed to dispute');
+  });
+
+  it('should dispute sell with asset fee with invalid root', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-sell-fee-asset-root.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(250 - 1);
+    await rollupChain.executeBlock(0, [tns[0][2]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(1, 'invalid post-state root');
+  });
 });
