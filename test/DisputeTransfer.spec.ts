@@ -7,7 +7,7 @@ import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInpu
 
 describe('DisputeTransfer', function () {
   async function fixture([admin]: Wallet[]) {
-    const { rollupChain, celr, dai } = await deployContracts(admin);
+    const { rollupChain, dai } = await deployContracts(admin);
     await rollupChain.setBlockChallengePeriod(10);
 
     const users = await getUsers(admin, [dai], 2);

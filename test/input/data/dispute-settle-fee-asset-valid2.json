@@ -29,7 +29,7 @@
       "Success": true,
       "SharesFromBuy": 1000000000000000000,
       "AmountFromSell": 0,
-      "currEpoch": 350
+      "CurrEpoch": 350
     }
   },
   {
@@ -73,7 +73,7 @@
       "Success": true,
       "SharesFromBuy": 900000000000000000,
       "AmountFromSell": 500000000000000000,
-      "currEpoch": 400
+      "CurrEpoch": 400
     }
   },
   {
