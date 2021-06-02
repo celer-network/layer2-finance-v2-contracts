@@ -19,6 +19,7 @@
       "ToAccountId": 2,
       "AssetId": 2,
       "Amount": 10000000000000000000,
+      "Fee": 2000000000000000000,
       "Timestamp": 1
     },
     "Flag": 1

@@ -14,6 +14,13 @@
     }
   },
   {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 1000000000000000000
+    }
+  },
+  {
     "Buy": {
       "AccountId": 1,
       "StrategyId": 1,
@@ -45,7 +52,7 @@
       "Success": true,
       "SharesFromBuy": 5000000000000000000,
       "AmountFromSell": 0,
-      "CurrEpoch": 100
+      "CurrEpoch": 200
     }
   },
   {
@@ -68,9 +75,10 @@
       "ToAccountId": 2,
       "StrategyId": 1,
       "Shares": 1000000000000000000,
-      "Fee": 200000000000000000,
-      "Timestamp": 2
+      "Fee": 1000000000000000000,
+      "Timestamp": 3
     },
-    "Flag": 2
+    "FeeCelr": true,
+    "Flag": 1
   }
 ]

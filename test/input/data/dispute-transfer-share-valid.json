@@ -68,6 +68,7 @@
       "ToAccountId": 2,
       "StrategyId": 1,
       "Shares": 1000000000000000000,
+      "Fee": 200000000000000000,
       "Timestamp": 3
     },
     "Flag": 1

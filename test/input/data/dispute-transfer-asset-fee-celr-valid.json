@@ -14,14 +14,22 @@
     }
   },
   {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 1000000000000000000
+    }
+  },
+  {
     "TransferAsset": {
       "FromAccountId": 1,
       "ToAccountId": 2,
       "AssetId": 2,
-      "Amount": 10000000000000000000,
-      "Fee": 2000000000000000000,
+      "Amount": 100000000000000000000,
+      "Fee": 1000000000000000000,
       "Timestamp": 1
     },
-    "Flag": 2
+    "FeeCelr": true,
+    "Flag": 1
   }
 ]
