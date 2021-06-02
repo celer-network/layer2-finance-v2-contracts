@@ -1,0 +1,25 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "Withdraw": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 1000000000000000000,
+      "Fee": 100000000000000000,
+      "Timestamp": 1
+    }
+  },
+  {
+    "WithdrawProtocolFee": {
+      "AssetId": 2,
+      "Amount": 100000000000000000
+    },
+    "Flag": 2
+  }
+]

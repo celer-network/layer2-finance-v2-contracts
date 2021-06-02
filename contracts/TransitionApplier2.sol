@@ -106,7 +106,7 @@ contract TransitionApplier2 {
      * @notice Apply a TransferOperatorFeeTransition.
      *
      * @param _transition The disputed transition.
-     * @param _accountInfo The involved account from the previous transition (source of the transfer).
+     * @param _accountInfo The involved account from the previous transition.
      * @param _globalInfo The involved global info from the previous transition.
      * @return new account info and global info after applying the disputed transition
      */
@@ -115,7 +115,8 @@ contract TransitionApplier2 {
         dt.AccountInfo memory _accountInfo,
         dt.GlobalInfo memory _globalInfo
     ) external pure returns (dt.AccountInfo memory, dt.GlobalInfo memory) {
-        require(_accountInfo.accountId == _transition.accountId, "account id not match");
+        require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
+        require(_accountInfo.account != address(0), ErrMsg.REQ_BAD_ACCT);
 
         uint32 assetFeeLen = uint32(_globalInfo.opFees.assets.length);
         if (assetFeeLen > 1) {
