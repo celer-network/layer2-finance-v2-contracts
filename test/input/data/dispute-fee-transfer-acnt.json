@@ -1,0 +1,25 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "TransferAsset": {
+      "FromAccountId": 1,
+      "ToAccountId": 2,
+      "AssetId": 2,
+      "Amount": 1000000000000000000,
+      "Fee": 100000000000000000,
+      "Timestamp": 1
+    }
+  },
+  {
+    "TransferOperatorFee": {
+      "AccountId": 3
+    },
+    "Flag": 1
+  }
+]
