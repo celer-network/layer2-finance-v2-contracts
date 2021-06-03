@@ -197,4 +197,156 @@ describe('DisputeSettle', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(2, 'invalid post-state root');
   });
+
+  it('should fail to dispute valid settle with asset refund', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-refund-asset-valid.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(750 - 1);
+    await rollupChain.executeBlock(0, [tns[0][2]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(800 - 1);
+    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    ).to.be.revertedWith('Failed to dispute');
+  });
+
+  it('should dispute valid settle with asset refund with invalid root', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-refund-asset-root.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(850 - 1);
+    await rollupChain.executeBlock(0, [tns[0][2]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(900 - 1);
+    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(2, 'invalid post-state root');
+  });
+
+  it('should dispute valid settle with asset refund with invalid amt', async function () {
+    const { admin, rollupChain } = await loadFixture(fixture);
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-refund-asset-amt.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(950 - 1);
+    await rollupChain.executeBlock(0, [tns[0][2]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(1000 - 1);
+    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(2, 'failed to evaluate');
+  });
+
+  it('should fail to dispute valid settle with celr refund', async function () {
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
+    await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-refund-celr-valid.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(1050 - 1);
+    await rollupChain.executeBlock(0, [tns[0][3]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(1100 - 1);
+    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    ).to.be.revertedWith('Failed to dispute');
+  });
+
+  it('should dispute valid settle with celr refund with invalid root', async function () {
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
+    await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-refund-celr-root.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(1150 - 1);
+    await rollupChain.executeBlock(0, [tns[0][3]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(1200 - 1);
+    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(2, 'invalid post-state root');
+  });
+
+  it('should dispute valid settle with celr refund with invalid amt', async function () {
+    const { admin, rollupChain, celr, users } = await loadFixture(fixture);
+    await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-refund-celr-amt.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumberTo(1250 - 1);
+    await rollupChain.executeBlock(0, [tns[0][3]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumberTo(1300 - 1);
+    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(2, 'failed to evaluate');
+  });
 });

@@ -300,8 +300,8 @@ contract TransitionApplier1 {
                 uint256 amount = (acctPend.sellShares * stPend.amountFromSell) / stPend.sellShares;
                 uint256 fee = acctPend.sellFees;
                 if (fee < assetRefund) {
-                    fee = 0;
                     assetRefund -= fee;
+                    fee = 0;
                 } else {
                     fee -= assetRefund;
                     assetRefund = 0;
