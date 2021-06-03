@@ -307,7 +307,7 @@ library Transitions {
         uint32 strategyId = uint32(ids);
         uint32 accountId = uint32(ids >> 32);
         uint256 refund = uint152(_infoCode >> 8);
-        uint128 assetRefund = uint128(refund);
+        uint128 assetRefund = uint96(refund);
         uint128 celrRefund = uint128(refund >> 96) * 1e9;
         uint8 transitionType = uint8(_infoCode);
         return (accountId, strategyId, aggregateId, celrRefund, assetRefund, transitionType);
