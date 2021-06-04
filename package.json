@@ -7,7 +7,7 @@
     "compile": "hardhat compile",
     "generate:typechain": "rm -rf typechain && hardhat typechain",
     "report-gas:benchmark": "hardhat test benchmark/*.ts",
-    "report-gas:summary": "REPORT_GAS=true yarn test",
+    "report-gas:summary": "REPORT_GAS=true hardhat test test/BuySell.spec.ts ",
     "size-contracts": "hardhat size-contracts > reports/contract_sizes.txt",
     "test": "hardhat compile && sh ./scripts/test_all.sh"
   },
