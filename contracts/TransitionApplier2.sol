@@ -184,6 +184,7 @@ contract TransitionApplier2 {
 
         require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
+        require(_stakingPoolInfo.strategyId > 0, ErrMsg.REQ_BAD_SP);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
@@ -270,6 +271,7 @@ contract TransitionApplier2 {
 
         require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
+        require(_stakingPoolInfo.strategyId > 0, ErrMsg.REQ_BAD_SP);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint32 poolId = _transition.poolId;
@@ -327,34 +329,53 @@ contract TransitionApplier2 {
     }
 
     /**
-     * @notice Apply an UpdatePoolInfoTransition.
+     * @notice Apply an AddPoolTransition.
      *
      * @param _transition The disputed transition.
      * @param _stakingPoolInfo The involved staking pool from the previous transition.
      * @param _globalInfo The involved global info from the previous transition.
      * @return new staking pool info after applying the disputed transition
      */
-    function applyUpdatePoolInfoTransition(
-        dt.UpdatePoolInfoTransition memory _transition,
+    function applyAddPoolTransition(
+        dt.AddPoolTransition memory _transition,
         dt.StakingPoolInfo memory _stakingPoolInfo,
         dt.GlobalInfo memory _globalInfo
     ) external pure returns (dt.StakingPoolInfo memory) {
-        require(
-            _transition.rewardAssetIds.length >= _stakingPoolInfo.rewardAssetIds.length &&
-                _transition.rewardAssetIds.length == _transition.rewardPerEpoch.length,
-            ErrMsg.REQ_BAD_LEN
-        );
+        require(_transition.rewardAssetIds.length == _transition.rewardPerEpoch.length, ErrMsg.REQ_BAD_LEN);
+        require(_stakingPoolInfo.strategyId == 0, ErrMsg.REQ_BAD_SP);
+        require(_transition.startEpoch >= _globalInfo.currEpoch, ErrMsg.REQ_BAD_EPOCH);
 
-        _updatePoolStates(_stakingPoolInfo, _globalInfo);
-
+        _stakingPoolInfo.lastRewardEpoch = _transition.startEpoch;
+        _stakingPoolInfo.stakeAdjustmentFactor = _transition.stakeAdjustmentFactor;
         _stakingPoolInfo.strategyId = _transition.strategyId;
         _stakingPoolInfo.rewardAssetIds = _transition.rewardAssetIds;
-        _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
         _stakingPoolInfo.accumulatedRewardPerUnit = tn.adjustUint256Array(
             _stakingPoolInfo.accumulatedRewardPerUnit,
             uint32(_transition.rewardAssetIds.length)
         );
-        _stakingPoolInfo.stakeAdjustmentFactor = _transition.stakeAdjustmentFactor;
+        _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
+        return _stakingPoolInfo;
+    }
+
+    /**
+     * @notice Apply an UpdatePoolTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _stakingPoolInfo The involved staking pool from the previous transition.
+     * @param _globalInfo The involved global info from the previous transition.
+     * @return new staking pool info after applying the disputed transition
+     */
+    function applyUpdatePoolTransition(
+        dt.UpdatePoolTransition memory _transition,
+        dt.StakingPoolInfo memory _stakingPoolInfo,
+        dt.GlobalInfo memory _globalInfo
+    ) external pure returns (dt.StakingPoolInfo memory) {
+        require(_transition.rewardPerEpoch.length == _stakingPoolInfo.rewardPerEpoch.length, ErrMsg.REQ_BAD_LEN);
+        require(_stakingPoolInfo.lastRewardEpoch > 0, ErrMsg.REQ_BAD_SP);
+
+        _updatePoolStates(_stakingPoolInfo, _globalInfo);
+
+        _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
         return _stakingPoolInfo;
     }
 
@@ -382,19 +403,22 @@ contract TransitionApplier2 {
         private
         pure
     {
-        uint256 totalStakes = _stakingPoolInfo.totalStakes;
-        if (totalStakes == 0) {
-            // Start the pool
+        if (_globalInfo.currEpoch > _stakingPoolInfo.lastRewardEpoch) {
+            uint256 totalStakes = _stakingPoolInfo.totalStakes;
+            if (totalStakes > 0) {
+                uint64 numEpochs = _globalInfo.currEpoch - _stakingPoolInfo.lastRewardEpoch;
+                for (
+                    uint32 rewardTokenId = 0;
+                    rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length;
+                    rewardTokenId++
+                ) {
+                    uint256 pendingReward = numEpochs * _stakingPoolInfo.rewardPerEpoch[rewardTokenId];
+                    _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId] += ((pendingReward *
+                        STAKING_SCALE_FACTOR) / totalStakes);
+                }
+            }
             _stakingPoolInfo.lastRewardEpoch = _globalInfo.currEpoch;
-            return;
         }
-        uint64 numEpochs = _globalInfo.currEpoch - _stakingPoolInfo.lastRewardEpoch;
-        for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
-            uint256 pendingReward = numEpochs * _stakingPoolInfo.rewardPerEpoch[rewardTokenId];
-            _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId] += ((pendingReward * STAKING_SCALE_FACTOR) /
-                totalStakes);
-        }
-        _stakingPoolInfo.lastRewardEpoch = _globalInfo.currEpoch;
     }
 
     /**

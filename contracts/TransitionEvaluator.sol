@@ -139,10 +139,18 @@ contract TransitionEvaluator {
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
-        } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
-            dt.UpdatePoolInfoTransition memory updatePoolInfo = tn.decodeUpdatePoolInfoTransition(_transition);
-            updatedInfos.stakingPoolInfo = transitionApplier2.applyUpdatePoolInfoTransition(
-                updatePoolInfo,
+        } else if (transitionType == tn.TN_TYPE_ADD_POOL) {
+            dt.AddPoolTransition memory addPool = tn.decodeAddPoolTransition(_transition);
+            updatedInfos.stakingPoolInfo = transitionApplier2.applyAddPoolTransition(
+                addPool,
+                _infos.stakingPoolInfo,
+                _infos.globalInfo
+            );
+            outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
+        } else if (transitionType == tn.TN_TYPE_UPDATE_POOL) {
+            dt.UpdatePoolTransition memory updatePool = tn.decodeUpdatePoolTransition(_transition);
+            updatedInfos.stakingPoolInfo = transitionApplier2.applyUpdatePoolTransition(
+                updatePool,
                 _infos.stakingPoolInfo,
                 _infos.globalInfo
             );
@@ -243,8 +251,12 @@ contract TransitionEvaluator {
             stateRoot = transition.stateRoot;
             accountId = transition.accountId;
             stakingPoolId = transition.poolId;
-        } else if (transitionType == tn.TN_TYPE_UPDATE_POOL_INFO) {
-            dt.UpdatePoolInfoTransition memory transition = tn.decodeUpdatePoolInfoTransition(rawTransition);
+        } else if (transitionType == tn.TN_TYPE_ADD_POOL) {
+            dt.AddPoolTransition memory transition = tn.decodeAddPoolTransition(rawTransition);
+            stateRoot = transition.stateRoot;
+            stakingPoolId = transition.poolId;
+        } else if (transitionType == tn.TN_TYPE_UPDATE_POOL) {
+            dt.UpdatePoolTransition memory transition = tn.decodeUpdatePoolTransition(rawTransition);
             stateRoot = transition.stateRoot;
             stakingPoolId = transition.poolId;
         } else if (transitionType == tn.TN_TYPE_DEPOSIT_REWARD) {
