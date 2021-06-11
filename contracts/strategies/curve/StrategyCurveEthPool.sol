@@ -5,10 +5,16 @@ pragma solidity >=0.6.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "../../interfaces/IWETH.sol";
 import "../interfaces/IStrategy.sol";
+import "../interfaces/uniswap/IUniswapV2.sol";
+import "../interfaces/curve/ICurveFi.sol";
+import "../interfaces/curve/IGauge.sol";
+import "../interfaces/curve/IMintr.sol";
 
 contract StrategyCurveEthPool is IStrategy, Ownable {
     using SafeERC20 for IERC20;
@@ -67,7 +73,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
     }
 
     function getAssetAddress() external view override returns (address) {
-        return asset;
+        return weth;
     }
 
     function aggregateOrders(
