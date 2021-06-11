@@ -6,12 +6,13 @@
     }
   },
   {
-    "UpdatePoolInfo": {
+    "AddPool": {
       "PoolId": 1,
       "StrategyId": 1,
       "RewardAssetIds": [1],
       "RewardPerEpoch": [1],
-      "StakeAdjustmentFactor": 500000000000
+      "StakeAdjustmentFactor": 500000000000,
+      "StartEpoch": 10
     }
   },
   {
