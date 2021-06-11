@@ -14,6 +14,8 @@ library ErrMsg {
     string internal constant REQ_NO_DRAIN = "drain failed";
     string internal constant REQ_BAD_ASSET = "invalid asset";
     string internal constant REQ_BAD_ST = "invalid strategy";
+    string internal constant REQ_BAD_SP = "invalid staking pool";
+    string internal constant REQ_BAD_EPOCH = "invalid epoch";
     string internal constant REQ_OVER_LIMIT = "exceeds limit";
     string internal constant REQ_BAD_DEP_TN = "invalid deposit tn";
     string internal constant REQ_BAD_EXECRES_TN = "invalid execRes tn";

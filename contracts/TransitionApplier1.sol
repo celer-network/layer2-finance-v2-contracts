@@ -212,6 +212,7 @@ contract TransitionApplier1 {
 
         require(_accountInfo.accountId == _transition.accountId, ErrMsg.REQ_BAD_ACCT);
         require(_accountInfo.timestamp < _transition.timestamp, ErrMsg.REQ_BAD_TS);
+        require(_strategyInfo.assetId > 0, ErrMsg.REQ_BAD_ST);
         _accountInfo.timestamp = _transition.timestamp;
 
         uint256 npend = _strategyInfo.pending.length;

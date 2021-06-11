@@ -165,7 +165,7 @@ library DataTypes {
         uint8 v; // signature v
     }
 
-    struct UpdatePoolInfoTransition {
+    struct AddPoolTransition {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 poolId;
@@ -173,6 +173,14 @@ library DataTypes {
         uint32[] rewardAssetIds;
         uint256[] rewardPerEpoch;
         uint256 stakeAdjustmentFactor;
+        uint64 startEpoch;
+    }
+
+    struct UpdatePoolTransition {
+        uint8 transitionType;
+        bytes32 stateRoot;
+        uint32 poolId;
+        uint256[] rewardPerEpoch;
     }
 
     struct DepositRewardTransition {
@@ -261,7 +269,7 @@ library DataTypes {
         uint256 totalShares;
         uint256 totalStakes;
         uint256[] accumulatedRewardPerUnit; // reward asset index -> Accumulated reward per unit of stake, times 1e12 to avoid very small numbers
-        uint64 lastRewardEpoch; // Last epoch that reward distribution occurs. Initially set by the first UpdatePoolInfoTransition
+        uint64 lastRewardEpoch; // Last epoch that reward distribution occurs. Initially set by an AddPoolTransition
         uint256 stakeAdjustmentFactor; // A fraction to dilute whales. i.e. (0, 1) * 1e12
     }
 

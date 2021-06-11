@@ -20,11 +20,13 @@ library Transitions {
     uint8 public constant TN_TYPE_SETTLE = 10;
     uint8 public constant TN_TYPE_WITHDRAW_PROTO_FEE = 11;
     uint8 public constant TN_TYPE_XFER_OP_FEE = 12;
-    // Liquidity Mining
+
+    // Staking / liquidity mining
     uint8 public constant TN_TYPE_STAKE = 13;
     uint8 public constant TN_TYPE_UNSTAKE = 14;
-    uint8 public constant TN_TYPE_UPDATE_POOL_INFO = 15;
-    uint8 public constant TN_TYPE_DEPOSIT_REWARD = 16;
+    uint8 public constant TN_TYPE_ADD_POOL = 15;
+    uint8 public constant TN_TYPE_UPDATE_POOL = 16;
+    uint8 public constant TN_TYPE_DEPOSIT_REWARD = 17;
 
     // fee encoding
     uint128 public constant UINT128_HIBIT = 2**127;
@@ -445,10 +447,10 @@ library Transitions {
         return (poolId, accountId, timestamp, v, transitionType);
     }
 
-    function decodeUpdatePoolInfoTransition(bytes memory _rawBytes)
+    function decodeAddPoolTransition(bytes memory _rawBytes)
         internal
         pure
-        returns (DataTypes.UpdatePoolInfoTransition memory)
+        returns (DataTypes.AddPoolTransition memory)
     {
         (
             uint8 transitionType,
@@ -457,18 +459,32 @@ library Transitions {
             uint32 strategyId,
             uint32[] memory rewardAssetIds,
             uint256[] memory rewardPerEpoch,
-            uint256 stakeAdjustmentFactor
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32[], uint256[], uint256));
-        DataTypes.UpdatePoolInfoTransition memory transition =
-            DataTypes.UpdatePoolInfoTransition(
+            uint256 stakeAdjustmentFactor,
+            uint64 startEpoch
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32[], uint256[], uint256, uint64));
+        DataTypes.AddPoolTransition memory transition =
+            DataTypes.AddPoolTransition(
                 transitionType,
                 stateRoot,
                 poolId,
                 strategyId,
                 rewardAssetIds,
                 rewardPerEpoch,
-                stakeAdjustmentFactor
+                stakeAdjustmentFactor,
+                startEpoch
             );
+        return transition;
+    }
+
+    function decodeUpdatePoolTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.UpdatePoolTransition memory)
+    {
+        (uint8 transitionType, bytes32 stateRoot, uint32 poolId, uint256[] memory rewardPerEpoch) =
+            abi.decode((_rawBytes), (uint8, bytes32, uint32, uint256[]));
+        DataTypes.UpdatePoolTransition memory transition =
+            DataTypes.UpdatePoolTransition(transitionType, stateRoot, poolId, rewardPerEpoch);
         return transition;
     }
 
