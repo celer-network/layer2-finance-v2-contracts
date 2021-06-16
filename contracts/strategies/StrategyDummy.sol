@@ -36,8 +36,8 @@ contract StrategyDummy is IStrategy, Ownable {
         uint256 _harvestGain
     ) {
         controller = _controller;
-        funder = _funder;
         asset = _asset;
+        funder = _funder;
         harvestGain = _harvestGain;
     }
 
