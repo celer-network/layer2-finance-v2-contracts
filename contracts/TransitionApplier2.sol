@@ -371,7 +371,7 @@ contract TransitionApplier2 {
         dt.GlobalInfo memory _globalInfo
     ) external pure returns (dt.StakingPoolInfo memory) {
         require(_transition.rewardPerEpoch.length == _stakingPoolInfo.rewardPerEpoch.length, ErrMsg.REQ_BAD_LEN);
-        require(_stakingPoolInfo.lastRewardEpoch > 0, ErrMsg.REQ_BAD_SP);
+        require(_stakingPoolInfo.strategyId > 0, ErrMsg.REQ_BAD_SP);
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
