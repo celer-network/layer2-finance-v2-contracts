@@ -173,7 +173,7 @@ describe('DisputeSell', function () {
       .withArgs(1, 'invalid post-state root');
   });
 
-  it('should dispute sellwith invalid celr fee amt', async function () {
+  it('should dispute sell with invalid celr fee amt', async function () {
     const { admin, rollupChain, celr, users } = await loadFixture(fixture);
     await celr.connect(users[0]).approve(rollupChain.address, parseEther('100'));
     await rollupChain.connect(users[0]).deposit(celr.address, parseEther('0.5'));
