@@ -8,16 +8,16 @@
 SOLC_VER="v0.8.4+commit.c7e474f2"
 OPENZEPPELIN="openzeppelin-contracts-4.1.0"          # if change, also need to change the url in dld_solc
 GETH_VER="geth-alltools-linux-amd64-1.10.3-991384a7" # for abigen
-CNTRDIR="contracts" # folder name for all contracts code
+CNTRDIR="contracts"                                  # folder name for all contracts code
 GO_REPO=https://${GH_TOKEN}@github.com/celer-network/layer2-finance-v2-go
 
 # xx.sol under contracts/, no need for .sol suffix, if sol file is in subfolder, just add the relative path
 solFiles=(
   Registry
-  TransitionDisputer
-  TransitionEvaluator
   TransitionApplier1
   TransitionApplier2
+  TransitionEvaluator
+  TransitionDisputer
   RollupChain
   # strategies
   strategies/interfaces/IStrategy
@@ -44,7 +44,7 @@ gen_dtHelper() {
   DTFILE="DataTypes.sol"
   CTRNAME="DtHelper"
   SOLFILE="$CTRNAME.sol"
-  cat > $SOLFILE << EOF
+  cat >$SOLFILE <<EOF
 // SPDX-License-Identifier: MIT
 // Auto generated. DO NOT MODIFY MAUALLY
 pragma solidity >=0.8.0;
@@ -53,12 +53,11 @@ import {DataTypes as dt} from "./$DTFILE";
 contract $CTRNAME {
 EOF
 
-  grep -Eo "struct [^ ]*" $DTFILE|cut -d' ' -f2| while read STRUCT
-  do
-    echo "  function $STRUCT(dt.$STRUCT calldata _in) public pure {}" >> $SOLFILE
+  grep -Eo "struct [^ ]*" $DTFILE | cut -d' ' -f2 | while read STRUCT; do
+    echo "  function $STRUCT(dt.$STRUCT calldata _in) public pure {}" >>$SOLFILE
   done
 
-  echo "}" >> $SOLFILE
+  echo "}" >>$SOLFILE
   popd
 }
 
@@ -68,7 +67,7 @@ run_solc() {
   pushd $CNTRDIR
   gen_dtHelper
   solc --base-path $PWD --allow-paths . --overwrite --optimize --pretty-json --combined-json abi,bin -o . '@openzeppelin/'=$OPENZEPPELIN/ \
-  $(for f in ${solFiles[@]}; do echo -n "$f.sol "; done)
+    $(for f in ${solFiles[@]}; do echo -n "$f.sol "; done)
   no_openzeppelin combined.json # combined.json file name is hardcoded in solc
   popd
 }
@@ -76,7 +75,7 @@ run_solc() {
 # remove openzeppelin from combined.json. solc will also include all openzeppelin in combined.json but we don't want to generate go for them
 # $1 is the json file from solc output
 no_openzeppelin() {
-  jq '."contracts"|=with_entries(select(.key|test("^openzeppelin")|not))' $1 > tmp.json
+  jq '."contracts"|=with_entries(select(.key|test("^openzeppelin")|not))' $1 >tmp.json
   mv tmp.json $1
 }
 

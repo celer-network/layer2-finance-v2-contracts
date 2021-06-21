@@ -4,9 +4,9 @@ name: gen-go-binding
 on:
   pull_request:
     paths:
+      - '.github/workflows/abigen.yml'
       - 'contracts/**'
       - 'scripts/**'
-
 jobs:
   build:
     runs-on: ubuntu-20.04
