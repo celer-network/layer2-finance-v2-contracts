@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 
-import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
