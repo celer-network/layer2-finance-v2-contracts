@@ -313,6 +313,8 @@ contract TransitionApplier2 {
             uint256 pendingReward = (accumulatedReward - _accountInfo.rewardDebts[poolId][rewardTokenId]);
             _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
             uint32 assetId = _stakingPoolInfo.rewardAssetIds[rewardTokenId];
+            _globalInfo.rewards = tn.adjustUint256Array(_globalInfo.rewards, assetId);
+            // Cap to available reward
             if (pendingReward > _globalInfo.rewards[assetId]) {
                 pendingReward = _globalInfo.rewards[assetId];
             }
