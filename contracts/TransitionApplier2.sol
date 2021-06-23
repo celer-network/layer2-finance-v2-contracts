@@ -203,11 +203,10 @@ contract TransitionApplier2 {
 
         if (addedShares > 0) {
             _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
-            uint256 addedStake =
-                _getAdjustedStake(
-                    _accountInfo.stakedShares[poolId] + addedShares,
-                    _stakingPoolInfo.stakeAdjustmentFactor
-                ) - _accountInfo.stakes[poolId];
+            uint256 addedStake = _getAdjustedStake(
+                _accountInfo.stakedShares[poolId] + addedShares,
+                _stakingPoolInfo.stakeAdjustmentFactor
+            ) - _accountInfo.stakes[poolId];
             _accountInfo.stakedShares[poolId] += addedShares;
             _accountInfo.stakes[poolId] += addedStake;
             _stakingPoolInfo.totalShares += addedShares;
@@ -290,12 +289,11 @@ contract TransitionApplier2 {
 
         if (removedShares > 0) {
             _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
-            uint256 removedStake =
-                _accountInfo.stakes[poolId] -
-                    _getAdjustedStake(
-                        _accountInfo.stakedShares[poolId] - removedShares,
-                        _stakingPoolInfo.stakeAdjustmentFactor
-                    );
+            uint256 removedStake = _accountInfo.stakes[poolId] -
+                _getAdjustedStake(
+                    _accountInfo.stakedShares[poolId] - removedShares,
+                    _stakingPoolInfo.stakeAdjustmentFactor
+                );
             _accountInfo.stakedShares[poolId] -= removedShares;
             _accountInfo.stakes[poolId] -= removedStake;
             _stakingPoolInfo.totalShares -= removedShares;
@@ -310,9 +308,8 @@ contract TransitionApplier2 {
         }
         // Harvest
         for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
-            uint256 accumulatedReward =
-                (_accountInfo.stakes[poolId] * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
-                    STAKING_SCALE_FACTOR;
+            uint256 accumulatedReward = (_accountInfo.stakes[poolId] *
+                _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) / STAKING_SCALE_FACTOR;
             uint256 pendingReward = (accumulatedReward - _accountInfo.rewardDebts[poolId][rewardTokenId]);
             _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
             uint32 assetId = _stakingPoolInfo.rewardAssetIds[rewardTokenId];
@@ -488,9 +485,10 @@ contract TransitionApplier2 {
      * @param _adjustmentFactor The adjustment factor, a value from (0, 1) * STAKING_SCALE_FACTOR
      */
     function _getAdjustedStake(uint256 _stakedShares, uint256 _adjustmentFactor) private pure returns (uint256) {
-        return ((STAKING_SCALE_FACTOR - _adjustmentFactor) *
-            _stakedShares +
-            _sqrt(STAKING_SCALE_FACTOR * _adjustmentFactor * _stakedShares));
+        return
+            ((STAKING_SCALE_FACTOR - _adjustmentFactor) *
+                _stakedShares +
+                _sqrt(STAKING_SCALE_FACTOR * _adjustmentFactor * _stakedShares)) / STAKING_SCALE_FACTOR;
     }
 
     /**
