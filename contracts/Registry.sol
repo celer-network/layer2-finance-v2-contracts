@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Registry is Ownable {
     // require() error messages
-    string constant REQ_BAD_ASSET = "invalid asset";
-    string constant REQ_BAD_ST = "invalid strategy";
+    string private constant REQ_BAD_ASSET = "invalid asset";
+    string private constant REQ_BAD_ST = "invalid strategy";
 
     // Map asset addresses to indexes.
     // asset with index 1 is CELR as the platform token

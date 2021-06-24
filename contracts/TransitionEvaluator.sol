@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.0 <0.9.0;
-pragma abicoder v2;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -14,8 +13,8 @@ import "./TransitionApplier2.sol";
 import "./Registry.sol";
 
 contract TransitionEvaluator {
-    TransitionApplier1 transitionApplier1;
-    TransitionApplier2 transitionApplier2;
+    TransitionApplier1 public immutable transitionApplier1;
+    TransitionApplier2 public immutable transitionApplier2;
 
     // Transition evaluation is split across 3 contracts, this one is the main entry point.
     // In turn, it needs to access the other two contracts to evaluate the other transitions.
