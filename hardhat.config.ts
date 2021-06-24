@@ -3,6 +3,7 @@ import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
+import '@typechain/hardhat';
 
 import * as dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/types';
@@ -70,6 +71,10 @@ const config: HardhatUserConfig = {
     noColors: true,
     outputFile: 'reports/gas_usage/summary.txt'
   },
+  typechain: {
+    outDir: 'typechain',
+    target: 'ethers-v5'
+  }
 };
 
 export default config;
