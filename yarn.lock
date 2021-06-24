@@ -8160,10 +8160,10 @@ solc@0.7.3:
     semver "^5.5.0"
     tmp "0.0.33"
 
-solc@0.8.4:
-  version "0.8.4"
-  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.4.tgz#c7e606e5fc07f3fe37414bc3dd868404399ea8bb"
-  integrity sha512-krEdbucX9yY362l79gXTK2UHhsZ02aQjQOYTzcgTd/waApueo3yWGzjX0CDJ1ByOuW46WuKAyzfbRWdFNr6OYQ==
+solc@0.8.6:
+  version "0.8.6"
+  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.6.tgz#e4341fa6780137df97b94a0cfbd59b3f2037d0e0"
+  integrity sha512-miiDaWdaUnD7A6Cktb/2ug9f+ajcOCDYRr7vgbPEsMoutSlBtp5rca57oMg8iHSuM7jilwdxePujWI/+rbNftQ==
   dependencies:
     command-exists "^1.2.8"
     commander "3.0.2"

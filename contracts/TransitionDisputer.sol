@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.0 <0.9.0;
-pragma abicoder v2;
+pragma solidity 0.8.6;
 
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
@@ -15,7 +14,7 @@ contract TransitionDisputer {
     bytes32 public constant INIT_TRANSITION_STATE_ROOT =
         bytes32(0xc6011c637feab6939cc17cdfdd9e34a435f76bd08fcc224f59edaeb31fd13928);
 
-    TransitionEvaluator transitionEvaluator;
+    TransitionEvaluator public immutable transitionEvaluator;
 
     constructor(TransitionEvaluator _transitionEvaluator) {
         transitionEvaluator = _transitionEvaluator;

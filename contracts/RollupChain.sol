@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.0 <0.9.0;
-pragma abicoder v2;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -26,9 +25,9 @@ contract RollupChain is Ownable, Pausable {
 
     /* Fields */
     // The state transition disputer
-    TransitionDisputer transitionDisputer;
+    TransitionDisputer public immutable transitionDisputer;
     // Asset and strategy registry
-    Registry registry;
+    Registry public immutable registry;
 
     // All the blocks (prepared and/or executed).
     dt.Block[] public blocks;
@@ -127,8 +126,6 @@ contract RollupChain is Ownable, Pausable {
         require(msg.sender == operator, ErrMsg.REQ_NOT_OPER);
         _;
     }
-
-    fallback() external payable {}
 
     receive() external payable {}
 
@@ -253,15 +250,15 @@ contract RollupChain is Ownable, Pausable {
             }
         }
 
-        dt.Block memory rollupBlock =
+        blocks.push(
             dt.Block({
                 rootHash: root,
                 intentHash: intentHash,
                 intentExecCount: 0,
                 blockTime: uint64(block.number),
                 blockSize: uint32(_transitions.length)
-            });
-        blocks.push(rollupBlock);
+            })
+        );
 
         emit RollupBlockCommitted(_blockId);
     }
@@ -379,10 +376,12 @@ contract RollupChain is Ownable, Pausable {
      * in a rollup block within the maxPriorityTxDelay
      */
     function disputePriorityTxDelay() external {
-        if (blocks.length > 0) {
-            uint256 currentBlockId = blocks.length - 1;
-            if (depositQueuePointer.commitHead < depositQueuePointer.tail) {
-                if (currentBlockId - pendingDeposits[depositQueuePointer.commitHead].blockId > maxPriorityTxDelay) {
+        uint256 blklen = blocks.length;
+        if (blklen > 0) {
+            uint256 currentBlockId = blklen - 1;
+            EventQueuePointer memory queuePointer = depositQueuePointer;
+            if (queuePointer.commitHead < queuePointer.tail) {
+                if (currentBlockId - pendingDeposits[queuePointer.commitHead].blockId > maxPriorityTxDelay) {
                     _pause();
                     return;
                 }
@@ -664,10 +663,10 @@ contract RollupChain is Ownable, Pausable {
      * @param _blockId Executed block Id.
      */
     function _cleanupPendingWithdrawCommits(uint256 _blockId) private {
-        for (uint256 i = 0; i < pendingWithdrawCommits[_blockId].length; i++) {
-            PendingWithdrawCommit memory pwc = pendingWithdrawCommits[_blockId][i];
+        PendingWithdrawCommit[] memory pwc = pendingWithdrawCommits[_blockId];
+        for (uint256 i = 0; i < pwc.length; i++) {
             // Find and increment this account's assetId total amount
-            pendingWithdraws[pwc.account][pwc.assetId] += pwc.amount;
+            pendingWithdraws[pwc[i].account][pwc[i].assetId] += pwc[i].amount;
         }
         delete pendingWithdrawCommits[_blockId];
     }
@@ -684,7 +683,7 @@ contract RollupChain is Ownable, Pausable {
 
         // revert blocks and pending states
         while (blocks.length > _blockId) {
-            pendingWithdrawCommits[blocks.length - 1];
+            delete pendingWithdrawCommits[blocks.length - 1];
             blocks.pop();
         }
         bool first;
