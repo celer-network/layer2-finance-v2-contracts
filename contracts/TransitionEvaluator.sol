@@ -2,8 +2,6 @@
 
 pragma solidity 0.8.6;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
 /* Internal Imports */
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";

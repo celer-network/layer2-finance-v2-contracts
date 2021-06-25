@@ -10,8 +10,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
-import "./Registry.sol";
-import "./strategies/interfaces/IStrategy.sol";
 
 contract TransitionApplier2 {
     uint256 public constant STAKING_SCALE_FACTOR = 1e12;
