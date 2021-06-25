@@ -10,10 +10,10 @@ describe('DisputeUnstake', function () {
     const { rollupChain, celr, dai } = await deployContracts(admin);
     await rollupChain.setBlockChallengePeriod(10);
 
-    const users = await getUsers(admin, [dai, celr], 2);
+    const users = await getUsers(admin, [celr, dai], 2);
     const depositAmount = parseEther('100');
-    await dai.approve(rollupChain.address, depositAmount);
-    await rollupChain.depositReward(dai.address, depositAmount);
+    await celr.approve(rollupChain.address, depositAmount);
+    await rollupChain.depositReward(celr.address, depositAmount);
     await dai.connect(users[0]).approve(rollupChain.address, depositAmount);
     await rollupChain.connect(users[0]).deposit(dai.address, depositAmount);
 
