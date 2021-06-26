@@ -75,8 +75,10 @@ contract TransitionDisputer {
         );
 
         // ------ #2: decode transitions to get post- and pre-StateRoot, and ids of account(s) and strategy
-        (bool ok, disputeStateInfo memory dsi) =
-            _getStateRootsAndIds(_prevTransitionProof.transition, _invalidTransitionProof.transition);
+        (bool ok, disputeStateInfo memory dsi) = _getStateRootsAndIds(
+            _prevTransitionProof.transition,
+            _invalidTransitionProof.transition
+        );
         // If not success something went wrong with the decoding...
         if (!ok) {
             // revert the block if it has an incorrectly encoded transition!
@@ -136,8 +138,9 @@ contract TransitionDisputer {
         // ------ #5: verify unique account id mapping for deposit and transfer tns
         uint8 transitionType = tn.extractTransitionType(_invalidTransitionProof.transition);
         if (transitionType == tn.TN_TYPE_DEPOSIT) {
-            dt.DepositTransition memory transition =
-                tn.decodePackedDepositTransition(_invalidTransitionProof.transition);
+            dt.DepositTransition memory transition = tn.decodePackedDepositTransition(
+                _invalidTransitionProof.transition
+            );
             if (
                 _accountProofs[0].value.account == transition.account &&
                 _accountProofs[0].value.accountId != dsi.accountId
@@ -145,8 +148,9 @@ contract TransitionDisputer {
                 return ErrMsg.RSN_BAD_ACCT_ID;
             }
         } else if (transitionType == tn.TN_TYPE_XFER_ASSET) {
-            dt.TransferAssetTransition memory transition =
-                tn.decodePackedTransferAssetTransition(_invalidTransitionProof.transition);
+            dt.TransferAssetTransition memory transition = tn.decodePackedTransferAssetTransition(
+                _invalidTransitionProof.transition
+            );
             if (
                 _accountProofs[1].value.account == transition.toAccount &&
                 _accountProofs[1].value.accountId != dsi.accountIdDest
@@ -154,8 +158,9 @@ contract TransitionDisputer {
                 return ErrMsg.RSN_BAD_ACCT_ID;
             }
         } else if (transitionType == tn.TN_TYPE_XFER_SHARE) {
-            dt.TransferShareTransition memory transition =
-                tn.decodePackedTransferShareTransition(_invalidTransitionProof.transition);
+            dt.TransferShareTransition memory transition = tn.decodePackedTransferShareTransition(
+                _invalidTransitionProof.transition
+            );
             if (
                 _accountProofs[1].value.account == transition.toAccount &&
                 _accountProofs[1].value.accountId != dsi.accountIdDest
@@ -226,13 +231,12 @@ contract TransitionDisputer {
             accountInfos[i] = _accountProofs[i].value;
         }
 
-        dt.EvaluateInfos memory infos =
-            dt.EvaluateInfos({
-                accountInfos: accountInfos,
-                strategyInfo: _strategyProof.value,
-                stakingPoolInfo: _stakingPoolProof.value,
-                globalInfo: _globalInfo
-            });
+        dt.EvaluateInfos memory infos = dt.EvaluateInfos({
+            accountInfos: accountInfos,
+            strategyInfo: _strategyProof.value,
+            stakingPoolInfo: _stakingPoolProof.value,
+            globalInfo: _globalInfo
+        });
         // Make the external call
         (ok, returnData) = address(transitionEvaluator).call(
             abi.encodeWithSelector(
@@ -321,13 +325,12 @@ contract TransitionDisputer {
         returns (bool)
     {
         require(_checkTransitionInclusion(_initTransitionProof, _firstBlock), ErrMsg.REQ_TN_NOT_IN);
-        (bool success, bytes memory returnData) =
-            address(transitionEvaluator).call(
-                abi.encodeWithSelector(
-                    TransitionEvaluator.getTransitionStateRootAndAccessIds.selector,
-                    _initTransitionProof.transition
-                )
-            );
+        (bool success, bytes memory returnData) = address(transitionEvaluator).call(
+            abi.encodeWithSelector(
+                TransitionEvaluator.getTransitionStateRootAndAccessIds.selector,
+                _initTransitionProof.transition
+            )
+        );
         if (!success) {
             return true; // transition is invalid
         }
@@ -396,8 +399,9 @@ contract TransitionDisputer {
         bytes32 _stakingPoolStateRoot,
         bytes32 _globalInfoHash
     ) private pure returns (bool) {
-        bytes32 newStateRoot =
-            keccak256(abi.encodePacked(_accountStateRoot, _strategyStateRoot, _stakingPoolStateRoot, _globalInfoHash));
+        bytes32 newStateRoot = keccak256(
+            abi.encodePacked(_accountStateRoot, _strategyStateRoot, _stakingPoolStateRoot, _globalInfoHash)
+        );
         return (_stateRoot == newStateRoot);
     }
 

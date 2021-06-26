@@ -39,7 +39,10 @@ contract RollupChain is Ownable, Pausable {
     // - commitBlock() moves it to "done" status
     // - fraudulent block moves it back to "pending" status
     // - executeBlock() deletes it
-    enum PendingEventStatus {Pending, Done}
+    enum PendingEventStatus {
+        Pending,
+        Done
+    }
     struct PendingEvent {
         bytes32 ehash;
         uint64 blockId; // rollup block; "pending": baseline of censorship, "done": block holding L2 transition
@@ -568,17 +571,16 @@ contract RollupChain is Ownable, Pausable {
         uint64 aggregateId = queuePointer.commitHead;
         require(aggregateId < queuePointer.tail, ErrMsg.REQ_BAD_EXECRES_TN);
 
-        bytes32 ehash =
-            keccak256(
-                abi.encodePacked(
-                    _er.strategyId,
-                    _er.aggregateId,
-                    _er.success,
-                    _er.sharesFromBuy,
-                    _er.amountFromSell,
-                    _er.currEpoch
-                )
-            );
+        bytes32 ehash = keccak256(
+            abi.encodePacked(
+                _er.strategyId,
+                _er.aggregateId,
+                _er.success,
+                _er.sharesFromBuy,
+                _er.amountFromSell,
+                _er.currEpoch
+            )
+        );
         require(pendingExecResults[_er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
 
         pendingExecResults[_er.strategyId][aggregateId].status = PendingEventStatus.Done;
@@ -600,16 +602,15 @@ contract RollupChain is Ownable, Pausable {
 
         // TODO: reset allowance to zero after strategy interaction?
         IERC20(strategy.getAssetAddress()).safeIncreaseAllowance(strategyAddr, _aggregation.buyAmount);
-        (bool success, bytes memory returnData) =
-            strategyAddr.call(
-                abi.encodeWithSelector(
-                    IStrategy.aggregateOrders.selector,
-                    _aggregation.buyAmount,
-                    _aggregation.sellShares,
-                    _aggregation.minSharesFromBuy,
-                    _aggregation.minAmountFromSell
-                )
-            );
+        (bool success, bytes memory returnData) = strategyAddr.call(
+            abi.encodeWithSelector(
+                IStrategy.aggregateOrders.selector,
+                _aggregation.buyAmount,
+                _aggregation.sellShares,
+                _aggregation.minSharesFromBuy,
+                _aggregation.minAmountFromSell
+            )
+        );
         uint256 sharesFromBuy;
         uint256 amountFromSell;
         if (success) {
@@ -619,8 +620,9 @@ contract RollupChain is Ownable, Pausable {
         EventQueuePointer memory queuePointer = execResultQueuePointers[strategyId];
         uint64 aggregateId = queuePointer.tail++;
         uint64 epoch = uint64(block.number);
-        bytes32 ehash =
-            keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch));
+        bytes32 ehash = keccak256(
+            abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch)
+        );
         pendingExecResults[strategyId][aggregateId] = PendingEvent({
             ehash: ehash,
             blockId: uint64(blocks.length) - 1, // "pending": baseline of censorship delay
