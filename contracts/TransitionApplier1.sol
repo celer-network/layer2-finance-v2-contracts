@@ -67,17 +67,16 @@ contract TransitionApplier1 {
         dt.AccountInfo memory _accountInfo,
         dt.GlobalInfo memory _globalInfo
     ) public pure returns (dt.AccountInfo memory, dt.GlobalInfo memory) {
-        bytes32 txHash =
-            keccak256(
-                abi.encodePacked(
-                    _transition.transitionType,
-                    _transition.account,
-                    _transition.assetId,
-                    _transition.amount,
-                    _transition.fee,
-                    _transition.timestamp
-                )
-            );
+        bytes32 txHash = keccak256(
+            abi.encodePacked(
+                _transition.transitionType,
+                _transition.account,
+                _transition.assetId,
+                _transition.amount,
+                _transition.fee,
+                _transition.timestamp
+            )
+        );
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
@@ -108,17 +107,16 @@ contract TransitionApplier1 {
         dt.StrategyInfo memory _strategyInfo,
         Registry _registry
     ) public view returns (dt.AccountInfo memory, dt.StrategyInfo memory) {
-        bytes32 txHash =
-            keccak256(
-                abi.encodePacked(
-                    _transition.transitionType,
-                    _transition.strategyId,
-                    _transition.amount,
-                    _transition.maxSharePrice,
-                    _transition.fee,
-                    _transition.timestamp
-                )
-            );
+        bytes32 txHash = keccak256(
+            abi.encodePacked(
+                _transition.transitionType,
+                _transition.strategyId,
+                _transition.amount,
+                _transition.maxSharePrice,
+                _transition.fee,
+                _transition.timestamp
+            )
+        );
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
@@ -192,17 +190,16 @@ contract TransitionApplier1 {
         dt.AccountInfo memory _accountInfo,
         dt.StrategyInfo memory _strategyInfo
     ) external pure returns (dt.AccountInfo memory, dt.StrategyInfo memory) {
-        bytes32 txHash =
-            keccak256(
-                abi.encodePacked(
-                    _transition.transitionType,
-                    _transition.strategyId,
-                    _transition.shares,
-                    _transition.minSharePrice,
-                    _transition.fee,
-                    _transition.timestamp
-                )
-            );
+        bytes32 txHash = keccak256(
+            abi.encodePacked(
+                _transition.transitionType,
+                _transition.strategyId,
+                _transition.shares,
+                _transition.minSharePrice,
+                _transition.fee,
+                _transition.timestamp
+            )
+        );
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
@@ -364,17 +361,16 @@ contract TransitionApplier1 {
             dt.GlobalInfo memory
         )
     {
-        bytes32 txHash =
-            keccak256(
-                abi.encodePacked(
-                    _transition.transitionType,
-                    _transition.toAccount,
-                    _transition.assetId,
-                    _transition.amount,
-                    _transition.fee,
-                    _transition.timestamp
-                )
-            );
+        bytes32 txHash = keccak256(
+            abi.encodePacked(
+                _transition.transitionType,
+                _transition.toAccount,
+                _transition.assetId,
+                _transition.amount,
+                _transition.fee,
+                _transition.timestamp
+            )
+        );
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,
@@ -440,17 +436,16 @@ contract TransitionApplier1 {
             dt.GlobalInfo memory
         )
     {
-        bytes32 txHash =
-            keccak256(
-                abi.encodePacked(
-                    _transition.transitionType,
-                    _transition.toAccount,
-                    _transition.strategyId,
-                    _transition.shares,
-                    _transition.fee,
-                    _transition.timestamp
-                )
-            );
+        bytes32 txHash = keccak256(
+            abi.encodePacked(
+                _transition.transitionType,
+                _transition.toAccount,
+                _transition.strategyId,
+                _transition.shares,
+                _transition.fee,
+                _transition.timestamp
+            )
+        );
         require(
             ECDSA.recover(ECDSA.toEthSignedMessageHash(txHash), _transition.v, _transition.r, _transition.s) ==
                 _accountInfo.account,

@@ -87,7 +87,7 @@ contract TransitionEvaluator {
             require(_infos.accountInfos.length == 2, ErrMsg.REQ_TWO_ACCT);
             dt.TransferAssetTransition memory xfer = tn.decodePackedTransferAssetTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionApplier1
-                .applyAssetTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
+            .applyAssetTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[1] = getAccountInfoHash(updatedInfos.accountInfos[1]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
@@ -95,7 +95,7 @@ contract TransitionEvaluator {
             require(_infos.accountInfos.length == 2, ErrMsg.REQ_TWO_ACCT);
             dt.TransferShareTransition memory xfer = tn.decodePackedTransferShareTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.accountInfos[1], updatedInfos.globalInfo) = transitionApplier1
-                .applyShareTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
+            .applyShareTransferTransition(xfer, _infos.accountInfos[0], _infos.accountInfos[1], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[1] = getAccountInfoHash(updatedInfos.accountInfos[1]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
@@ -116,7 +116,7 @@ contract TransitionEvaluator {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.SettlementTransition memory settle = tn.decodePackedSettlementTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.strategyInfo, updatedInfos.globalInfo) = transitionApplier1
-                .applySettlementTransition(settle, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
+            .applySettlementTransition(settle, _infos.accountInfos[0], _infos.strategyInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[2] = getStrategyInfoHash(updatedInfos.strategyInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
@@ -124,7 +124,7 @@ contract TransitionEvaluator {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.StakeTransition memory stake = tn.decodePackedStakeTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionApplier2
-                .applyStakeTransition(stake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
+            .applyStakeTransition(stake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
@@ -132,7 +132,7 @@ contract TransitionEvaluator {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.UnstakeTransition memory unstake = tn.decodePackedUnstakeTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.stakingPoolInfo, updatedInfos.globalInfo) = transitionApplier2
-                .applyUnstakeTransition(unstake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
+            .applyUnstakeTransition(unstake, _infos.accountInfos[0], _infos.stakingPoolInfo, _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[3] = getStakingPoolInfoHash(updatedInfos.stakingPoolInfo);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
@@ -164,7 +164,7 @@ contract TransitionEvaluator {
             require(_infos.accountInfos.length == 1, ErrMsg.REQ_ONE_ACCT);
             dt.TransferOperatorFeeTransition memory tof = tn.decodeTransferOperatorFeeTransition(_transition);
             (updatedInfos.accountInfos[0], updatedInfos.globalInfo) = transitionApplier2
-                .applyTransferOperatorFeeTransition(tof, _infos.accountInfos[0], _infos.globalInfo);
+            .applyTransferOperatorFeeTransition(tof, _infos.accountInfos[0], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else {
