@@ -79,7 +79,9 @@ contract TransitionApplier2 {
         _strategyInfo.lastExecAggregateId = _transition.aggregateId;
 
         // Piggy-back the update to the global epoch
-        _globalInfo.currEpoch = _transition.currEpoch;
+        if (_transition.currEpoch > _globalInfo.currEpoch) {
+            _globalInfo.currEpoch = _transition.currEpoch;
+        }
 
         return (_strategyInfo, _globalInfo);
     }
