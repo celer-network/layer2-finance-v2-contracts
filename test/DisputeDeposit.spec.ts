@@ -8,7 +8,7 @@ import { deployContracts, getUsers, loadFixture, parseInput } from './common';
 describe('DisputeDeposit', function () {
   async function fixture([admin]: Wallet[]) {
     const { rollupChain, celr, dai } = await deployContracts(admin);
-    await rollupChain.setBlockChallengePeriod(10);
+    await rollupChain.setBlockChallengePeriod(5);
 
     return {
       admin,

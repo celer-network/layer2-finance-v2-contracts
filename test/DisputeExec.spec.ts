@@ -8,7 +8,7 @@ import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInpu
 describe('DisputeExecResult', function () {
   async function fixture([admin]: Wallet[]) {
     const { rollupChain, celr, dai } = await deployContracts(admin);
-    await rollupChain.setBlockChallengePeriod(10);
+    await rollupChain.setBlockChallengePeriod(5);
 
     const users = await getUsers(admin, [dai], 2);
     await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
