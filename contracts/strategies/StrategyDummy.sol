@@ -26,6 +26,7 @@ contract StrategyDummy is IStrategy, Ownable {
 
     address public funder;
     uint256 public harvestGain;
+    bool public alwaysFail;
 
     uint256 constant MAX_INT = 2**256 - 1;
 
@@ -61,6 +62,10 @@ contract StrategyDummy is IStrategy, Ownable {
         uint256 _minSharesFromBuy,
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
+        if (alwaysFail) {
+            revert("always fail");
+        }
+
         require(shares >= _sellShares, "not enough shares to sell");
         uint256 sharesFromBuy;
         uint256 amountFromSell;
@@ -118,6 +123,10 @@ contract StrategyDummy is IStrategy, Ownable {
 
     function setHarvestGain(uint256 _harvestGain) external onlyOwner {
         harvestGain = _harvestGain;
+    }
+
+    function setAlwaysFail(bool _alwaysFail) external onlyOwner {
+        alwaysFail = _alwaysFail;
     }
 
     function setFunder(address _funder) external onlyOwner {
