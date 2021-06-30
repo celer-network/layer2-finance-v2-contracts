@@ -72,6 +72,14 @@ describe('StrategyDummy', function () {
     ).to.be.revertedWith('failed min amount from sell');
   });
 
+  it('should fail if configured to always fail', async function () {
+    const { strategyDummy } = await loadFixture(fixture);
+    await strategyDummy.setAlwaysFail(true);
+    await expect(
+      strategyDummy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('6'), parseEther('0'))
+    ).to.be.revertedWith('always fail');
+  });
+
   it('should calculate price correctly', async function () {
     const { strategyDummy } = await loadFixture(fixture);
     await strategyDummy.aggregateOrders(parseEther('2'), parseEther('0'), parseEther('2'), parseEther('0'));
