@@ -286,6 +286,7 @@ contract TransitionApplier2 {
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
+        uint256 originalStake = _accountInfo.stakes[poolId];
         if (removedShares > 0) {
             _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
             uint256 removedStake = _accountInfo.stakes[poolId] -
@@ -297,20 +298,17 @@ contract TransitionApplier2 {
             _accountInfo.stakes[poolId] -= removedStake;
             _stakingPoolInfo.totalShares -= removedShares;
             _stakingPoolInfo.totalStakes -= removedStake;
-
-            for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
-                _adjustAccountRewardDebtEntries(_accountInfo, poolId, rewardTokenId);
-                _accountInfo.rewardDebts[poolId][rewardTokenId] -=
-                    (removedStake * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
-                    STAKING_SCALE_FACTOR;
-            }
         }
         // Harvest
         for (uint32 rewardTokenId = 0; rewardTokenId < _stakingPoolInfo.rewardPerEpoch.length; rewardTokenId++) {
-            uint256 accumulatedReward = (_accountInfo.stakes[poolId] *
-                _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) / STAKING_SCALE_FACTOR;
-            uint256 pendingReward = (accumulatedReward - _accountInfo.rewardDebts[poolId][rewardTokenId]);
-            _accountInfo.rewardDebts[poolId][rewardTokenId] = accumulatedReward;
+            _adjustAccountRewardDebtEntries(_accountInfo, poolId, rewardTokenId);
+            // NOTE: Calculate pending reward using original stake to avoid rounding down twice
+            uint256 pendingReward = (originalStake * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
+                STAKING_SCALE_FACTOR -
+                _accountInfo.rewardDebts[poolId][rewardTokenId];
+            _accountInfo.rewardDebts[poolId][rewardTokenId] =
+                (_accountInfo.stakes[poolId] * _stakingPoolInfo.accumulatedRewardPerUnit[rewardTokenId]) /
+                STAKING_SCALE_FACTOR;
             uint32 assetId = _stakingPoolInfo.rewardAssetIds[rewardTokenId];
             _globalInfo.rewards = tn.adjustUint256Array(_globalInfo.rewards, assetId);
             // Cap to available reward
