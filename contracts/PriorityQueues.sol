@@ -39,7 +39,7 @@ contract PriorityQueues is Ownable {
     EventQueuePointer public depositQueuePointer;
 
     // strategyId -> (aggregateId -> PendingExecResult)
-    // ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, currEpoch))
+    // ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell))
     mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResults;
     // strategyId -> execResultQueuePointer
     mapping(uint32 => EventQueuePointer) public execResultQueuePointers;
@@ -53,6 +53,14 @@ contract PriorityQueues is Ownable {
         uint256 blockLen;
         uint256 blockId;
     }
+
+    struct PendingEpochUpdate {
+        uint64 epoch;
+        uint64 blockId; // rollup block; "pending": baseline of censorship, "done": block holding L2 transition
+        PendingEventStatus status;
+    }
+    mapping(uint256 => PendingEpochUpdate) public pendingEpochUpdates;
+    EventQueuePointer public epochQueuePointer;
 
     modifier onlyController() {
         require(msg.sender == controller, "caller is not controller");
@@ -116,20 +124,33 @@ contract PriorityQueues is Ownable {
     }
 
     /**
-     * @notice Delete pending deposits finalized by this or previous block.
+     * @notice Delete pending queue events finalized by this or previous block.
      * @param _blockId Executed block Id.
      */
-    function cleanupPendingDeposits(uint256 _blockId) external onlyController {
-        EventQueuePointer memory queuePointer = depositQueuePointer;
-        while (queuePointer.executeHead < queuePointer.commitHead) {
-            PendingEvent memory pend = pendingDeposits[queuePointer.executeHead];
+    function cleanupPendingQueue(uint256 _blockId) external onlyController {
+        // cleanup deposit queue
+        EventQueuePointer memory dQueuePointer = depositQueuePointer;
+        while (dQueuePointer.executeHead < dQueuePointer.commitHead) {
+            PendingEvent memory pend = pendingDeposits[dQueuePointer.executeHead];
             if (pend.status != PendingEventStatus.Done || pend.blockId > _blockId) {
                 break;
             }
-            delete pendingDeposits[queuePointer.executeHead];
-            queuePointer.executeHead++;
+            delete pendingDeposits[dQueuePointer.executeHead];
+            dQueuePointer.executeHead++;
         }
-        depositQueuePointer = queuePointer;
+        depositQueuePointer = dQueuePointer;
+
+        // cleanup epoch queue
+        EventQueuePointer memory eQueuePointer = epochQueuePointer;
+        while (eQueuePointer.executeHead < eQueuePointer.commitHead) {
+            PendingEpochUpdate memory pend = pendingEpochUpdates[eQueuePointer.executeHead];
+            if (pend.status != PendingEventStatus.Done || pend.blockId > _blockId) {
+                break;
+            }
+            delete pendingEpochUpdates[eQueuePointer.executeHead];
+            eQueuePointer.executeHead++;
+        }
+        epochQueuePointer = eQueuePointer;
     }
 
     /**
@@ -149,8 +170,7 @@ contract PriorityQueues is Ownable {
                 er.aggregateId,
                 er.success,
                 er.sharesFromBuy,
-                er.amountFromSell,
-                er.currEpoch
+                er.amountFromSell
             )
         );
         require(pendingExecResults[er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
@@ -161,12 +181,15 @@ contract PriorityQueues is Ownable {
         execResultQueuePointers[er.strategyId] = queuePointer;
     }
 
-    function addPendingExecutionResult(ExecResultInfo calldata _er) external onlyController returns (uint64, uint64) {
+    /**
+     * @notice Add pending execution result record.
+     * @return aggregate Id
+     */
+    function addPendingExecutionResult(ExecResultInfo calldata _er) external onlyController returns (uint64) {
         EventQueuePointer memory queuePointer = execResultQueuePointers[_er.strategyId];
         uint64 aggregateId = queuePointer.tail++;
-        uint64 epoch = uint64(block.number);
         bytes32 ehash = keccak256(
-            abi.encodePacked(_er.strategyId, aggregateId, _er.success, _er.sharesFromBuy, _er.amountFromSell, epoch)
+            abi.encodePacked(_er.strategyId, aggregateId, _er.success, _er.sharesFromBuy, _er.amountFromSell)
         );
         pendingExecResults[_er.strategyId][aggregateId] = PendingEvent({
             ehash: ehash,
@@ -184,7 +207,40 @@ contract PriorityQueues is Ownable {
             queuePointer.executeHead++;
         }
         execResultQueuePointers[_er.strategyId] = queuePointer;
-        return (aggregateId, epoch);
+        return aggregateId;
+    }
+
+    /**
+     * @notice add pending epoch update
+     * @param _epoch epoch value
+     * @param _blockLen number of committed blocks
+     * @return epoch id
+     */
+    function addPendingEpoch(uint64 _epoch, uint256 _blockLen) external onlyController returns (uint64) {
+        uint64 epochId = epochQueuePointer.tail++;
+        pendingEpochUpdates[epochId] = PendingEpochUpdate({
+            epoch: _epoch,
+            blockId: uint64(_blockLen), // "pending": baseline of censorship delay
+            status: PendingEventStatus.Pending
+        });
+        return epochId;
+    }
+
+    /**
+     * @notice Check and update the pending epoch update record.
+     * @param _epoch The epoch value.
+     * @param _blockId Commit block Id.
+     */
+    function checkPendingEpochUpdate(uint64 _epoch, uint256 _blockId) external onlyController {
+        EventQueuePointer memory queuePointer = epochQueuePointer;
+        uint64 epochId = queuePointer.commitHead;
+        require(epochId < queuePointer.tail, ErrMsg.REQ_BAD_EPOCH_TN);
+
+        require(pendingEpochUpdates[epochId].epoch == _epoch, ErrMsg.REQ_BAD_EPOCH);
+        pendingEpochUpdates[epochId].status = PendingEventStatus.Done;
+        pendingEpochUpdates[epochId].blockId = uint64(_blockId); // "done": block holding the transition
+        queuePointer.commitHead++;
+        epochQueuePointer = queuePointer;
     }
 
     /**
@@ -201,9 +257,17 @@ contract PriorityQueues is Ownable {
     {
         if (_blockLen > 0) {
             uint256 currentBlockId = _blockLen - 1;
-            EventQueuePointer memory queuePointer = depositQueuePointer;
-            if (queuePointer.commitHead < queuePointer.tail) {
-                if (currentBlockId - pendingDeposits[queuePointer.commitHead].blockId > _maxPriorityTxDelay) {
+
+            EventQueuePointer memory dQueuePointer = depositQueuePointer;
+            if (dQueuePointer.commitHead < dQueuePointer.tail) {
+                if (currentBlockId - pendingDeposits[dQueuePointer.commitHead].blockId > _maxPriorityTxDelay) {
+                    return true;
+                }
+            }
+
+            EventQueuePointer memory eQueuePointer = epochQueuePointer;
+            if (eQueuePointer.commitHead < eQueuePointer.tail) {
+                if (currentBlockId - pendingEpochUpdates[eQueuePointer.commitHead].blockId > _maxPriorityTxDelay) {
                     return true;
                 }
             }

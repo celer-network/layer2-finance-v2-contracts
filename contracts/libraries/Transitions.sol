@@ -26,6 +26,7 @@ library Transitions {
     uint8 public constant TN_TYPE_ADD_POOL = 15;
     uint8 public constant TN_TYPE_UPDATE_POOL = 16;
     uint8 public constant TN_TYPE_DEPOSIT_REWARD = 17;
+    uint8 public constant TN_TYPE_UPDATE_EPOCH = 18;
 
     // fee encoding
     uint128 public constant UINT128_HIBIT = 2**127;
@@ -395,12 +396,11 @@ library Transitions {
         pure
         returns (DataTypes.ExecutionResultTransition memory)
     {
-        (uint256 infoCode, bytes32 stateRoot, uint256 sharesFromBuy, uint256 amountFromSell) = abi.decode(
+        (uint128 infoCode, bytes32 stateRoot, uint256 sharesFromBuy, uint256 amountFromSell) = abi.decode(
             (_rawBytes),
-            (uint256, bytes32, uint256, uint256)
+            (uint128, bytes32, uint256, uint256)
         );
         (
-            uint64 currEpoch,
             uint64 aggregateId,
             uint32 strategyId,
             bool success,
@@ -413,30 +413,26 @@ library Transitions {
             aggregateId,
             success,
             sharesFromBuy,
-            amountFromSell,
-            currEpoch
+            amountFromSell
         );
         return transition;
     }
 
-    function decodeExecutionResultInfoCode(uint256 _infoCode)
+    function decodeExecutionResultInfoCode(uint128 _infoCode)
         internal
         pure
         returns (
-            uint64, // currEpoch,
             uint64, // aggregateId
             uint32, // strategyId
             bool, // success
             uint8 // transitionType
         )
     {
-        (uint128 high, uint128 low) = splitUint256(_infoCode);
-        (, uint64 currEpoch) = splitUint128(high);
-        (uint64 aggregateId, uint64 low2) = splitUint128(low);
-        (uint32 strategyId, uint32 low3) = splitUint64(low2);
-        uint8 transitionType = uint8(low3);
-        bool success = uint8(low3 >> 8) == 1;
-        return (currEpoch, aggregateId, strategyId, success, transitionType);
+        (uint64 aggregateId, uint64 low) = splitUint128(_infoCode);
+        (uint32 strategyId, uint32 low2) = splitUint64(low);
+        uint8 transitionType = uint8(low2);
+        bool success = uint8(low2 >> 8) == 1;
+        return (aggregateId, strategyId, success, transitionType);
     }
 
     function decodePackedStakeTransition(bytes memory _rawBytes)
@@ -606,6 +602,19 @@ library Transitions {
             transitionType,
             stateRoot,
             accountId
+        );
+        return transition;
+    }
+
+    function decodeUpdateEpochTransition(bytes memory _rawBytes)
+        internal
+        pure
+        returns (DataTypes.UpdateEpochTransition memory)
+    {
+        (uint8 transitionType, uint64 epoch) = abi.decode((_rawBytes), (uint8, uint64));
+        DataTypes.UpdateEpochTransition memory transition = DataTypes.UpdateEpochTransition(
+            transitionType,
+            epoch
         );
         return transition;
     }

@@ -134,7 +134,6 @@ library DataTypes {
         bool success;
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-        uint64 currEpoch;
     }
 
     // decoded from calldata submitted as PackedStakingTransition
@@ -201,6 +200,11 @@ library DataTypes {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 accountId; // destination account Id
+    }
+
+    struct UpdateEpochTransition {
+        uint8 transitionType;
+        uint64 epoch;
     }
 
     struct OperatorFees {
@@ -409,14 +413,12 @@ library DataTypes {
     // calldata size: 4 x 32 bytes
     struct PackedExecutionResultTransition {
         /* infoCode packing:
-        192:255 [0]
-        128:191 [uint64 currEpoch]
         64:127  [uint64 aggregateId]
         32:63   [uint32 strategyId]
         9:31    [0]
         8:8     [bool success]
         0:7     [uint8 tntype] */
-        uint256 infoCode;
+        uint128 infoCode;
         bytes32 stateRoot;
         uint256 sharesFromBuy;
         uint256 amountFromSell;

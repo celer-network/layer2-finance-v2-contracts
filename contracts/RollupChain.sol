@@ -77,10 +77,10 @@ contract RollupChain is Ownable, Pausable {
         uint64 aggregateId,
         bool success,
         uint256 sharesFromBuy,
-        uint256 amountFromSell,
-        uint64 currEpoch
+        uint256 amountFromSell
     );
     event OperatorChanged(address previousOperator, address newOperator);
+    event EpochUpdate(uint64 epoch, uint64 epochId);
 
     constructor(
         uint256 _blockChallengePeriod,
@@ -222,6 +222,9 @@ contract RollupChain is Ownable, Pausable {
                 // Update the pending deposit record.
                 dt.DepositRewardTransition memory dp = tn.decodeDepositRewardTransition(_transitions[i]);
                 priorityQueues.checkPendingDeposit(address(0), dp.assetId, dp.amount, _blockId);
+            } else if (tnType == tn.TN_TYPE_UPDATE_EPOCH) {
+                dt.UpdateEpochTransition memory ep = tn.decodeUpdateEpochTransition(_transitions[i]);
+                priorityQueues.checkPendingEpochUpdate(ep.epoch, _blockId);
             }
         }
 
@@ -271,7 +274,7 @@ contract RollupChain is Ownable, Pausable {
 
         // In the first execution of any parts of this block, handle the pending deposit & withdraw records.
         if (intentExecCount == 0) {
-            priorityQueues.cleanupPendingDeposits(_blockId);
+            priorityQueues.cleanupPendingQueue(_blockId);
             _cleanupPendingWithdrawCommits(_blockId);
         }
 
@@ -357,6 +360,15 @@ contract RollupChain is Ownable, Pausable {
             return;
         }
         revert("Not exceed max priority tx delay");
+    }
+
+    /**
+     * @notice Update mining epoch to current block number
+     */
+    function updateEpoch() external {
+        uint64 epoch = uint64(block.number);
+        uint64 epochId = priorityQueues.addPendingEpoch(epoch, blocks.length);
+        emit EpochUpdate(epoch, epochId);
     }
 
     /**
@@ -521,10 +533,10 @@ contract RollupChain is Ownable, Pausable {
             (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
         }
 
-        (uint64 aggregateId, uint64 epoch) = priorityQueues.addPendingExecutionResult(
+        uint64 aggregateId = priorityQueues.addPendingExecutionResult(
             PriorityQueues.ExecResultInfo(strategyId, success, sharesFromBuy, amountFromSell, blocks.length, _blockId)
         );
-        emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch);
+        emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell);
     }
 
     /**

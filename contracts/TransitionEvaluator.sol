@@ -167,6 +167,10 @@ contract TransitionEvaluator {
             .applyTransferOperatorFeeTransition(tof, _infos.accountInfos[0], _infos.globalInfo);
             outputs[0] = getAccountInfoHash(updatedInfos.accountInfos[0]);
             outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
+        } else if (transitionType == tn.TN_TYPE_UPDATE_EPOCH) {
+            dt.UpdateEpochTransition memory ue = tn.decodeUpdateEpochTransition(_transition);
+            updatedInfos.globalInfo = transitionApplier2.applyUpdateEpochTransition(ue, _infos.globalInfo);
+            outputs[4] = getGlobalInfoHash(updatedInfos.globalInfo);
         } else {
             revert("Transition type not recognized");
         }

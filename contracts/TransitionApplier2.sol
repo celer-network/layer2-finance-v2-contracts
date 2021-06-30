@@ -78,11 +78,6 @@ contract TransitionApplier2 {
         _strategyInfo.pending[idx].unsettledSellShares = _strategyInfo.pending[idx].sellShares;
         _strategyInfo.lastExecAggregateId = _transition.aggregateId;
 
-        // Piggy-back the update to the global epoch
-        if (_transition.currEpoch > _globalInfo.currEpoch) {
-            _globalInfo.currEpoch = _transition.currEpoch;
-        }
-
         return (_strategyInfo, _globalInfo);
     }
 
@@ -136,6 +131,21 @@ contract TransitionApplier2 {
         }
 
         return (_accountInfo, _globalInfo);
+    }
+
+    /**
+     * @notice Apply a UpdateEpochTransition.
+     *
+     * @param _transition The disputed transition.
+     * @param _globalInfo The involved global info from the previous transition.
+     * @return new global info after applying the disputed transition
+     */
+    function applyUpdateEpochTransition(
+        dt.UpdateEpochTransition memory _transition,
+        dt.GlobalInfo memory _globalInfo
+    ) public pure returns (dt.GlobalInfo memory) {
+        _globalInfo.currEpoch = _transition.epoch;
+        return _globalInfo;
     }
 
     /**
