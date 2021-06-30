@@ -36,33 +36,6 @@ contract RollupChain is Ownable, Pausable {
     dt.Block[] public blocks;
     uint256 public countExecuted;
 
-    // Track pending L1-initiated even roundtrip status across L1->L2->L1.
-    // Each event record ID is a count++ (i.e. it's a queue).
-    // - L1 event creates it in "pending" status
-    // - commitBlock() moves it to "done" status
-    // - fraudulent block moves it back to "pending" status
-    // - executeBlock() deletes it
-    enum PendingEventStatus {
-        Pending,
-        Done
-    }
-    struct PendingEvent {
-        bytes32 ehash;
-        uint64 blockId; // rollup block; "pending": baseline of censorship, "done": block holding L2 transition
-        PendingEventStatus status;
-    }
-    struct EventQueuePointer {
-        uint64 executeHead; // moves up inside blockExecute() -- lowest
-        uint64 commitHead; // moves up inside blockCommit() -- intermediate
-        uint64 tail; // moves up inside L1 event -- highest
-    }
-
-    // strategyId -> (aggregateId -> PendingExecResult)
-    // ehash = keccak256(abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, currEpoch))
-    mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResults;
-    // strategyId -> execResultQueuePointer
-    mapping(uint32 => EventQueuePointer) public execResultQueuePointers;
-
     // Track pending withdraws arriving from L2 then done on L1 across 2 phases.
     // A separate mapping is used for each phase:
     // (1) pendingWithdrawCommits: commitBlock() --> executeBlock(), per blockId
@@ -239,8 +212,7 @@ contract RollupChain is Ownable, Pausable {
                 intentHash = keccak256(abi.encodePacked(intentHash, _transitions[i]));
             } else if (tnType == tn.TN_TYPE_EXEC_RESULT) {
                 // Update the pending execution result record.
-                dt.ExecutionResultTransition memory er = tn.decodePackedExecutionResultTransition(_transitions[i]);
-                _checkPendingExecutionResult(er, _blockId);
+                priorityQueues.checkPendingExecutionResult(_transitions[i], _blockId);
             } else if (tnType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
                 dt.WithdrawProtocolFeeTransition memory wf = tn.decodeWithdrawProtocolFeeTransition(_transitions[i]);
                 pendingWithdrawCommits[_blockId].push(
@@ -522,34 +494,6 @@ contract RollupChain is Ownable, Pausable {
     }
 
     /**
-     * @notice Check and update the pending executionResult record.
-     * @param _er The executionResult transition.
-     * @param _blockId Commit block Id.
-     */
-    function _checkPendingExecutionResult(dt.ExecutionResultTransition memory _er, uint256 _blockId) private {
-        EventQueuePointer memory queuePointer = execResultQueuePointers[_er.strategyId];
-        uint64 aggregateId = queuePointer.commitHead;
-        require(aggregateId < queuePointer.tail, ErrMsg.REQ_BAD_EXECRES_TN);
-
-        bytes32 ehash = keccak256(
-            abi.encodePacked(
-                _er.strategyId,
-                _er.aggregateId,
-                _er.success,
-                _er.sharesFromBuy,
-                _er.amountFromSell,
-                _er.currEpoch
-            )
-        );
-        require(pendingExecResults[_er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
-
-        pendingExecResults[_er.strategyId][aggregateId].status = PendingEventStatus.Done;
-        pendingExecResults[_er.strategyId][aggregateId].blockId = uint64(_blockId); // "done": block holding the transition
-        queuePointer.commitHead++;
-        execResultQueuePointers[_er.strategyId] = queuePointer;
-    }
-
-    /**
      * @notice execute aggregated order.
      * @param _aggregation The AggregateOrders transition.
      * @param _blockId Executed block Id.
@@ -577,29 +521,10 @@ contract RollupChain is Ownable, Pausable {
             (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
         }
 
-        EventQueuePointer memory queuePointer = execResultQueuePointers[strategyId];
-        uint64 aggregateId = queuePointer.tail++;
-        uint64 epoch = uint64(block.number);
-        bytes32 ehash = keccak256(
-            abi.encodePacked(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch)
+        (uint64 aggregateId, uint64 epoch) = priorityQueues.addPendingExecutionResult(
+            PriorityQueues.ExecResultInfo(strategyId, success, sharesFromBuy, amountFromSell, blocks.length, _blockId)
         );
-        pendingExecResults[strategyId][aggregateId] = PendingEvent({
-            ehash: ehash,
-            blockId: uint64(blocks.length) - 1, // "pending": baseline of censorship delay
-            status: PendingEventStatus.Pending
-        });
         emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell, epoch);
-
-        // Delete pending execution result finalized by this or previous block.
-        while (queuePointer.executeHead < queuePointer.commitHead) {
-            PendingEvent memory pend = pendingExecResults[strategyId][queuePointer.executeHead];
-            if (pend.status != PendingEventStatus.Done || pend.blockId > _blockId) {
-                break;
-            }
-            delete pendingExecResults[strategyId][queuePointer.executeHead];
-            queuePointer.executeHead++;
-        }
-        execResultQueuePointers[strategyId] = queuePointer;
     }
 
     /**

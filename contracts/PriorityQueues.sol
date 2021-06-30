@@ -4,6 +4,9 @@ pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+/* Internal Imports */
+import {DataTypes as dt} from "./libraries/DataTypes.sol";
+import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
 
 contract PriorityQueues is Ownable {
@@ -40,6 +43,16 @@ contract PriorityQueues is Ownable {
     mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResults;
     // strategyId -> execResultQueuePointer
     mapping(uint32 => EventQueuePointer) public execResultQueuePointers;
+
+    // group fields to avoid "stack too deep" error
+    struct ExecResultInfo {
+        uint32 strategyId;
+        bool success;
+        uint256 sharesFromBuy;
+        uint256 amountFromSell;
+        uint256 blockLen;
+        uint256 blockId;
+    }
 
     modifier onlyController() {
         require(msg.sender == controller, "caller is not controller");
@@ -117,6 +130,61 @@ contract PriorityQueues is Ownable {
             queuePointer.executeHead++;
         }
         depositQueuePointer = queuePointer;
+    }
+
+    /**
+     * @notice Check and update the pending executionResult record.
+     * @param _tnBytes The packetExecutionResult transition bytes.
+     * @param _blockId Commit block Id.
+     */
+    function checkPendingExecutionResult(bytes memory _tnBytes, uint256 _blockId) external onlyController {
+        dt.ExecutionResultTransition memory er = tn.decodePackedExecutionResultTransition(_tnBytes);
+        EventQueuePointer memory queuePointer = execResultQueuePointers[er.strategyId];
+        uint64 aggregateId = queuePointer.commitHead;
+        require(aggregateId < queuePointer.tail, ErrMsg.REQ_BAD_EXECRES_TN);
+
+        bytes32 ehash = keccak256(
+            abi.encodePacked(
+                er.strategyId,
+                er.aggregateId,
+                er.success,
+                er.sharesFromBuy,
+                er.amountFromSell,
+                er.currEpoch
+            )
+        );
+        require(pendingExecResults[er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
+
+        pendingExecResults[er.strategyId][aggregateId].status = PendingEventStatus.Done;
+        pendingExecResults[er.strategyId][aggregateId].blockId = uint64(_blockId); // "done": block holding the transition
+        queuePointer.commitHead++;
+        execResultQueuePointers[er.strategyId] = queuePointer;
+    }
+
+    function addPendingExecutionResult(ExecResultInfo calldata _er) external onlyController returns (uint64, uint64) {
+        EventQueuePointer memory queuePointer = execResultQueuePointers[_er.strategyId];
+        uint64 aggregateId = queuePointer.tail++;
+        uint64 epoch = uint64(block.number);
+        bytes32 ehash = keccak256(
+            abi.encodePacked(_er.strategyId, aggregateId, _er.success, _er.sharesFromBuy, _er.amountFromSell, epoch)
+        );
+        pendingExecResults[_er.strategyId][aggregateId] = PendingEvent({
+            ehash: ehash,
+            blockId: uint64(_er.blockLen) - 1, // "pending": baseline of censorship delay
+            status: PendingEventStatus.Pending
+        });
+
+        // Delete pending execution result finalized by this or previous block.
+        while (queuePointer.executeHead < queuePointer.commitHead) {
+            PendingEvent memory pend = pendingExecResults[_er.strategyId][queuePointer.executeHead];
+            if (pend.status != PendingEventStatus.Done || pend.blockId > _er.blockId) {
+                break;
+            }
+            delete pendingExecResults[_er.strategyId][queuePointer.executeHead];
+            queuePointer.executeHead++;
+        }
+        execResultQueuePointers[_er.strategyId] = queuePointer;
+        return (aggregateId, epoch);
     }
 
     /**

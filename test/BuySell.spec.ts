@@ -8,18 +8,19 @@ import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInpu
 
 describe('BuySell', function () {
   async function fixture([admin]: Wallet[]) {
-    const { rollupChain, dai, weth } = await deployContracts(admin);
+    const { rollupChain, priorityQueues, dai, weth } = await deployContracts(admin);
 
     return {
       admin,
       rollupChain,
+      priorityQueues,
       dai,
       weth
     };
   }
 
   it('should aggregate orders correctly', async function () {
-    const { admin, rollupChain, dai } = await loadFixture(fixture);
+    const { admin, rollupChain, priorityQueues, dai } = await loadFixture(fixture);
     const users = await getUsers(admin, [dai], 2);
     await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
     await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
@@ -35,7 +36,7 @@ describe('BuySell', function () {
       .to.emit(rollupChain, 'AggregationExecuted')
       .withArgs(1, 0, true, parseEther('5'), 0, 50);
 
-    let [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
+    let [ehash, blockId, status] = await priorityQueues.pendingExecResults(1, 0);
     const h = solidityKeccak256(
       ['uint32', 'uint64', 'bool', 'uint256', 'uint256', 'uint64'],
       [1, 0, true, parseEther('5'), 0, 50]
@@ -46,21 +47,21 @@ describe('BuySell', function () {
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    [, , status] = await rollupChain.pendingExecResults(1, 0);
+    [, , status] = await priorityQueues.pendingExecResults(1, 0);
     expect(status).to.equal(1);
 
     await expect(rollupChain.executeBlock(1, [tns[1][8]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
       .withArgs(1, 1, true, parseEther('3'), parseEther('2.5'), 52);
 
-    [ehash, blockId, status] = await rollupChain.pendingExecResults(1, 0);
+    [ehash, blockId, status] = await priorityQueues.pendingExecResults(1, 0);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
     await rollupChain.commitBlock(2, tns[2]);
 
-    [, , status] = await rollupChain.pendingExecResults(1, 1);
+    [, , status] = await priorityQueues.pendingExecResults(1, 1);
     expect(status).to.equal(1);
   });
 
