@@ -45,7 +45,7 @@ hardhat etherscan-verify --network <network>
 
 ```sh
 source scripts/solt.sh
-run_solt_write()
+run_solt_write
 ```
 
 Then try:
