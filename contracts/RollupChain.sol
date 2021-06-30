@@ -13,7 +13,7 @@ import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
 import "./libraries/MerkleTree.sol";
 import "./Registry.sol";
-import "./PendingQueues.sol";
+import "./PriorityQueues.sol";
 import "./TransitionDisputer.sol";
 import "./strategies/interfaces/IStrategy.sol";
 import "./interfaces/IWETH.sol";
@@ -30,7 +30,7 @@ contract RollupChain is Ownable, Pausable {
     // Asset and strategy registry
     Registry public immutable registry;
     // Pending queues
-    PendingQueues public immutable pendingQueues;
+    PriorityQueues public immutable priorityQueues;
 
     // All the blocks (prepared and/or executed).
     dt.Block[] public blocks;
@@ -114,14 +114,14 @@ contract RollupChain is Ownable, Pausable {
         uint256 _maxPriorityTxDelay,
         address _transitionDisputerAddress,
         address _registryAddress,
-        address _pendingQueuesAddress,
+        address _priorityQueuesAddress,
         address _operator
     ) {
         blockChallengePeriod = _blockChallengePeriod;
         maxPriorityTxDelay = _maxPriorityTxDelay;
         transitionDisputer = TransitionDisputer(_transitionDisputerAddress);
         registry = Registry(_registryAddress);
-        pendingQueues = PendingQueues(_pendingQueuesAddress);
+        priorityQueues = PriorityQueues(_priorityQueuesAddress);
         operator = _operator;
     }
 
@@ -228,7 +228,7 @@ contract RollupChain is Ownable, Pausable {
             } else if (tnType == tn.TN_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
                 dt.DepositTransition memory dp = tn.decodePackedDepositTransition(_transitions[i]);
-                pendingQueues.checkPendingDeposit(dp.account, dp.assetId, dp.amount, _blockId);
+                priorityQueues.checkPendingDeposit(dp.account, dp.assetId, dp.amount, _blockId);
             } else if (tnType == tn.TN_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = tn.decodePackedWithdrawTransition(_transitions[i]);
@@ -249,7 +249,7 @@ contract RollupChain is Ownable, Pausable {
             } else if (tnType == tn.TN_TYPE_DEPOSIT_REWARD) {
                 // Update the pending deposit record.
                 dt.DepositRewardTransition memory dp = tn.decodeDepositRewardTransition(_transitions[i]);
-                pendingQueues.checkPendingDeposit(address(0), dp.assetId, dp.amount, _blockId);
+                priorityQueues.checkPendingDeposit(address(0), dp.assetId, dp.amount, _blockId);
             }
         }
 
@@ -299,7 +299,7 @@ contract RollupChain is Ownable, Pausable {
 
         // In the first execution of any parts of this block, handle the pending deposit & withdraw records.
         if (intentExecCount == 0) {
-            pendingQueues.cleanupPendingDeposits(_blockId);
+            priorityQueues.cleanupPendingDeposits(_blockId);
             _cleanupPendingWithdrawCommits(_blockId);
         }
 
@@ -379,7 +379,7 @@ contract RollupChain is Ownable, Pausable {
      * in a rollup block within the maxPriorityTxDelay
      */
     function disputePriorityTxDelay() external {
-        bool success = pendingQueues.disputePriorityTxDelay(blocks.length, maxPriorityTxDelay);
+        bool success = priorityQueues.disputePriorityTxDelay(blocks.length, maxPriorityTxDelay);
         if (success) {
             _pause();
             return;
@@ -492,7 +492,7 @@ contract RollupChain is Ownable, Pausable {
         require(netDeposit <= netDepositLimits[_asset], ErrMsg.REQ_OVER_LIMIT);
         netDeposits[_asset] = netDeposit;
 
-        uint64 depositId = pendingQueues.addPendingDeposit(_account, assetId, _amount, blocks.length);
+        uint64 depositId = priorityQueues.addPendingDeposit(_account, assetId, _amount, blocks.length);
         emit AssetDeposited(_account, assetId, _amount, depositId);
     }
 
@@ -631,7 +631,7 @@ contract RollupChain is Ownable, Pausable {
             delete pendingWithdrawCommits[blocks.length - 1];
             blocks.pop();
         }
-        pendingQueues.revertBlock(_blockId);
+        priorityQueues.revertBlock(_blockId);
 
         emit RollupBlockReverted(_blockId, _reason);
     }

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./libraries/ErrMsg.sol";
 
-contract PendingQueues is Ownable {
+contract PriorityQueues is Ownable {
     address public controller;
 
     // Track pending L1-initiated even roundtrip status across L1->L2->L1.
@@ -40,26 +40,6 @@ contract PendingQueues is Ownable {
     mapping(uint32 => mapping(uint256 => PendingEvent)) public pendingExecResults;
     // strategyId -> execResultQueuePointer
     mapping(uint32 => EventQueuePointer) public execResultQueuePointers;
-
-    // Track pending withdraws arriving from L2 then done on L1 across 2 phases.
-    // A separate mapping is used for each phase:
-    // (1) pendingWithdrawCommits: commitBlock() --> executeBlock(), per blockId
-    // (2) pendingWithdraws: executeBlock() --> L1-withdraw, per user account address
-    //
-    // - commitBlock() creates pendingWithdrawCommits entries for the blockId.
-    // - executeBlock() aggregates them into per-account pendingWithdraws entries and
-    //   deletes the pendingWithdrawCommits entries.
-    // - fraudulent block deletes the pendingWithdrawCommits during the blockId rollback.
-    // - L1 withdraw() gives the funds and deletes the account's pendingWithdraws entries.
-    struct PendingWithdrawCommit {
-        address account;
-        uint32 assetId;
-        uint256 amount;
-    }
-    mapping(uint256 => PendingWithdrawCommit[]) public pendingWithdrawCommits;
-
-    // Mapping of account => assetId => pendingWithdrawAmount
-    mapping(address => mapping(uint32 => uint256)) public pendingWithdraws;
 
     modifier onlyController() {
         require(msg.sender == controller, "caller is not controller");
