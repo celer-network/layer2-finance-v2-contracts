@@ -11,6 +11,7 @@ const deployFunc: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const transitionDisputer = await deployments.get('TransitionDisputer');
   const registry = await deployments.get('Registry');
+  const priorityOperations = await deployments.get('PriorityOperations');
 
   await deploy('RollupChain', {
     from: deployer,
@@ -20,11 +21,12 @@ const deployFunc: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       process.env.ROLLUP_MAX_PRIORITY_TX_DELAY,
       transitionDisputer.address,
       registry.address,
+      priorityOperations.address,
       process.env.ROLLUP_OPERATOR
     ]
   });
 };
 
 deployFunc.tags = ['RollupChain'];
-deployFunc.dependencies = ['Registry', 'TransitionDisputer'];
+deployFunc.dependencies = ['Registry', 'PriorityOperations', 'TransitionDisputer'];
 export default deployFunc;
