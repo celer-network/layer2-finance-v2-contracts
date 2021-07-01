@@ -354,8 +354,7 @@ contract RollupChain is Ownable, Pausable {
      * in a rollup block within the maxPriorityTxDelay
      */
     function disputePriorityTxDelay() external {
-        bool success = priorityOperations.disputePriorityTxDelay(blocks.length, maxPriorityTxDelay);
-        if (success) {
+        if (priorityOperations.isPriorityTxDelayViolated(blocks.length, maxPriorityTxDelay)) {
             _pause();
             return;
         }
@@ -366,7 +365,7 @@ contract RollupChain is Ownable, Pausable {
      * @notice Update mining epoch to current block number
      */
     function updateEpoch() external {
-        uint64 epoch = priorityOperations.addPendingEpoch(blocks.length);
+        uint64 epoch = priorityOperations.addPendingEpochUpdate(blocks.length);
         emit EpochUpdate(epoch);
     }
 

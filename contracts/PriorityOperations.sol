@@ -155,7 +155,7 @@ contract PriorityOperations is Ownable {
 
     /**
      * @notice Check and update the pending executionResult record.
-     * @param _tnBytes The packetExecutionResult transition bytes.
+     * @param _tnBytes The packedExecutionResult transition bytes.
      * @param _blockId Commit block Id.
      */
     function checkPendingExecutionResult(bytes memory _tnBytes, uint256 _blockId) external onlyController {
@@ -215,7 +215,7 @@ contract PriorityOperations is Ownable {
      * @param _blockLen number of committed blocks
      * @return epoch value
      */
-    function addPendingEpoch(uint256 _blockLen) external onlyController returns (uint64) {
+    function addPendingEpochUpdate(uint256 _blockLen) external onlyController returns (uint64) {
         uint64 epochId = epochQueuePointer.tail++;
         uint64 epoch = uint64(block.number);
         pendingEpochUpdates[epochId] = PendingEpochUpdate({
@@ -244,12 +244,12 @@ contract PriorityOperations is Ownable {
     }
 
     /**
-     * @notice Dispute if operator failed to reflect an L1-initiated priority tx
+     * @notice if operator failed to reflect an L1-initiated priority tx
      * in a rollup block within the maxPriorityTxDelay
      * @param _blockLen number of committed blocks.
      * @param _maxPriorityTxDelay maximm allowed delay for priority tx
      */
-    function disputePriorityTxDelay(uint256 _blockLen, uint256 _maxPriorityTxDelay)
+    function isPriorityTxDelayViolated(uint256 _blockLen, uint256 _maxPriorityTxDelay)
         external
         view
         onlyController
