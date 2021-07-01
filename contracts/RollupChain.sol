@@ -532,7 +532,14 @@ contract RollupChain is Ownable, Pausable {
         }
 
         uint64 aggregateId = priorityOperations.addPendingExecutionResult(
-            PriorityOperations.ExecResultInfo(strategyId, success, sharesFromBuy, amountFromSell, blocks.length, _blockId)
+            PriorityOperations.ExecResultInfo(
+                strategyId,
+                success,
+                sharesFromBuy,
+                amountFromSell,
+                blocks.length,
+                _blockId
+            )
         );
         emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell);
     }

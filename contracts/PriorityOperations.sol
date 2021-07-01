@@ -165,13 +165,7 @@ contract PriorityOperations is Ownable {
         require(aggregateId < queuePointer.tail, ErrMsg.REQ_BAD_EXECRES_TN);
 
         bytes32 ehash = keccak256(
-            abi.encodePacked(
-                er.strategyId,
-                er.aggregateId,
-                er.success,
-                er.sharesFromBuy,
-                er.amountFromSell
-            )
+            abi.encodePacked(er.strategyId, er.aggregateId, er.success, er.sharesFromBuy, er.amountFromSell)
         );
         require(pendingExecResults[er.strategyId][aggregateId].ehash == ehash, ErrMsg.REQ_BAD_HASH);
 

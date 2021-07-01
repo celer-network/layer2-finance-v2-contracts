@@ -400,12 +400,9 @@ library Transitions {
             (_rawBytes),
             (uint128, bytes32, uint256, uint256)
         );
-        (
-            uint64 aggregateId,
-            uint32 strategyId,
-            bool success,
-            uint8 transitionType
-        ) = decodeExecutionResultInfoCode(infoCode);
+        (uint64 aggregateId, uint32 strategyId, bool success, uint8 transitionType) = decodeExecutionResultInfoCode(
+            infoCode
+        );
         DataTypes.ExecutionResultTransition memory transition = DataTypes.ExecutionResultTransition(
             transitionType,
             stateRoot,

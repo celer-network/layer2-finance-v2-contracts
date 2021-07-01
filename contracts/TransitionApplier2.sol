@@ -140,11 +140,14 @@ contract TransitionApplier2 {
      * @param _globalInfo The involved global info from the previous transition.
      * @return new global info after applying the disputed transition
      */
-    function applyUpdateEpochTransition(
-        dt.UpdateEpochTransition memory _transition,
-        dt.GlobalInfo memory _globalInfo
-    ) public pure returns (dt.GlobalInfo memory) {
-        _globalInfo.currEpoch = _transition.epoch;
+    function applyUpdateEpochTransition(dt.UpdateEpochTransition memory _transition, dt.GlobalInfo memory _globalInfo)
+        public
+        pure
+        returns (dt.GlobalInfo memory)
+    {
+        if (_transition.epoch >= _globalInfo.currEpoch) {
+            _globalInfo.currEpoch = _transition.epoch;
+        }
         return _globalInfo;
     }
 

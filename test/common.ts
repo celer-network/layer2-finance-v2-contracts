@@ -85,7 +85,9 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   const transitionDisputer = await transitionDisputerFactory.deploy(transitionEvaluator.address);
   await transitionDisputer.deployed();
 
-  const priorityOperationsFactory = (await ethers.getContractFactory('PriorityOperations')) as PriorityOperations__factory;
+  const priorityOperationsFactory = (await ethers.getContractFactory(
+    'PriorityOperations'
+  )) as PriorityOperations__factory;
   const priorityOperations = await priorityOperationsFactory.deploy();
   await priorityOperations.deployed();
 
@@ -151,7 +153,18 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   await registry.registerStrategy(strategyDai2.address);
   await registry.registerStrategy(strategyWeth.address);
 
-  return { admin, registry, rollupChain, priorityOperations, celr, dai, weth, strategyDai1, strategyDai2, strategyWeth };
+  return {
+    admin,
+    registry,
+    rollupChain,
+    priorityOperations,
+    celr,
+    dai,
+    weth,
+    strategyDai1,
+    strategyDai2,
+    strategyWeth
+  };
 }
 
 export async function getUsers(admin: Wallet, assets: TestERC20[], num: number): Promise<Wallet[]> {

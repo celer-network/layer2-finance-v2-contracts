@@ -53,8 +53,8 @@ describe('DisputeEpoch', function () {
         data: disputeData
       })
     )
-    .to.emit(rollupChain, 'RollupBlockReverted')
-    .withArgs(0, 'invalid post-state root');
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(0, 'invalid post-state root');
   });
 
   it('should fail when update incorrect epoch', async function () {
