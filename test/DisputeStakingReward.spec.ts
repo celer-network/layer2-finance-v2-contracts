@@ -8,7 +8,7 @@ import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInpu
 describe('DisputeStakingReward', function () {
   async function fixture([admin]: Wallet[]) {
     const { rollupChain, celr, dai, weth } = await deployContracts(admin);
-    await rollupChain.setBlockChallengePeriod(10);
+    await rollupChain.setBlockChallengePeriod(5);
 
     const users = await getUsers(admin, [celr, dai], 2);
     const depositAmount = parseEther('100');
@@ -34,10 +34,12 @@ describe('DisputeStakingReward', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(50 - 1);
+    await rollupChain.updateEpoch();
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await advanceBlockNumberTo(100 - 1);
-    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+    await rollupChain.updateEpoch();
+    await rollupChain.executeBlock(1, [tns[1][5]], 1);
     await rollupChain.commitBlock(2, tns[2]);
     await expect(
       admin.sendTransaction({
@@ -53,10 +55,12 @@ describe('DisputeStakingReward', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(200 - 1);
+    await rollupChain.updateEpoch();
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await advanceBlockNumberTo(250 - 1);
-    await rollupChain.executeBlock(1, [tns[1][4]], 1);
+    await rollupChain.updateEpoch();
+    await rollupChain.executeBlock(1, [tns[1][5]], 1);
     await rollupChain.commitBlock(2, tns[2]);
     await expect(
       admin.sendTransaction({

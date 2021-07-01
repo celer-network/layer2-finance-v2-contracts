@@ -44,8 +44,7 @@
       "AggregateId": 0,
       "Success": true,
       "SharesFromBuy": 5000000000000000000,
-      "AmountFromSell": 0,
-      "CurrEpoch": 150
+      "AmountFromSell": 0
     }
   },
   {

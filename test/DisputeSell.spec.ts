@@ -3,12 +3,12 @@ import { expect } from 'chai';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
-import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
+import { advanceBlockNumber, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('DisputeSell', function () {
   async function fixture([admin]: Wallet[]) {
     const { rollupChain, celr, dai } = await deployContracts(admin);
-    await rollupChain.setBlockChallengePeriod(10);
+    await rollupChain.setBlockChallengePeriod(5);
 
     const users = await getUsers(admin, [celr, dai], 2);
     await dai.connect(users[0]).approve(rollupChain.address, parseEther('100'));
@@ -32,7 +32,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(50 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -54,7 +54,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(100 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -77,7 +77,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(150 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -97,7 +97,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(200 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -115,7 +115,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(250 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -138,7 +138,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(300 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -158,7 +158,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(350 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -180,7 +180,7 @@ describe('DisputeSell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(400 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);

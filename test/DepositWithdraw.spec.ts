@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
-import { BigNumber } from "@ethersproject/bignumber";
+import { BigNumber } from '@ethersproject/bignumber';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
@@ -10,18 +10,19 @@ import { deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('DepositWithdraw', function () {
   async function fixture([admin]: Wallet[]) {
-    const { rollupChain, celr, weth } = await deployContracts(admin);
+    const { rollupChain, priorityOperations, celr, weth } = await deployContracts(admin);
 
     return {
       admin,
       rollupChain,
+      priorityOperations,
       celr,
       weth
     };
   }
 
   it('should deposit and withdraw ERC20 and ETH', async function () {
-    const { admin, rollupChain, celr, weth } = await loadFixture(fixture);
+    const { admin, rollupChain, priorityOperations, celr, weth } = await loadFixture(fixture);
     const users = await getUsers(admin, [celr], 1);
     const depositAmount = 100;
     const withdrawAmount = 50;
@@ -33,7 +34,7 @@ describe('DepositWithdraw', function () {
       .to.emit(rollupChain, 'AssetDeposited')
       .withArgs(users[0].address, 1, depositAmount, 0);
 
-    let [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
+    let [ehash, blockId, status] = await priorityOperations.pendingDeposits(0);
     let h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 1, depositAmount]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
@@ -70,7 +71,7 @@ describe('DepositWithdraw', function () {
       .to.emit(rollupChain, 'AssetDeposited')
       .withArgs(users[0].address, 3, depositAmount, 1);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(1);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(1);
     h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 3, depositAmount]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(1);
@@ -98,7 +99,7 @@ describe('DepositWithdraw', function () {
   });
 
   it('should handle deposit transition queue correctly', async function () {
-    const { admin, rollupChain, celr, weth } = await loadFixture(fixture);
+    const { admin, rollupChain, priorityOperations, celr, weth } = await loadFixture(fixture);
 
     const users = await getUsers(admin, [celr], 2);
     await celr.connect(users[0]).approve(rollupChain.address, parseEther('1'));
@@ -108,25 +109,25 @@ describe('DepositWithdraw', function () {
     await rollupChain.connect(users[1]).deposit(celr.address, 300);
     await rollupChain.connect(users[0]).depositETH(weth.address, 400, { value: 400 });
 
-    let [ehash, blockId, status] = await rollupChain.pendingDeposits(0);
+    let [ehash, blockId, status] = await priorityOperations.pendingDeposits(0);
     let h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 1, 100]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(1);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(1);
     h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[1].address, 3, 200]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(2);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(2);
     h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[1].address, 1, 300]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(3);
     h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 3, 400]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
@@ -137,23 +138,23 @@ describe('DepositWithdraw', function () {
     await expect(rollupChain.commitBlock(0, tns[1])).to.be.revertedWith('invalid data hash');
     await rollupChain.commitBlock(0, tns[0]);
 
-    [, , status] = await rollupChain.pendingDeposits(2);
+    [, , status] = await priorityOperations.pendingDeposits(2);
     expect(status).to.equal(1);
-    [, , status] = await rollupChain.pendingDeposits(3);
+    [, , status] = await priorityOperations.pendingDeposits(3);
     expect(status).to.equal(0);
 
     await rollupChain.commitBlock(1, tns[1]);
-    [, , status] = await rollupChain.pendingDeposits(3);
+    [, , status] = await priorityOperations.pendingDeposits(3);
     expect(status).to.equal(1);
 
     await expect(rollupChain.executeBlock(0, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(0, 0);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(2);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(2);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(3);
     h = solidityKeccak256(['address', 'uint32', 'uint256'], [users[0].address, 3, 400]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(1);
@@ -161,7 +162,7 @@ describe('DepositWithdraw', function () {
 
     await expect(rollupChain.executeBlock(1, [], 0)).to.emit(rollupChain, 'RollupBlockExecuted').withArgs(1, 0);
 
-    [ehash, blockId, status] = await rollupChain.pendingDeposits(3);
+    [ehash, blockId, status] = await priorityOperations.pendingDeposits(3);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);
