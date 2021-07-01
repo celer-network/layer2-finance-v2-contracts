@@ -611,9 +611,10 @@ library Transitions {
         pure
         returns (DataTypes.UpdateEpochTransition memory)
     {
-        (uint8 transitionType, uint64 epoch) = abi.decode((_rawBytes), (uint8, uint64));
+        (uint8 transitionType, bytes32 stateRoot, uint64 epoch) = abi.decode((_rawBytes), (uint8, bytes32, uint64));
         DataTypes.UpdateEpochTransition memory transition = DataTypes.UpdateEpochTransition(
             transitionType,
+            stateRoot,
             epoch
         );
         return transition;

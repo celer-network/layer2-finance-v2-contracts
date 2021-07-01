@@ -204,6 +204,7 @@ library DataTypes {
 
     struct UpdateEpochTransition {
         uint8 transitionType;
+        bytes32 stateRoot;
         uint64 epoch;
     }
 
