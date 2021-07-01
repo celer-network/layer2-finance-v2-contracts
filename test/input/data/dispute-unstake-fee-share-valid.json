@@ -37,14 +37,19 @@
     },
     "Flag": 99
   },
+
+  {
+    "UpdateEpoch": {
+      "Epoch": 200
+    }
+  },
   {
     "ExecutionResult": {
       "StrategyId": 1,
       "AggregateId": 0,
       "Success": true,
       "SharesFromBuy": 2000000000000000000,
-      "AmountFromSell": 0,
-      "CurrEpoch": 200
+      "AmountFromSell": 0
     }
   },
   {
