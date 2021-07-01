@@ -32,6 +32,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(50 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -48,6 +49,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(100 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -66,6 +68,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(150 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -84,6 +87,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(200 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -100,6 +104,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(250 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -118,6 +123,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(300 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -138,6 +144,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(400 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][5]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -156,6 +163,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(500 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][5]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -176,6 +184,7 @@ describe('DisputeStake', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(600 - 1);
+    await rollupChain.updateEpoch()
     await rollupChain.executeBlock(0, [tns[0][5]], 1);
     await rollupChain.commitBlock(1, tns[1]);
     await expect(
@@ -187,4 +196,5 @@ describe('DisputeStake', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(1, 'failed to evaluate');
   });
+
 });
