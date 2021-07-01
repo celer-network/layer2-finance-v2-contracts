@@ -36,10 +36,7 @@ describe('BuySell', function () {
       .withArgs(1, 0, true, parseEther('5'), 0);
 
     let [ehash, blockId, status] = await priorityQueues.pendingExecResults(1, 0);
-    const h = solidityKeccak256(
-      ['uint32', 'uint64', 'bool', 'uint256', 'uint256'],
-      [1, 0, true, parseEther('5'), 0]
-    );
+    const h = solidityKeccak256(['uint32', 'uint64', 'bool', 'uint256', 'uint256'], [1, 0, true, parseEther('5'), 0]);
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
     expect(status).to.equal(0);

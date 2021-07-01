@@ -1,0 +1,15 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 1,
+      "Amount": 100
+    }
+  },
+  {
+    "UpdateEpoch": {
+      "Epoch": 100
+    },
+    "Flag": 2
+  }
+]

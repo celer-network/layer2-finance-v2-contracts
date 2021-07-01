@@ -273,6 +273,9 @@ contract TransitionEvaluator {
         } else if (transitionType == tn.TN_TYPE_INIT) {
             dt.InitTransition memory transition = tn.decodeInitTransition(rawTransition);
             stateRoot = transition.stateRoot;
+        } else if (transitionType == tn.TN_TYPE_UPDATE_EPOCH) {
+            dt.UpdateEpochTransition memory transition = tn.decodeUpdateEpochTransition(rawTransition);
+            stateRoot = transition.stateRoot;
         } else {
             revert("Transition type not recognized");
         }
