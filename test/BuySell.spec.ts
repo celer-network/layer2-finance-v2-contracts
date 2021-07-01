@@ -4,7 +4,7 @@ import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
-import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
+import { deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('BuySell', function () {
   async function fixture([admin]: Wallet[]) {
@@ -31,15 +31,14 @@ describe('BuySell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(50 - 1);
     await expect(rollupChain.executeBlock(0, [tns[0][4]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 0, true, parseEther('5'), 0, 50);
+      .withArgs(1, 0, true, parseEther('5'), 0);
 
     let [ehash, blockId, status] = await priorityQueues.pendingExecResults(1, 0);
     const h = solidityKeccak256(
-      ['uint32', 'uint64', 'bool', 'uint256', 'uint256', 'uint64'],
-      [1, 0, true, parseEther('5'), 0, 50]
+      ['uint32', 'uint64', 'bool', 'uint256', 'uint256'],
+      [1, 0, true, parseEther('5'), 0]
     );
     expect(ehash).to.equal(h);
     expect(blockId).to.equal(0);
@@ -52,7 +51,7 @@ describe('BuySell', function () {
 
     await expect(rollupChain.executeBlock(1, [tns[1][8]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 1, true, parseEther('3'), parseEther('2.5'), 52);
+      .withArgs(1, 1, true, parseEther('3'), parseEther('2.5'));
 
     [ehash, blockId, status] = await priorityQueues.pendingExecResults(1, 0);
     expect(ehash).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
@@ -79,17 +78,16 @@ describe('BuySell', function () {
     await rollupChain.commitBlock(0, tns[0]);
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(100 - 1);
     const intents = [tns[0][6], tns[0][7], tns[0][8]];
     await expect(rollupChain.executeBlock(0, intents, 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 0, true, parseEther('3'), 0, 100)
+      .withArgs(1, 0, true, parseEther('3'), 0)
       .to.emit(rollupChain, 'RollupBlockExecuted')
       .withArgs(0, 1);
 
     await expect(rollupChain.executeBlock(0, intents, 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(2, 0, true, parseEther('2'), 0, 101)
+      .withArgs(2, 0, true, parseEther('2'), 0)
       .to.emit(rollupChain, 'RollupBlockExecuted')
       .withArgs(0, 2);
 
@@ -97,13 +95,13 @@ describe('BuySell', function () {
 
     await expect(rollupChain.executeBlock(0, intents, 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(3, 0, true, parseEther('1'), 0, 103)
+      .withArgs(3, 0, true, parseEther('1'), 0)
       .to.emit(rollupChain, 'RollupBlockExecuted')
       .withArgs(0, 3);
 
     await expect(rollupChain.executeBlock(1, [tns[1][1]], 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 1, true, parseEther('5'), 0, 104)
+      .withArgs(1, 1, true, parseEther('5'), 0)
       .to.emit(rollupChain, 'RollupBlockExecuted')
       .withArgs(1, 1);
   });
@@ -121,13 +119,12 @@ describe('BuySell', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(150 - 1);
     const intents = [tns[0][6], tns[0][7], tns[0][8]];
     await expect(rollupChain.executeBlock(0, intents, 2))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(1, 0, true, parseEther('3'), 0, 150)
+      .withArgs(1, 0, true, parseEther('3'), 0)
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(2, 0, true, parseEther('2'), 0, 150)
+      .withArgs(2, 0, true, parseEther('2'), 0)
       .to.emit(rollupChain, 'RollupBlockExecuted')
       .withArgs(0, 2);
 
@@ -138,7 +135,7 @@ describe('BuySell', function () {
 
     await expect(rollupChain.executeBlock(0, intents, 1))
       .to.emit(rollupChain, 'AggregationExecuted')
-      .withArgs(3, 0, true, parseEther('1'), 0, 152)
+      .withArgs(3, 0, true, parseEther('1'), 0)
       .to.emit(rollupChain, 'RollupBlockExecuted')
       .withArgs(0, 3);
 

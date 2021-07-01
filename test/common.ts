@@ -195,6 +195,14 @@ export async function parseInput(filename: string): Promise<Inputs> {
   return { tns, disputeData };
 }
 
+export async function advanceBlockNumber(blknum: number): Promise<void> {
+  const promises = [];
+  for (let i = 0; i < blknum; i++) {
+    promises.push(ethers.provider.send('evm_mine', []));
+  }
+  await Promise.all(promises);
+}
+
 export async function advanceBlockNumberTo(target: number): Promise<void> {
   const blockNumber = await ethers.provider.getBlockNumber();
   const promises = [];

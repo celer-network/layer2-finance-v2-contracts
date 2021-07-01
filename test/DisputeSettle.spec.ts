@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
-import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
+import { advanceBlockNumber, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('DisputeSettle', function () {
   async function fixture([admin]: Wallet[]) {
@@ -31,12 +31,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(50 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(100 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][8]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -56,12 +56,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(150 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(200 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][8]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -81,12 +81,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(250 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(300 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -104,12 +104,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(350 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(400 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -127,12 +127,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(450 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(500 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -154,12 +154,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(550 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(600 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -179,12 +179,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(650 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(700 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -204,12 +204,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(750 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(800 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -227,12 +227,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(850 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(900 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -252,12 +252,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(950 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][2]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(1000 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -279,12 +279,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(1050 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(1100 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -304,12 +304,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(1150 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(1200 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);
@@ -331,12 +331,12 @@ describe('DisputeSettle', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(1250 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][3]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
 
-    await advanceBlockNumberTo(1300 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(1, [tns[1][4]], 1);
 
     await rollupChain.commitBlock(2, tns[2]);

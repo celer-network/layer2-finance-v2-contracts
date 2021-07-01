@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
-import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
+import { advanceBlockNumber, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
 describe('DisputeAggregateOrder', function () {
   async function fixture([admin]: Wallet[]) {
@@ -30,7 +30,7 @@ describe('DisputeAggregateOrder', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(50 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -48,7 +48,7 @@ describe('DisputeAggregateOrder', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(100 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);
@@ -68,7 +68,7 @@ describe('DisputeAggregateOrder', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
 
-    await advanceBlockNumberTo(150 - 1);
+    await advanceBlockNumber(6);
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
 
     await rollupChain.commitBlock(1, tns[1]);

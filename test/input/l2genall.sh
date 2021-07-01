@@ -1,6 +1,7 @@
 #!/bin/bash
 
-files=$(ls ./data/*.json)
+prefix=$1
+files=$(ls ./data/$prefix*.json)
 for eachfile in $files; do
   out=${eachfile/json/txt}
   echo $eachfile '>' $out
