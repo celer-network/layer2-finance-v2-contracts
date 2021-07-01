@@ -34,6 +34,7 @@ describe('Staking', function () {
 
     await rollupChain.commitBlock(0, tns[0]);
     await advanceBlockNumberTo(50 - 1);
+    await rollupChain.updateEpoch();
     await rollupChain.executeBlock(0, [tns[0][4]], 1);
     // NOTE: Enable to get aggregation epoch
     // const aggr = await rollupChain.queryFilter(

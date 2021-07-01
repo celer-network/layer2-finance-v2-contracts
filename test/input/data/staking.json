@@ -37,6 +37,12 @@
     },
     "Flag": 99
   },
+
+  {
+    "UpdateEpoch": {
+      "Epoch": 50
+    }
+  },
   {
     "ExecutionResult": {
       "StrategyId": 1,
