@@ -7,7 +7,7 @@ import { Wallet } from '@ethersproject/wallet';
 
 import { Registry__factory } from '../typechain';
 import { RollupChain__factory } from '../typechain/factories/RollupChain__factory';
-import { PriorityQueues__factory } from '../typechain/factories/PriorityQueues__factory';
+import { PriorityOperations__factory } from '../typechain/factories/PriorityOperations__factory';
 import { StrategyDummy__factory } from '../typechain/factories/StrategyDummy__factory';
 import { TestERC20__factory } from '../typechain/factories/TestERC20__factory';
 import { TransitionApplier1__factory } from '../typechain/factories/TransitionApplier1__factory';
@@ -17,7 +17,7 @@ import { TransitionEvaluator__factory } from '../typechain/factories/TransitionE
 import { WETH9__factory } from '../typechain/factories/WETH9__factory';
 import { Registry } from '../typechain/Registry.d';
 import { RollupChain } from '../typechain/RollupChain.d';
-import { PriorityQueues } from '../typechain/PriorityQueues.d';
+import { PriorityOperations } from '../typechain/PriorityOperations.d';
 import { StrategyDummy } from '../typechain/StrategyDummy.d';
 import { TestERC20 } from '../typechain/TestERC20';
 import { WETH9 } from '../typechain/WETH9.d';
@@ -44,7 +44,7 @@ interface DeploymentInfo {
   admin: Wallet;
   registry: Registry;
   rollupChain: RollupChain;
-  priorityQueues: PriorityQueues;
+  priorityOperations: PriorityOperations;
   celr: TestERC20;
   dai: TestERC20;
   weth: WETH9;
@@ -85,9 +85,9 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   const transitionDisputer = await transitionDisputerFactory.deploy(transitionEvaluator.address);
   await transitionDisputer.deployed();
 
-  const priorityQueuesFactory = (await ethers.getContractFactory('PriorityQueues')) as PriorityQueues__factory;
-  const priorityQueues = await priorityQueuesFactory.deploy();
-  await priorityQueues.deployed();
+  const priorityOperationsFactory = (await ethers.getContractFactory('PriorityOperations')) as PriorityOperations__factory;
+  const priorityOperations = await priorityOperationsFactory.deploy();
+  await priorityOperations.deployed();
 
   const rollupChainFactory = (await ethers.getContractFactory('RollupChain')) as RollupChain__factory;
   const rollupChain = await rollupChainFactory.deploy(
@@ -95,11 +95,11 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
     0,
     transitionDisputer.address,
     registry.address,
-    priorityQueues.address,
+    priorityOperations.address,
     admin.address
   );
   await rollupChain.deployed();
-  priorityQueues.setController(rollupChain.address);
+  priorityOperations.setController(rollupChain.address);
 
   const testERC20Factory = (await ethers.getContractFactory('TestERC20')) as TestERC20__factory;
   const celr = await testERC20Factory.deploy();
@@ -151,7 +151,7 @@ export async function deployContracts(admin: Wallet): Promise<DeploymentInfo> {
   await registry.registerStrategy(strategyDai2.address);
   await registry.registerStrategy(strategyWeth.address);
 
-  return { admin, registry, rollupChain, priorityQueues, celr, dai, weth, strategyDai1, strategyDai2, strategyWeth };
+  return { admin, registry, rollupChain, priorityOperations, celr, dai, weth, strategyDai1, strategyDai2, strategyWeth };
 }
 
 export async function getUsers(admin: Wallet, assets: TestERC20[], num: number): Promise<Wallet[]> {

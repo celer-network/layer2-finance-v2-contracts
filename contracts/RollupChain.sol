@@ -13,7 +13,7 @@ import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
 import "./libraries/MerkleTree.sol";
 import "./Registry.sol";
-import "./PriorityQueues.sol";
+import "./PriorityOperations.sol";
 import "./TransitionDisputer.sol";
 import "./strategies/interfaces/IStrategy.sol";
 import "./interfaces/IWETH.sol";
@@ -30,7 +30,7 @@ contract RollupChain is Ownable, Pausable {
     // Asset and strategy registry
     Registry public immutable registry;
     // Pending queues
-    PriorityQueues public immutable priorityQueues;
+    PriorityOperations public immutable priorityOperations;
 
     // All the blocks (prepared and/or executed).
     dt.Block[] public blocks;
@@ -80,21 +80,21 @@ contract RollupChain is Ownable, Pausable {
         uint256 amountFromSell
     );
     event OperatorChanged(address previousOperator, address newOperator);
-    event EpochUpdate(uint64 epoch, uint64 epochId);
+    event EpochUpdate(uint64 epoch);
 
     constructor(
         uint256 _blockChallengePeriod,
         uint256 _maxPriorityTxDelay,
         address _transitionDisputerAddress,
         address _registryAddress,
-        address _priorityQueuesAddress,
+        address _priorityOperationsAddress,
         address _operator
     ) {
         blockChallengePeriod = _blockChallengePeriod;
         maxPriorityTxDelay = _maxPriorityTxDelay;
         transitionDisputer = TransitionDisputer(_transitionDisputerAddress);
         registry = Registry(_registryAddress);
-        priorityQueues = PriorityQueues(_priorityQueuesAddress);
+        priorityOperations = PriorityOperations(_priorityOperationsAddress);
         operator = _operator;
     }
 
@@ -201,7 +201,7 @@ contract RollupChain is Ownable, Pausable {
             } else if (tnType == tn.TN_TYPE_DEPOSIT) {
                 // Update the pending deposit record.
                 dt.DepositTransition memory dp = tn.decodePackedDepositTransition(_transitions[i]);
-                priorityQueues.checkPendingDeposit(dp.account, dp.assetId, dp.amount, _blockId);
+                priorityOperations.checkPendingDeposit(dp.account, dp.assetId, dp.amount, _blockId);
             } else if (tnType == tn.TN_TYPE_WITHDRAW) {
                 // Append the pending withdraw-commit record for this blockId.
                 dt.WithdrawTransition memory wd = tn.decodePackedWithdrawTransition(_transitions[i]);
@@ -212,7 +212,7 @@ contract RollupChain is Ownable, Pausable {
                 intentHash = keccak256(abi.encodePacked(intentHash, _transitions[i]));
             } else if (tnType == tn.TN_TYPE_EXEC_RESULT) {
                 // Update the pending execution result record.
-                priorityQueues.checkPendingExecutionResult(_transitions[i], _blockId);
+                priorityOperations.checkPendingExecutionResult(_transitions[i], _blockId);
             } else if (tnType == tn.TN_TYPE_WITHDRAW_PROTO_FEE) {
                 dt.WithdrawProtocolFeeTransition memory wf = tn.decodeWithdrawProtocolFeeTransition(_transitions[i]);
                 pendingWithdrawCommits[_blockId].push(
@@ -221,10 +221,10 @@ contract RollupChain is Ownable, Pausable {
             } else if (tnType == tn.TN_TYPE_DEPOSIT_REWARD) {
                 // Update the pending deposit record.
                 dt.DepositRewardTransition memory dp = tn.decodeDepositRewardTransition(_transitions[i]);
-                priorityQueues.checkPendingDeposit(address(0), dp.assetId, dp.amount, _blockId);
+                priorityOperations.checkPendingDeposit(address(0), dp.assetId, dp.amount, _blockId);
             } else if (tnType == tn.TN_TYPE_UPDATE_EPOCH) {
                 dt.UpdateEpochTransition memory ep = tn.decodeUpdateEpochTransition(_transitions[i]);
-                priorityQueues.checkPendingEpochUpdate(ep.epoch, _blockId);
+                priorityOperations.checkPendingEpochUpdate(ep.epoch, _blockId);
             }
         }
 
@@ -274,7 +274,7 @@ contract RollupChain is Ownable, Pausable {
 
         // In the first execution of any parts of this block, handle the pending deposit & withdraw records.
         if (intentExecCount == 0) {
-            priorityQueues.cleanupPendingQueue(_blockId);
+            priorityOperations.cleanupPendingQueue(_blockId);
             _cleanupPendingWithdrawCommits(_blockId);
         }
 
@@ -354,7 +354,7 @@ contract RollupChain is Ownable, Pausable {
      * in a rollup block within the maxPriorityTxDelay
      */
     function disputePriorityTxDelay() external {
-        bool success = priorityQueues.disputePriorityTxDelay(blocks.length, maxPriorityTxDelay);
+        bool success = priorityOperations.disputePriorityTxDelay(blocks.length, maxPriorityTxDelay);
         if (success) {
             _pause();
             return;
@@ -366,9 +366,8 @@ contract RollupChain is Ownable, Pausable {
      * @notice Update mining epoch to current block number
      */
     function updateEpoch() external {
-        uint64 epoch = uint64(block.number);
-        uint64 epochId = priorityQueues.addPendingEpoch(epoch, blocks.length);
-        emit EpochUpdate(epoch, epochId);
+        uint64 epoch = priorityOperations.addPendingEpoch(blocks.length);
+        emit EpochUpdate(epoch);
     }
 
     /**
@@ -476,7 +475,7 @@ contract RollupChain is Ownable, Pausable {
         require(netDeposit <= netDepositLimits[_asset], ErrMsg.REQ_OVER_LIMIT);
         netDeposits[_asset] = netDeposit;
 
-        uint64 depositId = priorityQueues.addPendingDeposit(_account, assetId, _amount, blocks.length);
+        uint64 depositId = priorityOperations.addPendingDeposit(_account, assetId, _amount, blocks.length);
         emit AssetDeposited(_account, assetId, _amount, depositId);
     }
 
@@ -533,8 +532,8 @@ contract RollupChain is Ownable, Pausable {
             (sharesFromBuy, amountFromSell) = abi.decode((returnData), (uint256, uint256));
         }
 
-        uint64 aggregateId = priorityQueues.addPendingExecutionResult(
-            PriorityQueues.ExecResultInfo(strategyId, success, sharesFromBuy, amountFromSell, blocks.length, _blockId)
+        uint64 aggregateId = priorityOperations.addPendingExecutionResult(
+            PriorityOperations.ExecResultInfo(strategyId, success, sharesFromBuy, amountFromSell, blocks.length, _blockId)
         );
         emit AggregationExecuted(strategyId, aggregateId, success, sharesFromBuy, amountFromSell);
     }
@@ -568,7 +567,7 @@ contract RollupChain is Ownable, Pausable {
             delete pendingWithdrawCommits[blocks.length - 1];
             blocks.pop();
         }
-        priorityQueues.revertBlock(_blockId);
+        priorityOperations.revertBlock(_blockId);
 
         emit RollupBlockReverted(_blockId, _reason);
     }

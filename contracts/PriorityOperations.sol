@@ -9,7 +9,7 @@ import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
 
-contract PriorityQueues is Ownable {
+contract PriorityOperations is Ownable {
     address public controller;
 
     // Track pending L1-initiated even roundtrip status across L1->L2->L1.
@@ -212,18 +212,18 @@ contract PriorityQueues is Ownable {
 
     /**
      * @notice add pending epoch update
-     * @param _epoch epoch value
      * @param _blockLen number of committed blocks
-     * @return epoch id
+     * @return epoch value
      */
-    function addPendingEpoch(uint64 _epoch, uint256 _blockLen) external onlyController returns (uint64) {
+    function addPendingEpoch(uint256 _blockLen) external onlyController returns (uint64) {
         uint64 epochId = epochQueuePointer.tail++;
+        uint64 epoch = uint64(block.number);
         pendingEpochUpdates[epochId] = PendingEpochUpdate({
-            epoch: _epoch,
+            epoch: epoch,
             blockId: uint64(_blockLen), // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
-        return epochId;
+        return epoch;
     }
 
     /**
