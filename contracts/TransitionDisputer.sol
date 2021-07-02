@@ -12,7 +12,7 @@ import "./Registry.sol";
 contract TransitionDisputer {
     // state root of empty account, strategy, staking pool, global info
     bytes32 public constant INIT_TRANSITION_STATE_ROOT =
-        bytes32(0xc6011c637feab6939cc17cdfdd9e34a435f76bd08fcc224f59edaeb31fd13928);
+        bytes32(0x20661bb288d00ccdc1b0eb476dad70149c2846e645bd487ca637ff2a65f97637);
 
     TransitionEvaluator public immutable transitionEvaluator;
 
