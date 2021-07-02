@@ -243,12 +243,7 @@ contract PriorityOperations is Ownable {
      * @param _blockLen number of committed blocks.
      * @param _maxPriorityTxDelay maximm allowed delay for priority tx
      */
-    function isPriorityTxDelayViolated(uint256 _blockLen, uint256 _maxPriorityTxDelay)
-        external
-        view
-        onlyController
-        returns (bool)
-    {
+    function isPriorityTxDelayViolated(uint256 _blockLen, uint256 _maxPriorityTxDelay) external view returns (bool) {
         if (_blockLen > 0) {
             uint256 currentBlockId = _blockLen - 1;
 

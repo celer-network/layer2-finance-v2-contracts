@@ -299,7 +299,7 @@ contract TransitionApplier2 {
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
-        _adjustAccountStakedShareAndStakeEntries(_accountInfo, poolId);
+        require(_accountInfo.stakes.length > poolId, ErrMsg.REQ_BAD_AMOUNT);
         _adjustAccountRewardDebtEntries(_accountInfo, poolId, uint32(_stakingPoolInfo.rewardPerEpoch.length - 1));
         uint256 originalStake = _accountInfo.stakes[poolId];
         if (removedShares > 0) {
