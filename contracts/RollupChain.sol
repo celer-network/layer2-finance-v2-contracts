@@ -80,7 +80,7 @@ contract RollupChain is Ownable, Pausable {
         uint256 amountFromSell
     );
     event OperatorChanged(address previousOperator, address newOperator);
-    event EpochUpdate(uint64 epoch);
+    event EpochUpdate(uint64 epoch, uint64 epochId);
 
     constructor(
         uint256 _blockChallengePeriod,
@@ -365,8 +365,8 @@ contract RollupChain is Ownable, Pausable {
      * @notice Update mining epoch to current block number
      */
     function updateEpoch() external {
-        uint64 epoch = priorityOperations.addPendingEpochUpdate(blocks.length);
-        emit EpochUpdate(epoch);
+        (uint64 epoch, uint64 epochId) = priorityOperations.addPendingEpochUpdate(blocks.length);
+        emit EpochUpdate(epoch, epochId);
     }
 
     /**

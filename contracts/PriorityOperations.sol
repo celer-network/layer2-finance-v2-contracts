@@ -177,6 +177,7 @@ contract PriorityOperations is Ownable {
 
     /**
      * @notice Add pending execution result record.
+     * @param _er execution result info
      * @return aggregate Id
      */
     function addPendingExecutionResult(ExecResultInfo calldata _er) external onlyController returns (uint64) {
@@ -207,9 +208,9 @@ contract PriorityOperations is Ownable {
     /**
      * @notice add pending epoch update
      * @param _blockLen number of committed blocks
-     * @return epoch value
+     * @return epoch value and index
      */
-    function addPendingEpochUpdate(uint256 _blockLen) external onlyController returns (uint64) {
+    function addPendingEpochUpdate(uint256 _blockLen) external onlyController returns (uint64, uint64) {
         uint64 epochId = epochQueuePointer.tail++;
         uint64 epoch = uint64(block.number);
         pendingEpochUpdates[epochId] = PendingEpochUpdate({
@@ -217,7 +218,7 @@ contract PriorityOperations is Ownable {
             blockId: uint64(_blockLen), // "pending": baseline of censorship delay
             status: PendingEventStatus.Pending
         });
-        return epoch;
+        return (epoch, epochId);
     }
 
     /**
@@ -278,6 +279,18 @@ contract PriorityOperations is Ownable {
                 }
                 pendingDeposits[i].blockId = uint64(_blockId);
                 pendingDeposits[i].status = PendingEventStatus.Pending;
+            }
+        }
+
+        first = false;
+        for (uint64 i = epochQueuePointer.executeHead; i < epochQueuePointer.tail; i++) {
+            if (pendingEpochUpdates[i].blockId >= _blockId) {
+                if (!first) {
+                    epochQueuePointer.commitHead = i;
+                    first = true;
+                }
+                pendingEpochUpdates[i].blockId = uint64(_blockId);
+                pendingEpochUpdates[i].status = PendingEventStatus.Pending;
             }
         }
     }
