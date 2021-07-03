@@ -2,7 +2,7 @@
   {
     "DepositReward": {
       "AssetId": 3,
-      "Amount": 100000000000000000000
+      "Amount": 200000000000000000000
     }
   },
   {
@@ -10,9 +10,9 @@
       "PoolId": 1,
       "StrategyId": 1,
       "RewardAssetIds": [3],
-      "RewardPerEpoch": [3000000000000000000],
-      "StakeAdjustmentFactor": 700000000000,
-      "StartEpoch": 10
+      "RewardPerEpoch": [500000000000000000],
+      "StakeAdjustmentFactor": 500000000000,
+      "StartEpoch": 1850
     }
   },
   {
@@ -39,7 +39,7 @@
   },
   {
     "UpdateEpoch": {
-      "Epoch": 50
+      "Epoch": 1750
     }
   },
   {
@@ -62,7 +62,7 @@
     "Stake": {
       "PoolId": 1,
       "AccountId": 1,
-      "Shares": 2000000000000000000,
+      "Shares": 1,
       "Fee": 0,
       "Timestamp": 2
     }
@@ -84,7 +84,13 @@
   },
   {
     "UpdateEpoch": {
-      "Epoch": 157
+      "Epoch": 1800
+    }
+  },
+  {
+    "UpdatePool": {
+      "PoolId": 1,
+      "RewardPerEpoch": [2000000000000000000]
     }
   },
   {
@@ -101,23 +107,28 @@
       "StrategyId": 1,
       "AggregateId": 1,
       "AccountId": 1
+    },
+    "Flag": 99
+  },
+  {
+    "UpdateEpoch": {
+      "Epoch": 1900
     }
   },
   {
     "Unstake": {
       "PoolId": 1,
       "AccountId": 1,
-      "Shares": 900000000000000000,
+      "Shares": 1,
       "Fee": 0,
       "Timestamp": 4
     }
   },
   {
-    "Unstake": {
-      "PoolId": 1,
+    "Withdraw": {
       "AccountId": 1,
-      "Shares": 1000000000000000000,
-      "Fee": 0,
+      "AssetId": 3,
+      "Amount": 100000000000000000000,
       "Timestamp": 5
     },
     "Flag": 1
