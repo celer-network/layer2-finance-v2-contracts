@@ -358,12 +358,18 @@ contract TransitionApplier2 {
         _stakingPoolInfo.lastRewardEpoch = _transition.startEpoch;
         _stakingPoolInfo.stakeAdjustmentFactor = _transition.stakeAdjustmentFactor;
         _stakingPoolInfo.strategyId = _transition.strategyId;
-        _stakingPoolInfo.rewardAssetIds = _transition.rewardAssetIds;
+        _stakingPoolInfo.rewardAssetIds = new uint32[](_transition.rewardAssetIds.length);
+        for (uint256 i = 0; i < _transition.rewardAssetIds.length; i++) {
+            _stakingPoolInfo.rewardAssetIds[i] = _transition.rewardAssetIds[i];
+        }
         _stakingPoolInfo.accumulatedRewardPerUnit = tn.adjustUint256Array(
             _stakingPoolInfo.accumulatedRewardPerUnit,
-            uint32(_transition.rewardAssetIds.length)
+            uint32(_transition.rewardAssetIds.length - 1)
         );
-        _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
+        _stakingPoolInfo.rewardPerEpoch = new uint256[](_transition.rewardPerEpoch.length);
+        for (uint256 i = 0; i < _transition.rewardPerEpoch.length; i++) {
+            _stakingPoolInfo.rewardPerEpoch[i] = _transition.rewardPerEpoch[i];
+        }
         return _stakingPoolInfo;
     }
 
@@ -385,7 +391,10 @@ contract TransitionApplier2 {
 
         _updatePoolStates(_stakingPoolInfo, _globalInfo);
 
-        _stakingPoolInfo.rewardPerEpoch = _transition.rewardPerEpoch;
+        _stakingPoolInfo.rewardPerEpoch = new uint256[](_transition.rewardPerEpoch.length);
+        for (uint256 i = 0; i < _transition.rewardPerEpoch.length; i++) {
+            _stakingPoolInfo.rewardPerEpoch[i] = _transition.rewardPerEpoch[i];
+        }
         return _stakingPoolInfo;
     }
 

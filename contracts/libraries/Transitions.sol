@@ -31,6 +31,8 @@ library Transitions {
     // fee encoding
     uint128 public constant UINT128_HIBIT = 2**127;
 
+    uint8 public constant MAX_REWARD_ASSETS = 5;
+
     function extractTransitionType(bytes memory _bytes) internal pure returns (uint8) {
         uint8 transitionType;
         assembly {
@@ -512,16 +514,17 @@ library Transitions {
         pure
         returns (DataTypes.AddPoolTransition memory)
     {
+        // NOTE: Current solc won't allow using MAX_REWARD_ASSETS with abi.decode
         (
             uint8 transitionType,
             bytes32 stateRoot,
             uint32 poolId,
             uint32 strategyId,
-            uint32[] memory rewardAssetIds,
-            uint256[] memory rewardPerEpoch,
+            uint32[MAX_REWARD_ASSETS] memory rewardAssetIds,
+            uint256[MAX_REWARD_ASSETS] memory rewardPerEpoch,
             uint256 stakeAdjustmentFactor,
             uint64 startEpoch
-        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32[], uint256[], uint256, uint64));
+        ) = abi.decode((_rawBytes), (uint8, bytes32, uint32, uint32, uint32[5], uint256[5], uint256, uint64));
         DataTypes.AddPoolTransition memory transition = DataTypes.AddPoolTransition(
             transitionType,
             stateRoot,
@@ -540,10 +543,9 @@ library Transitions {
         pure
         returns (DataTypes.UpdatePoolTransition memory)
     {
-        (uint8 transitionType, bytes32 stateRoot, uint32 poolId, uint256[] memory rewardPerEpoch) = abi.decode(
-            (_rawBytes),
-            (uint8, bytes32, uint32, uint256[])
-        );
+        // NOTE: Current solc won't allow using MAX_REWARD_ASSETS with abi.decode
+        (uint8 transitionType, bytes32 stateRoot, uint32 poolId, uint256[MAX_REWARD_ASSETS] memory rewardPerEpoch) = abi
+        .decode((_rawBytes), (uint8, bytes32, uint32, uint256[5]));
         DataTypes.UpdatePoolTransition memory transition = DataTypes.UpdatePoolTransition(
             transitionType,
             stateRoot,
