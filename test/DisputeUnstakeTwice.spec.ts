@@ -5,6 +5,7 @@ import { Wallet } from '@ethersproject/wallet';
 
 import { advanceBlockNumberTo, deployContracts, getUsers, loadFixture, parseInput } from './common';
 
+// Makes sure we don't round down twice when calculating pending rewards
 describe('DisputeUnstakeTwice', function () {
   async function fixture([admin]: Wallet[]) {
     const { rollupChain, celr, dai, weth } = await deployContracts(admin);
