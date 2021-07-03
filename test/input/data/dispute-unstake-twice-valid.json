@@ -9,8 +9,8 @@
     "AddPool": {
       "PoolId": 1,
       "StrategyId": 1,
-      "RewardAssetIds": [3],
-      "RewardPerEpoch": [3000000000000000000],
+      "RewardAssetIds": [3, 0, 0, 0, 0],
+      "RewardPerEpoch": [3000000000000000000, 0, 0, 0, 0],
       "StakeAdjustmentFactor": 700000000000,
       "StartEpoch": 10
     }

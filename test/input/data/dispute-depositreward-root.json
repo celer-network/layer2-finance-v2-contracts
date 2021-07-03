@@ -1,0 +1,12 @@
+[
+  {
+    "Init": {}
+  },
+  {
+    "DepositReward": {
+      "AssetId": 1,
+      "Amount": 100000000000000000000
+    },
+    "Flag": 2
+  }
+]

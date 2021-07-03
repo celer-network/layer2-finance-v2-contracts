@@ -1,0 +1,16 @@
+[
+  {
+    "Init": {}
+  },
+  {
+    "AddPool": {
+      "PoolId": 1,
+      "StrategyId": 1,
+      "RewardAssetIds": [1, 0, 0, 0, 0],
+      "RewardPerEpoch": [1, 0, 0, 0, 0],
+      "StakeAdjustmentFactor": 500000000000,
+      "StartEpoch": 10
+    },
+    "Flag": 1
+  }
+]

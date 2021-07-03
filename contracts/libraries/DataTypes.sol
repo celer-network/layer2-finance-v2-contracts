@@ -3,6 +3,8 @@
 pragma solidity 0.8.6;
 
 library DataTypes {
+    uint8 public constant MAX_REWARD_ASSETS = 5;
+
     struct Block {
         bytes32 rootHash;
         bytes32 intentHash; // hash of L2-to-L1 aggregate-orders transitions
@@ -169,8 +171,8 @@ library DataTypes {
         bytes32 stateRoot;
         uint32 poolId;
         uint32 strategyId;
-        uint32[] rewardAssetIds;
-        uint256[] rewardPerEpoch;
+        uint32[MAX_REWARD_ASSETS] rewardAssetIds;
+        uint256[MAX_REWARD_ASSETS] rewardPerEpoch;
         uint256 stakeAdjustmentFactor;
         uint64 startEpoch;
     }
@@ -179,7 +181,7 @@ library DataTypes {
         uint8 transitionType;
         bytes32 stateRoot;
         uint32 poolId;
-        uint256[] rewardPerEpoch;
+        uint256[MAX_REWARD_ASSETS] rewardPerEpoch;
     }
 
     struct DepositRewardTransition {
