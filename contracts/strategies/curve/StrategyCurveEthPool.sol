@@ -85,47 +85,47 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
         require(msg.sender == controller, "Not controller");
 
         uint256 price = ICurveFi(ethPool).get_virtual_price();
-        uint256 amountDerivedFromSellShares = _sellShares.div(1e18).mul(price); // amount to be obtained from selling LP Token
-        uint256 sharesDerivedFromBuyAmount = _buyAmount.mul(1e18).div(price); // LP Token to get obtained from buying with ETH
+        uint256 sellAmount = _sellShares.div(1e18).mul(price); // amount to be obtained from selling LP Token
+        uint256 buyShares = _buyAmount.mul(1e18).div(price); // LP Token to buy with ETH
 
         uint256 sharesBought; // bought shares from share sellers and/or curvefi
         uint256 amountSoldFor; // ETH for which the sellers' shares are sold
 
-        if (sharesDerivedFromBuyAmount > _sellShares) {
+        if (buyShares > _sellShares) {
             // LP Token amount to sell in this batch can't cover the share amount of LP tokens people want to buy
             // therefore we need buy more LP Tokens to cover the demand for more LP Tokens.
-            uint256 buyAmount = _buyAmount - amountDerivedFromSellShares;
-            IERC20(weth).safeTransferFrom(msg.sender, address(this), buyAmount);
-            IWETH(weth).withdraw(buyAmount);
+            uint256 amountToBuy = _buyAmount - sellAmount;
+            IERC20(weth).safeTransferFrom(msg.sender, address(this), amountToBuy);
+            IWETH(weth).withdraw(amountToBuy);
             uint256[2] memory amounts;
-            amounts[ethIndexInPool] = buyAmount;
-            ICurveFi(ethPool).add_liquidity{value: buyAmount}(
+            amounts[ethIndexInPool] = amountToBuy;
+            ICurveFi(ethPool).add_liquidity{value: amountToBuy}(
                 amounts,
-                sharesDerivedFromBuyAmount.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
+                buyShares.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
             );
             uint256 obtainedShares = IERC20(lpToken).balanceOf(address(this));
             // deposit bought LP tokens to curve gauge to farm CRV
             IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedShares);
             IGauge(gauge).deposit(obtainedShares);
             sharesBought = _sellShares + obtainedShares;
-            amountSoldFor = amountDerivedFromSellShares;
-            emit Buy(buyAmount, obtainedShares);
-        } else if (sharesDerivedFromBuyAmount < _sellShares) {
+            amountSoldFor = sellAmount;
+            emit Buy(amountToBuy, obtainedShares);
+        } else if (buyShares < _sellShares) {
             // LP Token to be obtained from buying in this batch can't cover the LP Token amount people want to sell
             // therefore we need sell more LP Tokens to cover the need for more ETH.
-            uint256 sellShares = _sellShares - sharesDerivedFromBuyAmount;
-            IERC20(weth).safeTransferFrom(msg.sender, address(this), sellShares);
+            uint256 sharesToSell = _sellShares - buyShares;
+            IERC20(weth).safeTransferFrom(msg.sender, address(this), sharesToSell);
             ICurveFi(ethPool).remove_liquidity_one_coin(
-                sellShares,
+                sharesToSell,
                 ethIndexInPool,
-                amountDerivedFromSellShares.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
+                sellAmount.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
             );
             uint256 ethBalance = address(this).balance;
             IWETH(weth).deposit{value: ethBalance}();
             IERC20(weth).safeTransfer(msg.sender, ethBalance);
-            sharesBought = sharesDerivedFromBuyAmount;
+            sharesBought = buyShares;
             amountSoldFor = _buyAmount + ethBalance;
-            emit Sell(sellShares, ethBalance);
+            emit Sell(sharesToSell, ethBalance);
         }
 
         require(sharesBought >= _minSharesToBuy, "failed min shares to buy");
