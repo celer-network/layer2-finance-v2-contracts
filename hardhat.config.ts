@@ -29,7 +29,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
     hardhat: {},
-    localhost: { timeout: 300000 },
+    localhost: { timeout: 600000 },
     kovan: {
       url: kovanEndpoint,
       accounts: [`0x${kovanPrivateKey}`]
