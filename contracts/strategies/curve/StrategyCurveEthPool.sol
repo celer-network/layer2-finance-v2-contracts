@@ -150,7 +150,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
         IERC20(weth).safeTransferFrom(msg.sender, address(this), _sellShares);
 
         // remove liquidity from pool
-        ICurveFi(pool).remove_liquidity_one_coin(_sellShares, supplyTokenIndexInPool, _minAmountFromSell);
+        ICurveFi(pool).remove_liquidity_one_coin(_sellShares, int8(supplyTokenIndexInPool), _minAmountFromSell);
 
         uint256 ethBalance = address(this).balance;
 

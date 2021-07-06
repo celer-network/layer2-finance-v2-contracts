@@ -91,7 +91,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
     function aggregateOrders(
         uint256 _buyAmount,
-        uint256 _minSharesToBuy,
+        uint256 _minSharesFromBuy,
         uint256 _sellShares,
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
@@ -130,7 +130,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             _sell(sellShares, minAmountFromSell);
         }
 
-        return (sharesFromBuy, amountSoldFor);
+        return (sharesFromBuy, amountFromSell);
     }
 
     function _buy(uint256 _buyAmount, uint256 _minLpTokenFromBuy) private {
@@ -157,7 +157,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
         IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _sellShares);
 
         // remove liquidity from pool
-        ICurveFi(pool).remove_liquidity_one_coin(_sellShares, supplyTokenIndexInPool, _minAmount);
+        ICurveFi(pool).remove_liquidity_one_coin(_sellShares, int8(supplyTokenIndexInPool), _minAmount);
 
         uint256 ethBalance = address(this).balance;
 
