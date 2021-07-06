@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.5;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -20,6 +20,8 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
+
+    uint256 constant MAX_INT = 2**256 - 1;
 
     address public controller;
 
@@ -122,7 +124,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             _sell(sellShares, minAmountFromSell);
         }
 
-        return (sharesFromBuy, amountSoldFor);
+        return (sharesFromBuy, amountFromSell);
     }
 
     function _buy(uint256 _buyAmount, uint256 _minLpTokenFromBuy) private {

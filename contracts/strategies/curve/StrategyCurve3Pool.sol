@@ -1,185 +1,228 @@
-// // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
-// pragma solidity >=0.6.0 <0.9.0;
+pragma solidity 0.8.6;
 
-// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import "@openzeppelin/contracts/utils/Address.sol";
-// import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-// import "../interfaces/IStrategy.sol";
+import "../../interfaces/IWETH.sol";
+import "../interfaces/IStrategy.sol";
+import "../interfaces/uniswap/IUniswapV2.sol";
+import "../interfaces/curve/ICurveFi.sol";
+import "../interfaces/curve/IGauge.sol";
+import "../interfaces/curve/IMintr.sol";
 
-// contract StrategyCurve3Pool is IStrategy, Ownable {
-//     using SafeERC20 for IERC20;
-//     using Address for address;
+contract StrategyCurveEthPool is IStrategy, Ownable {
+    using SafeERC20 for IERC20;
+    using Address for address;
+    using SafeMath for uint256;
 
-//     address public controller;
+    uint256 constant MAX_INT = 2**256 - 1;
 
-//     // contract addresses
-//     address public triPool; // Curve 3 token swap pool
-//     address public gauge; // Curve gauge
-//     address public mintr; // Curve minter
-//     address public uniswap; // UniswapV2
+    address public controller;
 
-//     // supply token params
-//     uint8 public supplyTokenDecimals;
-//     uint8 public supplyTokenIndexInPool = 0;
+    // contract addresses
+    address public pool; // swap pool
+    address public gauge; // Curve gauge
+    address public mintr; // Curve minter
+    address public uniswap; // UniswapV2
 
-//     // token addresses
-//     address public supplyToken;
-//     address public lpToken; // LP token (triCrv)
-//     address public crv;
-//     address public weth;
+    // supply token params
+    uint8 public supplyTokenIndexInPool = 0; // ETH - 0, Other - 1
+    uint8 public supplyTokenDecimals;
 
-//     // slippage tolerance settings
-//     uint256 public constant DENOMINATOR = 10000;
-//     uint256 public slippage = 500;
+    // token addresses
+    address public supplyToken;
+    address public lpToken; // LP token
+    address public crv; // CRV token
+    address public weth; // WETH token
 
-//     constructor(
-//         address _controller,
-//         address _supplyToken,
-//         uint8 _supplyTokenDecimals,
-//         uint8 _supplyTokenIndexInPool,
-//         address _triPool,
-//         address _lpToken,
-//         address _gauge,
-//         address _mintr,
-//         address _crv,
-//         address _weth,
-//         address _uniswap
-//     ) {
-//         controller = _controller;
-//         supplyToken = _supplyToken;
-//         supplyTokenDecimals = _supplyTokenDecimals;
-//         supplyTokenIndexInPool = _supplyTokenIndexInPool;
-//         triPool = _triPool;
-//         lpToken = _lpToken;
-//         gauge = _gauge;
-//         mintr = _mintr;
-//         crv = _crv;
-//         weth = _weth;
-//         uniswap = _uniswap;
-//     }
+    // slippage tolerance settings
+    uint256 public constant DENOMINATOR = 10000;
+    uint256 public slippage = 500;
 
-//     modifier onlyController() {
-//         require(msg.sender == controller, "caller is not controller");
-//         _;
-//     }
+    // asset and share tracking
+    uint256 assetAmount;
+    uint256 shares;
 
-//     modifier onlyOwnerOrController() {
-//         require(msg.sender == owner() || msg.sender == controller, "caller is not owner or controller");
-//         _;
-//     }
+    constructor(
+        address _controller,
+        uint8 _supplyTokenIndexInPool,
+        uint8 _supplyTokenDecimals,
+        address _pool,
+        address _supplyToken,
+        address _lpToken,
+        address _gauge,
+        address _mintr,
+        address _crv,
+        address _weth,
+        address _uniswap
+    ) {
+        controller = _controller;
+        supplyTokenIndexInPool = _supplyTokenIndexInPool;
+        supplyTokenDecimals = _supplyTokenDecimals;
+        pool = _pool;
+        supplyToken = _supplyToken;
+        lpToken = _lpToken;
+        gauge = _gauge;
+        mintr = _mintr;
+        crv = _crv;
+        weth = _weth;
+        uniswap = _uniswap;
+    }
 
-//     function getAssetAddress() external view override returns (address) {
-//         return asset;
-//     }
+    modifier onlyController() {
+        require(msg.sender == controller, "caller is not controller");
+        _;
+    }
 
-//     function aggregateOrders(
-//         uint256 _buyAmount, // ETH
-//         uint256 _minSharesToBuy,
-//         uint256 _sellShares, // LP Token
-//         uint256 _minAmountFromSell
-//     ) external override onlyController returns (uint256, uint256) {
-//         require(msg.sender == controller, "Not controller");
+    modifier onlyOwnerOrController() {
+        require(msg.sender == owner() || msg.sender == controller, "caller is not owner or controller");
+        _;
+    }
 
-//         uint256 price = ICurveFi(triPool).get_virtual_price();
-//         uint256 amountDerivedFromSellShares =
-//             _sellShares.div(1e18).div(1e18).div(10**(18 - supplyTokenDecimals)).mul(price); // amount to be obtained from selling LP Token
-//         uint256 sharesDerivedFromBuyAmount =
-//             _buyAmount.mul(1e18).mul(1e18).mul(10**(18 - supplyTokenDecimals)).div(price); // LP Token to get obtained from buying with supply token
+    function getAssetAddress() external view override returns (address) {
+        return weth;
+    }
 
-//         uint256 sharesBought; // bought shares from share sellers and/or curvefi
-//         uint256 amountSoldFor; // ETH for which the sellers' shares are sold
+    function aggregateOrders(
+        uint256 _buyAmount,
+        uint256 _minSharesToBuy,
+        uint256 _sellShares,
+        uint256 _minAmountFromSell
+    ) external override onlyController returns (uint256, uint256) {
+        require(msg.sender == controller, "Not controller");
+        require(shares >= _sellShares, "not enough shares to sell");
 
-//         if (sharesDerivedFromBuyAmount > _sellShares) {
-//             // LP Token amount to sell in this batch can't cover the share amount of LP tokens people want to buy
-//             // therefore we need buy more LP Tokens to cover the demand for more LP Tokens.
-//             uint256 buyAmount = _buyAmount - amountDerivedFromSellShares;
-//             IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), buyAmount);
-//             uint256[2] memory amounts;
-//             amounts[supplyTokenIndexInPool] = buyAmount;
-//             ICurveFi(triPool).add_liquidity{value: buyAmount}(
-//                 amounts,
-//                 sharesDerivedFromBuyAmount.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
-//             );
-//             uint256 obtainedShares = IERC20(lpToken).balanceOf(address(this));
-//             // deposit bought LP tokens to curve gauge to farm CRV
-//             IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedShares);
-//             IGauge(gauge).deposit(obtainedShares);
-//             sharesBought = _sellShares + obtainedShares;
-//             amountSoldFor = amountDerivedFromSellShares;
-//             emit Buy(buyAmount, obtainedShares);
-//         } else if (sharesDerivedFromBuyAmount < _sellShares) {
-//             // LP Token to be obtained from buying in this batch can't cover the LP Token amount people want to sell
-//             // therefore we need sell more LP Tokens to cover the need for more ETH.
-//             uint256 sellShares = _sellShares - sharesDerivedFromBuyAmount;
-//             IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), sellShares);
-//             ICurveFi(triPool).remove_liquidity_one_coin(
-//                 sellShares,
-//                 supplyTokenIndexInPool,
-//                 amountDerivedFromSellShares.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR)
-//             );
-//             uint256 ethBalance = address(this).balance;
-//             IWETH(weth).deposit{value: ethBalance}();
-//             IERC20(weth).safeTransfer(msg.sender, ethBalance);
-//             sharesBought = sharesDerivedFromBuyAmount;
-//             amountSoldFor = _buyAmount + ethBalance;
-//             emit Sell(sellShares, ethBalance);
-//         }
+        uint256 amountFromSell;
+        uint256 sharesFromBuy;
+        uint256 lpTokenPrice = ICurveFi(pool).get_virtual_price();
 
-//         require(sharesBought >= _minSharesToBuy, "failed min shares to buy");
-//         require(amountSoldFor >= _minAmountFromSell, "failed min amount from sell");
+        if (assetAmount == 0 || shares == 0) {
+            assetAmount = _buyAmount;
+            shares = _buyAmount;
+            sharesFromBuy = _buyAmount;
+        } else {
+            amountFromSell = _sellShares.mul(assetAmount).div(shares);
+            sharesFromBuy = _buyAmount.mul(shares).div(assetAmount);
+            assetAmount = assetAmount.add(_buyAmount).sub(amountFromSell);
+            shares = shares.add(sharesFromBuy).sub(_sellShares);
+        }
 
-//         return (sharesBought, amountSoldFor);
-//     }
+        require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
+        require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
 
-//     function syncPrice() external view override returns (uint256) {
-//         return ICurveFi(triPool).get_virtual_price();
-//     }
+        if (amountFromSell < _buyAmount) {
+            uint256 buyAmount = _buyAmount - amountFromSell;
+            uint256 minLpTokenFromBuy = buyAmount.mul(lpTokenPrice).div(1e18).mul(DENOMINATOR.sub(slippage)).div(
+                DENOMINATOR
+            );
+            _buy(buyAmount, minLpTokenFromBuy);
+        } else if (amountFromSell > _buyAmount) {
+            uint256 sellShares = _sellShares - sharesFromBuy;
+            uint256 minAmountFromSell = sellShares.mul(1e18).div(lpTokenPrice).mul(DENOMINATOR.sub(slippage)).div(
+                DENOMINATOR
+            );
+            _sell(sellShares, minAmountFromSell);
+        }
 
-//     function harvest() external override onlyOwnerOrController {
-//         // Harvest CRV
-//         IMintr(mintr).mint(gauge);
-//         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
-//         if (crvBalance > 0) {
-//             // Sell CRV for more supply token
-//             IERC20(crv).safeIncreaseAllowance(uniswap, crvBalance);
+        return (sharesFromBuy, amountSoldFor);
+    }
 
-//             address[] memory paths = new address[](3);
-//             paths[0] = crv;
-//             paths[1] = weth;
-//             paths[2] = supplyToken;
+    function _buy(uint256 _buyAmount, uint256 _minLpTokenFromBuy) private {
+        // pull fund from controller
+        IERC20(weth).safeTransferFrom(msg.sender, address(this), _buyAmount);
+        IWETH(weth).withdraw(_buyAmount);
 
-//             IUniswapV2(uniswap).swapExactTokensForTokens(
-//                 crvBalance,
-//                 uint256(0),
-//                 paths,
-//                 address(this),
-//                 block.timestamp.add(1800)
-//             );
+        // add liquidity in pool
+        uint256[3] memory amounts;
+        amounts[supplyTokenIndexInPool] = _buyAmount;
+        IERC20(lpToken).safeIncreaseAllowance(pool, _buyAmount);
+        ICurveFi(pool).add_liquidity(amounts, _minLpTokenFromBuy);
+        uint256 obtainedLpTokens = IERC20(lpToken).balanceOf(address(this));
 
-//             // Re-invest supply token to obtain more 3CRV
-//             uint256 obtainedSupplyTokenAmount = IERC20(supplyToken).balanceOf(address(this));
-//             IERC20(supplyToken).safeIncreaseAllowance(triPool, obtainedSupplyTokenAmount);
-//             uint256 minMintAmount =
-//                 obtainedSupplyTokenAmount.mul(1e18).mul(10**(18 - supplyTokenDecimals)).div(
-//                     ICurveFi(triPool).get_virtual_price()
-//                 );
-//             uint256[3] memory amounts;
-//             amounts[supplyTokenIndexInPool] = obtainedSupplyTokenAmount;
-//             ICurveFi(triPool).add_liquidity(amounts, minMintAmount.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR));
+        // deposit bought LP tokens to curve gauge to farm CRV
+        IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpTokens);
+        IGauge(gauge).deposit(obtainedLpTokens);
 
-//             // Stake 3CRV in Gauge to farm more CRV
-//             uint256 obtainedTriCrvBalance = IERC20(triCrv).balanceOf(address(this));
-//             IERC20(triCrv).safeIncreaseAllowance(gauge, obtainedTriCrvBalance);
-//             IGauge(gauge).deposit(obtainedTriCrvBalance);
-//         }
-//     }
+        emit Buy(_buyAmount, obtainedLpTokens);
+    }
 
-//     function setController(address _controller) external onlyOwner {
-//         emit ControllerChanged(controller, _controller);
-//         controller = _controller;
-//     }
-// }
+    function _sell(uint256 _sellShares, uint256 _minAmount) private {
+        // pull shares from controller
+        IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _sellShares);
+
+        // remove liquidity from pool
+        ICurveFi(pool).remove_liquidity_one_coin(_sellShares, supplyTokenIndexInPool, _minAmount);
+
+        uint256 ethBalance = address(this).balance;
+
+        // wrap ETH and send back to controller
+        IWETH(supplyToken).deposit{value: ethBalance}();
+        IERC20(supplyToken).safeTransfer(msg.sender, ethBalance);
+
+        emit Sell(_sellShares, ethBalance);
+    }
+
+    function syncPrice() external view override returns (uint256) {
+        if (shares == 0) {
+            if (assetAmount == 0) {
+                return 1e18;
+            }
+            return MAX_INT;
+        }
+        return (assetAmount * 1e18) / shares;
+    }
+
+    function harvest() external override onlyOwnerOrController {
+        IMintr(mintr).mint(gauge);
+        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+
+        if (crvBalance > 0) {
+            // Sell CRV for more supply token
+            IERC20(crv).safeIncreaseAllowance(uniswap, crvBalance);
+
+            address[] memory path = new address[](2);
+            path[0] = crv;
+            path[1] = weth;
+            path[2] = supplyToken;
+
+            IUniswapV2(uniswap).swapExactTokensForETH(
+                crvBalance,
+                uint256(0),
+                path,
+                address(this),
+                block.timestamp.add(1800)
+            );
+
+            // Re-invest supply token to obtain more lpToken
+            uint256 obtainedAssetAmount = address(this).balance;
+            uint256 minMintAmount = obtainedAssetAmount
+            .mul(1e18)
+            .div(ICurveFi(pool).get_virtual_price())
+            .mul(DENOMINATOR.sub(slippage))
+            .div(DENOMINATOR);
+            uint256[3] memory amounts;
+            amounts[supplyTokenIndexInPool] = obtainedAssetAmount;
+            IERC20(lpToken).safeIncreaseAllowance(pool, obtainedAssetAmount);
+            ICurveFi(pool).add_liquidity(amounts, minMintAmount);
+
+            // Stake lpToken in Gauge to farm more CRV
+            uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this));
+            IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpToken);
+            IGauge(gauge).deposit(obtainedLpToken);
+
+            // add newly obtained supply token amount to asset amount
+            assetAmount = assetAmount.add(obtainedAssetAmount);
+        }
+    }
+
+    function setController(address _controller) external onlyOwner {
+        emit ControllerChanged(controller, _controller);
+        controller = _controller;
+    }
+}
