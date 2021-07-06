@@ -38,7 +38,6 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
     address public controller;
 
     uint256 internal constant MAX_INT = 2**256 - 1;
-    uint256 public assetAmount;
     uint256 public shares;
 
     constructor(
@@ -84,7 +83,7 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
         // 1. Deposit or withdrawal
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-        assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
+        uint256 assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
         if (assetAmount == 0 || shares == 0) {
             shares = _buyAmount;
             assetAmount = _buyAmount;
@@ -113,7 +112,8 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
         return (sharesFromBuy, amountFromSell);
     }
 
-    function syncPrice() external view override returns (uint256) {
+    function syncPrice() external override returns (uint256) {
+        uint256 assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
         if (shares == 0) {
             if (assetAmount == 0) {
                 return 1e18;
@@ -147,9 +147,6 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
             uint256 obtainedEthAmount = address(this).balance;
             ICEth(cEth).mint{value: obtainedEthAmount}();
         }
-
-        // sync the asset balance
-        assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
     }
 
     function _buy(uint256 _buyAmount) private {

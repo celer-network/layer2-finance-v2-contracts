@@ -27,9 +27,6 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
     // The address of Aave Lending Pool
     address public lendingPool;
 
-    // Info of supplying erc20 token to Aave lending pool
-    // The symbol of the supplying token
-    string public symbol;
     // The address of supplying token (e.g. DAI, USDT)
     address public supplyToken;
 
@@ -52,12 +49,10 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
     address public weth;
 
     uint256 internal constant MAX_INT = 2**256 - 1;
-    uint256 public assetAmount;
     uint256 public shares;
 
     constructor(
         address _lendingPool,
-        string memory _symbol,
         address _supplyToken,
         address _aToken,
         address _controller,
@@ -68,7 +63,6 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
         address _weth
     ) {
         lendingPool = _lendingPool;
-        symbol = _symbol;
         supplyToken = _supplyToken;
         aToken = _aToken;
         controller = _controller;
@@ -103,7 +97,7 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
         // 1. Deposit or withdrawal
         uint256 sharesFromBuy;
         uint256 amountFromSell;
-        assetAmount = IAToken(aToken).balanceOf(address(this));
+        uint256 assetAmount = IAToken(aToken).balanceOf(address(this));
         if (assetAmount == 0 || shares == 0) {
             shares = _buyAmount;
             assetAmount = _buyAmount;
@@ -133,6 +127,7 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
     }
 
     function syncPrice() external view override returns (uint256) {
+        uint256 assetAmount = IAToken(aToken).balanceOf(address(this));
         if (shares == 0) {
             if (assetAmount == 0) {
                 return 1e18;
@@ -200,9 +195,6 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
             IERC20(supplyToken).safeIncreaseAllowance(lendingPool, obtainedSupplyTokenAmount);
             ILendingPool(lendingPool).deposit(supplyToken, obtainedSupplyTokenAmount, address(this), 0);
         }
-
-        // sync the asset balance
-        assetAmount = IAToken(aToken).balanceOf(address(this));
     }
 
     function _buy(uint256 _buyAmount) private {
