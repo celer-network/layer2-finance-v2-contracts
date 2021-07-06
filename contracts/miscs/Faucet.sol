@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.0 <0.9.0;
+pragma solidity 0.8.6;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Faucet {
+contract Faucet is Ownable {
     using SafeERC20 for IERC20;
 
     /**
@@ -19,5 +20,15 @@ contract Faucet {
             require(balance > 0, "Faucet is empty");
             token.safeTransfer(msg.sender, balance / 10000); // 0.01%
         }
+    }
+
+    /**
+     * @dev Owner drains one type of tokens
+     *
+     * @param _asset drained asset address
+     * @param _amount drained asset amount
+     */
+    function drainToken(address _asset, uint256 _amount) external onlyOwner {
+        IERC20(_asset).safeTransfer(msg.sender, _amount);
     }
 }
