@@ -24,13 +24,13 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
     address public controller;
 
     // contract addresses
-    address public ethPool; // Curve ETH/? swap pool
+    address public pool; // swap pool
     address public gauge; // Curve gauge
     address public mintr; // Curve minter
     address public uniswap; // UniswapV2
 
-    // supply token (WETH) params
-    uint8 public ethIndexInPool = 0; // ETH - 0, Other - 1
+    // supply token params
+    uint8 public supplyTokenIndexInPool = 0; // ETH - 0, Other - 1
 
     // token addresses
     address public lpToken; // LP token
@@ -47,8 +47,8 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
     constructor(
         address _controller,
-        uint8 _ethIndexInPool,
-        address _ethPool,
+        uint8 _supplyTokenIndexInPool,
+        address _pool,
         address _lpToken,
         address _gauge,
         address _mintr,
@@ -57,7 +57,8 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
         address _uniswap
     ) {
         controller = _controller;
-        ethIndexInPool = _ethIndexInPool;
+        supplyTokenIndexInPool = _supplyTokenIndexInPool;
+        pool = _pool;
         lpToken = _lpToken;
         gauge = _gauge;
         mintr = _mintr;
@@ -82,7 +83,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
     function aggregateOrders(
         uint256 _buyAmount,
-        uint256 _minSharesToBuy,
+        uint256 _minSharesFromBuy,
         uint256 _sellShares,
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
@@ -91,7 +92,7 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
         uint256 amountFromSell;
         uint256 sharesFromBuy;
-        uint256 lpTokenPrice = ICurveFi(ethPool).get_virtual_price();
+        uint256 lpTokenPrice = ICurveFi(pool).get_virtual_price();
 
         if (assetAmount == 0 || shares == 0) {
             assetAmount = _buyAmount;
@@ -109,13 +110,16 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
-            uint256 lpTokenFromBuy = buyAmount.mul(lpTokenPrice).div(1e18);
-            uint256 minLpTokenFromBuy = lpTokenFromBuy.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR);
+            uint256 minLpTokenFromBuy = buyAmount.mul(lpTokenPrice).div(1e18).mul(DENOMINATOR.sub(slippage)).div(
+                DENOMINATOR
+            );
             _buy(buyAmount, minLpTokenFromBuy);
         } else if (amountFromSell > _buyAmount) {
-            uint256 sharesToSell = _sellShares - sharesFromBuy;
-            uint256 minAmountFromSell = amountFromSell.mul(DENOMINATOR.sub(slippage)).div(DENOMINATOR);
-            _sell(sharesToSell, minAmountFromSell);
+            uint256 sellShares = _sellShares - sharesFromBuy;
+            uint256 minAmountFromSell = sellShares.mul(1e18).div(lpTokenPrice).mul(DENOMINATOR.sub(slippage)).div(
+                DENOMINATOR
+            );
+            _sell(sellShares, minAmountFromSell);
         }
 
         return (sharesFromBuy, amountSoldFor);
@@ -128,8 +132,8 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
         // add liquidity in pool
         uint256[2] memory amounts;
-        amounts[ethIndexInPool] = _buyAmount;
-        ICurveFi(ethPool).add_liquidity{value: _buyAmount}(amounts, _minLpTokenFromBuy);
+        amounts[supplyTokenIndexInPool] = _buyAmount;
+        ICurveFi(pool).add_liquidity{value: _buyAmount}(amounts, _minLpTokenFromBuy);
         uint256 obtainedLpTokens = IERC20(lpToken).balanceOf(address(this));
 
         // deposit bought LP tokens to curve gauge to farm CRV
@@ -139,12 +143,12 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
         emit Buy(_buyAmount, obtainedLpTokens);
     }
 
-    function _sell(uint256 _sellShares, uint256 _minAmount) private {
+    function _sell(uint256 _sellShares, uint256 _minAmountFromSell) private {
         // pull shares from controller
         IERC20(weth).safeTransferFrom(msg.sender, address(this), _sellShares);
 
         // remove liquidity from pool
-        ICurveFi(ethPool).remove_liquidity_one_coin(_sellShares, ethIndexInPool, _minAmount);
+        ICurveFi(pool).remove_liquidity_one_coin(_sellShares, supplyTokenIndexInPool, _minAmountFromSell);
 
         uint256 ethBalance = address(this).balance;
 
@@ -189,17 +193,17 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             uint256 obtainedAssetAmount = address(this).balance;
             uint256 minMintAmount = obtainedAssetAmount
             .mul(1e18)
-            .div(ICurveFi(ethPool).get_virtual_price())
+            .div(ICurveFi(pool).get_virtual_price())
             .mul(DENOMINATOR.sub(slippage))
             .div(DENOMINATOR);
             uint256[2] memory amounts;
-            amounts[ethIndexInPool] = obtainedAssetAmount;
-            ICurveFi(ethPool).add_liquidity{value: obtainedAssetAmount}(amounts, minMintAmount);
+            amounts[supplyTokenIndexInPool] = obtainedAssetAmount;
+            ICurveFi(pool).add_liquidity{value: obtainedAssetAmount}(amounts, minMintAmount);
 
             // Stake lpToken in Gauge to farm more CRV
-            uint256 obtainedTriCrvBalance = IERC20(lpToken).balanceOf(address(this));
-            IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedTriCrvBalance);
-            IGauge(gauge).deposit(obtainedTriCrvBalance);
+            uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this));
+            IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpToken);
+            IGauge(gauge).deposit(obtainedLpToken);
 
             // add newly obtained supply token amount to asset amount
             assetAmount = assetAmount.add(obtainedAssetAmount);
