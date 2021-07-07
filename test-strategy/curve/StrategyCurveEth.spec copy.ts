@@ -76,7 +76,7 @@ export async function testStrategyCurveEth(
   );
   expect(getAddress(await strategy.getAssetAddress())).to.equal(getAddress(weth.address));
 
-  const strategyBalanceBeforeCommit = await strategy.syncBalance();
+  const strategyBalanceBeforeCommit = await strategy.syncPrice();
   console.log(`Strategy WETH balance before commit:`, formatUnits(strategyBalanceBeforeCommit, ETH_DECIMALS));
 
   const displayCommitAmount = '0.1';

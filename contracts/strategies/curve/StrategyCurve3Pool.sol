@@ -107,10 +107,10 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             shares = _buyAmount;
             sharesFromBuy = _buyAmount;
         } else {
-            amountFromSell = _sellShares.mul(assetAmount).div(shares);
-            sharesFromBuy = _buyAmount.mul(shares).div(assetAmount);
-            assetAmount = assetAmount.add(_buyAmount).sub(amountFromSell);
-            shares = shares.add(sharesFromBuy).sub(_sellShares);
+            amountFromSell = _sellShares * assetAmount / shares;
+            sharesFromBuy = _buyAmount * shares / assetAmount;
+            assetAmount = assetAmount + _buyAmount - amountFromSell;
+            shares = shares + sharesFromBuy - _sellShares;
         }
 
         require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
@@ -118,16 +118,19 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
 
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
-            uint256 minLpTokenFromBuy = buyAmount.mul(lpTokenPrice).div(1e18).mul(DENOMINATOR.sub(slippage)).div(
-                DENOMINATOR
-            );
+            uint256 minLpTokenFromBuy = buyAmount * lpTokenPrice / 1e18 * (DENOMINATOR - slippage) / DENOMINATOR;
             _buy(buyAmount, minLpTokenFromBuy);
         } else if (amountFromSell > _buyAmount) {
             uint256 sellShares = _sellShares - sharesFromBuy;
-            uint256 minAmountFromSell = sellShares.mul(1e18).div(lpTokenPrice).mul(DENOMINATOR.sub(slippage)).div(
-                DENOMINATOR
-            );
+            uint256 minAmountFromSell = sellShares * 1e18 / lpTokenPrice * (DENOMINATOR - slippage) / DENOMINATOR;
             _sell(sellShares, minAmountFromSell);
+        }
+
+        if (_buyAmount > 0) {
+            emit Buy(_buyAmount, sharesFromBuy);
+        }
+        if (_sellShares > 0) {
+            emit Sell(_sellShares, amountFromSell);
         }
 
         return (sharesFromBuy, amountFromSell);
@@ -202,9 +205,9 @@ contract StrategyCurveEthPool is IStrategy, Ownable {
             // Re-invest supply token to obtain more lpToken
             uint256 obtainedAssetAmount = address(this).balance;
             uint256 minMintAmount = obtainedAssetAmount
-            .mul(1e18)
+             * 1e18)
             .div(ICurveFi(pool).get_virtual_price())
-            .mul(DENOMINATOR.sub(slippage))
+             * DENOMINATOR.sub(slippage))
             .div(DENOMINATOR);
             uint256[3] memory amounts;
             amounts[supplyTokenIndexInPool] = obtainedAssetAmount;
