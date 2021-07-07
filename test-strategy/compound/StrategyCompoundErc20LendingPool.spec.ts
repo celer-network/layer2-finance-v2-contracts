@@ -102,7 +102,6 @@ export async function testStrategyCompoundErc20LendingPool(
 
   console.log('===== Buy 1, Sell 2 =====');
   await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals)))
-    .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   expect(await strategy.shares()).to.lte(parseUnits('2', supplyTokenDecimals));
   const price3 = await strategy.callStatic.syncPrice();

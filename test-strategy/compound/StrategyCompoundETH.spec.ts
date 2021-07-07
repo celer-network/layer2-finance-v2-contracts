@@ -76,7 +76,6 @@ describe('StrategyCompoundETH', function () {
 
     console.log('===== Buy 1, Sell 2 =====');
     await expect(strategy.aggregateOrders(parseEther('1'), parseEther('2'), parseEther('0.5'), parseEther('2')))
-      .to.emit(strategy, 'Buy')
       .to.emit(strategy, 'Sell');
     expect(await strategy.shares()).to.lte(parseEther('2'));
     const price3 = await strategy.callStatic.syncPrice();

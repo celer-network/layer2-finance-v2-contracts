@@ -3,7 +3,6 @@
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -25,7 +24,6 @@ import "../../interfaces/IWETH.sol";
 contract StrategyLiquityPool is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint256;
 
     address public weth;
     address public uniswap;
@@ -117,24 +115,19 @@ contract StrategyLiquityPool is IStrategy, Ownable {
             assetAmount = _buyAmount;
             sharesFromBuy = _buyAmount;
         } else {
-            sharesFromBuy = _buyAmount.mul(shares).div(assetAmount);
-            amountFromSell = _sellShares.mul(assetAmount).div(shares);
-            assetAmount = assetAmount.add(_buyAmount).sub(amountFromSell);
-            shares = shares.add(sharesFromBuy).sub(_sellShares);
+            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+            amountFromSell = (_sellShares * assetAmount) / shares;
+            assetAmount = assetAmount + _buyAmount - amountFromSell;
+            shares = shares + sharesFromBuy - _sellShares;
         }
         require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
         require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
         if (_buyAmount > amountFromSell) {
             _deposit(_buyAmount - amountFromSell);
+            emit Buy(_buyAmount - amountFromSell, sharesFromBuy - _sellShares);
         } else if (_buyAmount < amountFromSell) {
             _withdrawal(amountFromSell - _buyAmount);
-        }
-
-        if (_buyAmount > 0) {
-            emit Buy(_buyAmount, sharesFromBuy);
-        }
-        if (_sellShares > 0) {
-            emit Sell(_sellShares, amountFromSell);
+            emit Sell(_sellShares - sharesFromBuy, amountFromSell - _buyAmount);
         }
 
         // 2. Monitor and adjust CR
@@ -157,7 +150,7 @@ contract StrategyLiquityPool is IStrategy, Ownable {
             (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
             uint256 nicr = MAX_INT;
             if (debt != 0) {
-                nicr = coll.add(_toBuyAmount).mul(NICR_PRECISION).div(debt);
+                nicr = (coll + _toBuyAmount) * NICR_PRECISION / debt;
             }
             (address upperHint, address lowerHint) = _getHints(nicr);
             IBorrowerOperations(borrowerOperations).addColl{value: _toBuyAmount}(upperHint, lowerHint);
@@ -169,7 +162,7 @@ contract StrategyLiquityPool is IStrategy, Ownable {
         (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
         uint256 nicr = MAX_INT;
         if (debt != 0) {
-            nicr = coll.sub(_toSellAmount).mul(NICR_PRECISION).div(debt);
+            nicr = (coll - _toSellAmount) * NICR_PRECISION / debt;
         }
         (address upperHint, address lowerHint) = _getHints(nicr);
         IBorrowerOperations(borrowerOperations).withdrawColl(_toSellAmount, upperHint, lowerHint);
@@ -199,9 +192,9 @@ contract StrategyLiquityPool is IStrategy, Ownable {
         uint256 currentICR = ITroveManager(troveManager).getCurrentICR(address(this), currentEthPrice);
         if (currentICR < icrLowerLimit) {
             (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-            uint256 expectDebt = debt.mul(currentICR).div(icrInitial);
+            uint256 expectDebt = debt * currentICR / icrInitial;
             
-            uint256 nicr = coll.mul(NICR_PRECISION).div(expectDebt);
+            uint256 nicr = coll * NICR_PRECISION / expectDebt;
             (address upperHint, address lowerHint) = _getHints(nicr);
 
             // TODO: make sure the LUSD in the stability pool is enough to withdrawal;
@@ -209,9 +202,9 @@ contract StrategyLiquityPool is IStrategy, Ownable {
             IBorrowerOperations(borrowerOperations).repayLUSD(debt - expectDebt, upperHint, lowerHint);
         } else if (currentICR > icrUpperLimit) {
             (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-            uint256 expectDebt = coll.mul(currentEthPrice).div(icrInitial);
+            uint256 expectDebt = coll * currentEthPrice / icrInitial;
 
-            uint256 nicr = coll.mul(NICR_PRECISION).div(expectDebt);
+            uint256 nicr = coll * NICR_PRECISION / expectDebt;
             (address upperHint, address lowerHint) = _getHints(nicr);
 
             IBorrowerOperations(borrowerOperations).withdrawLUSD(maxFeePercentage, expectDebt - debt, upperHint, lowerHint);
@@ -247,7 +240,7 @@ contract StrategyLiquityPool is IStrategy, Ownable {
                 uint256(0),
                 paths,
                 address(this),
-                block.timestamp.add(1800)
+                block.timestamp + 1800
             );
 
             // add ETH to trove

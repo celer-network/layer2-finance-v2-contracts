@@ -3,7 +3,6 @@
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -21,7 +20,6 @@ import "../../interfaces/IWETH.sol";
 contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint256;
 
     // The address of Compound interest-bearing ETH
     address payable public cEth;
@@ -89,24 +87,19 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
             assetAmount = _buyAmount;
             sharesFromBuy = _buyAmount;
         } else {
-            sharesFromBuy = _buyAmount.mul(shares).div(assetAmount);
-            amountFromSell = _sellShares.mul(assetAmount).div(shares);
-            assetAmount = assetAmount.add(_buyAmount).sub(amountFromSell);
-            shares = shares.add(sharesFromBuy).sub(_sellShares);
+            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+            amountFromSell = (_sellShares * assetAmount) / shares;
+            assetAmount = assetAmount + _buyAmount - amountFromSell;
+            shares = shares + sharesFromBuy - _sellShares;
         }
         require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
         require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
         if (_buyAmount > amountFromSell) {
             _buy(_buyAmount - amountFromSell);
+            emit Buy(_buyAmount - amountFromSell, sharesFromBuy - _sellShares);
         } else if (_buyAmount < amountFromSell) {
             _sell(amountFromSell - _buyAmount);
-        }
-
-        if (_buyAmount > 0) {
-            emit Buy(_buyAmount, sharesFromBuy);
-        }
-        if (_sellShares > 0) {
-            emit Sell(_sellShares, amountFromSell);
+            emit Sell(_sellShares - sharesFromBuy, amountFromSell - _buyAmount);
         }
 
         return (sharesFromBuy, amountFromSell);
@@ -140,7 +133,7 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
                 uint256(0),
                 paths,
                 address(this),
-                block.timestamp.add(1800)
+                block.timestamp + 1800
             );
 
             // Deposit ETH to Compound ETH Lending Pool and mint cETH.
