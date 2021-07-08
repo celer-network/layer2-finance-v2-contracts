@@ -85,28 +85,23 @@ export async function testStrategyAaveLendingPool(
   console.log('===== Buy 5 =====');
   await expect(strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('5', supplyTokenDecimals), parseUnits('0')))
     .to.emit(strategy, 'Buy')
-    .withArgs(parseUnits('5', supplyTokenDecimals), parseUnits('5', supplyTokenDecimals));
 
-  expect(await strategy.shares()).to.equal(parseUnits('5', supplyTokenDecimals));
   const price1 = await strategy.syncPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
   console.log('===== Sell 2 =====');
   await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('2', supplyTokenDecimals)))
-  .to.emit(strategy, 'Sell')
-  .withArgs(parseUnits('2', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals));
+    .to.emit(strategy, 'Sell')
 
-  expect(await strategy.shares()).to.equal(parseUnits('3', supplyTokenDecimals));
   const price2 = await strategy.syncPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.gte(price1);
 
   console.log('===== Buy 1, Sell 2 =====');
   await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals)))
+    .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell')
-    .withArgs(parseUnits('1', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals));
-  expect(await strategy.shares()).to.equal(parseUnits('2', supplyTokenDecimals));
   const price3 = await strategy.syncPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.gte(price2);

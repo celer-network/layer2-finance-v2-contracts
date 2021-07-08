@@ -36,6 +36,7 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
     address public controller;
 
     uint256 internal constant MAX_INT = 2**256 - 1;
+    uint256 internal constant PRICE_PRECISION = 1e18;
     uint256 public shares;
 
     constructor(
@@ -78,29 +79,42 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
         require(msg.sender == controller, "Not controller");
         require(shares >= _sellShares, "not enough shares to sell");
 
-        // 1. Deposit or withdrawal
         uint256 sharesFromBuy;
         uint256 amountFromSell;
         uint256 assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
-        if (assetAmount == 0 || shares == 0) {
-            shares = _buyAmount;
-            assetAmount = _buyAmount;
-            sharesFromBuy = _buyAmount;
-        } else {
-            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+        if (assetAmount != 0 && shares != 0) {
             amountFromSell = (_sellShares * assetAmount) / shares;
-            assetAmount = assetAmount + _buyAmount - amountFromSell;
-            shares = shares + sharesFromBuy - _sellShares;
+        }
+        require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
+
+        if (_buyAmount == amountFromSell) {
+            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+            return (sharesFromBuy, amountFromSell);
+        }
+
+        bool toBuy = _buyAmount > amountFromSell;
+        if (toBuy) {
+            _buy(_buyAmount - amountFromSell);
+        } else {
+            _sell(amountFromSell - _buyAmount);
+        }
+
+        uint256 newAssetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
+        if (assetAmount == 0) {
+            sharesFromBuy = newAssetAmount; //init buy
+        } else {
+            sharesFromBuy = (shares * newAssetAmount) / assetAmount + _sellShares - shares;
         }
         require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
-        require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
-        if (_buyAmount > amountFromSell) {
-            _buy(_buyAmount - amountFromSell);
-            emit Buy(_buyAmount - amountFromSell, sharesFromBuy - _sellShares);
-        } else if (_buyAmount < amountFromSell) {
-            _sell(amountFromSell - _buyAmount);
-            emit Sell(_sellShares - sharesFromBuy, amountFromSell - _buyAmount);
+
+        if (_buyAmount > 0) {
+            emit Buy(_buyAmount, sharesFromBuy);
         }
+        if (_sellShares > 0) {
+            emit Sell(_sellShares, amountFromSell);
+        }
+
+        shares = shares + sharesFromBuy - _sellShares;
 
         return (sharesFromBuy, amountFromSell);
     }
@@ -109,11 +123,11 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
         uint256 assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
         if (shares == 0) {
             if (assetAmount == 0) {
-                return 1e18;
+                return PRICE_PRECISION;
             }
             return MAX_INT;
         }
-        return (assetAmount * 1e18) / shares;
+        return (assetAmount * PRICE_PRECISION) / shares;
     }
 
     function harvest() external override onlyEOA {

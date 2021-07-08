@@ -46,8 +46,8 @@ contract StrategyLiquityPool is IStrategy, Ownable {
     // in the Liquity operations, the max fee percentage we are willing to accept in case of a fee slippage
     uint256 public maxFeePercentage;
 
-    uint256 public assetAmount;
     uint256 public shares;
+    uint256 internal constant PRICE_PRECISION = 1e18;
 
     uint256 internal constant MAX_INT = 2**256 - 1;
     uint256 internal constant NICR_PRECISION = 1e20;
@@ -105,31 +105,47 @@ contract StrategyLiquityPool is IStrategy, Ownable {
     ) external override returns (uint256, uint256) {
         require(msg.sender == controller, "Not controller");
         require(shares >= _sellShares, "not enough shares to sell");
-        
+
         // 1. Deposit or withdrawal
         uint256 sharesFromBuy;
         uint256 amountFromSell;
+        uint256 assetAmount;
         (,assetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-        if (assetAmount == 0 || shares == 0) {
-            shares = _buyAmount;
-            assetAmount = _buyAmount;
-            sharesFromBuy = _buyAmount;
-        } else {
-            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+        if (assetAmount != 0 && shares != 0) {
             amountFromSell = (_sellShares * assetAmount) / shares;
-            assetAmount = assetAmount + _buyAmount - amountFromSell;
-            shares = shares + sharesFromBuy - _sellShares;
         }
-        require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
         require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
-        if (_buyAmount > amountFromSell) {
-            _deposit(_buyAmount - amountFromSell);
-            emit Buy(_buyAmount - amountFromSell, sharesFromBuy - _sellShares);
-        } else if (_buyAmount < amountFromSell) {
-            _withdrawal(amountFromSell - _buyAmount);
-            emit Sell(_sellShares - sharesFromBuy, amountFromSell - _buyAmount);
+
+        if (_buyAmount == amountFromSell) {
+            sharesFromBuy = (_buyAmount * shares) / assetAmount;
+            return (sharesFromBuy, amountFromSell);
         }
 
+        bool toBuy = _buyAmount > amountFromSell;
+        if (toBuy) {
+            _deposit(_buyAmount - amountFromSell);
+        } else {
+            _withdrawal(amountFromSell - _buyAmount);
+        }
+
+        uint256 newAssetAmount;
+        (,newAssetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
+        if (assetAmount == 0) {
+            sharesFromBuy = newAssetAmount; //init buy
+        } else {
+            sharesFromBuy = (shares * newAssetAmount) / assetAmount + _sellShares - shares;
+        }
+        require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
+
+        if (_buyAmount > 0) {
+            emit Buy(_buyAmount, sharesFromBuy);
+        }
+        if (_sellShares > 0) {
+            emit Sell(_sellShares, amountFromSell);
+        }
+
+        shares = shares + sharesFromBuy - _sellShares;
+        
         // 2. Monitor and adjust CR
         _monitorAndAdjustCR();
 
@@ -213,13 +229,15 @@ contract StrategyLiquityPool is IStrategy, Ownable {
     }
 
     function syncPrice() external view override returns (uint256) {
+        uint256 assetAmount;
+        (,assetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
         if (shares == 0) {
             if (assetAmount == 0) {
-                return 1e18;
+                return PRICE_PRECISION;
             }
             return MAX_INT;
         }
-        return (assetAmount * 1e18) / shares;
+        return (assetAmount * PRICE_PRECISION) / shares;
     }
 
     function harvest() external override onlyEOA {

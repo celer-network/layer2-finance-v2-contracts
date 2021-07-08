@@ -57,11 +57,9 @@ describe('StrategyCompoundETH', function () {
     );
 
     console.log('===== Buy 5 =====');
-    await expect(strategy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('5'), parseEther('0')))
+    await expect(strategy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('4'), parseEther('0')))
       .to.emit(strategy, 'Buy')
-      .withArgs(parseEther('5'), parseEther('5'));
 
-    expect(await strategy.shares()).to.equal(parseEther('5'));
     const price1 = await strategy.callStatic.syncPrice();
     console.log('price1:', price1.toString());
     expect(price1).to.lte(parseEther('1'));
@@ -69,13 +67,13 @@ describe('StrategyCompoundETH', function () {
     console.log('===== Sell 2 =====');
     await expect(strategy.aggregateOrders(parseEther('0'), parseEther('2'), parseEther('0'), parseEther('2')))
       .to.emit(strategy, 'Sell');
-    expect(await strategy.shares()).to.equal(parseEther('3'));
     const price2 = await strategy.callStatic.syncPrice();
     console.log('price2:', price2.toString());
     expect(price2).to.gte(price1);
 
     console.log('===== Buy 1, Sell 2 =====');
     await expect(strategy.aggregateOrders(parseEther('1'), parseEther('2'), parseEther('0.5'), parseEther('2')))
+      .to.emit(strategy, 'Buy')
       .to.emit(strategy, 'Sell');
     expect(await strategy.shares()).to.lte(parseEther('2'));
     const price3 = await strategy.callStatic.syncPrice();
