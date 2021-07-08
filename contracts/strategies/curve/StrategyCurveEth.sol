@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,9 +18,12 @@ contract StrategyCurveEth is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    uint256 constant MAX_INT = 2**256 - 1;
-
     address public controller;
+
+    uint256 constant MAX_INT = 2**256 - 1;
+    uint256 constant PRICE_DECIMALS = PRICE_DECIMALS;
+    uint256 public constant SLIPPAGE_NUMERATOR = 500;
+    uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
 
     // contract addresses
     address public pool; // swap pool
@@ -36,10 +38,6 @@ contract StrategyCurveEth is IStrategy, Ownable {
     address public lpToken; // LP token
     address public crv; // CRV token
     address public weth; // WETH token
-
-    // slippage tolerance settings
-    uint256 public constant DENOMINATOR = 10000;
-    uint256 public slippage = 500;
 
     uint256 public shares;
 
@@ -81,8 +79,8 @@ contract StrategyCurveEth is IStrategy, Ownable {
 
     function aggregateOrders(
         uint256 _buyAmount,
-        uint256 _minSharesFromBuy,
         uint256 _sellShares,
+        uint256 _minSharesFromBuy,
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
         require(msg.sender == controller, "Not controller");
@@ -91,42 +89,42 @@ contract StrategyCurveEth is IStrategy, Ownable {
         uint256 amountFromSell;
         uint256 sharesFromBuy;
         uint256 lpTokenPrice = ICurveFi(pool).get_virtual_price();
-        uint256 sharePrice = syncPrice();
+        uint256 sharePrice = this.syncPrice();
 
-        if (assetAmount == 0 || shares == 0) {
+        if (shares == 0) {
             shares = _buyAmount;
             sharesFromBuy = _buyAmount;
         } else {
-            amountFromSell = _sellShares * sharePrice;
-            sharesFromBuy = _buyAmount / sharePrice;
+            amountFromSell = (_sellShares * sharePrice) / PRICE_DECIMALS;
+            sharesFromBuy = (_buyAmount * PRICE_DECIMALS) / sharePrice;
         }
 
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
-            uint256 minLpTokenFromBuy = buyAmount * lpTokenPrice / 1e18 * (DENOMINATOR - slippage) / DENOMINATOR;
-            uint256 actualLpTokenFromBuy = _buy(buyAmount, minLpTokenFromBuy);
-            uint256 updatedLpTokenPrice = ICurveFi(pool).get_virtual_price();
-            uint256 actualSharesFromBuy = actualLpTokenFromBuy * 1e18 / updatedLpTokenPrice / sharePrice;
+            uint256 actualSharesFromBuy = _buy(buyAmount);
             shares += actualSharesFromBuy;
-            require(actualSharesFromBuy + _sellShares >= _minSharesFromBuy, "failed min shares from buy");
-            emit Buy(buyAmount, actualSharesFromBuy);
+            uint256 totalSharesFromBuy = actualSharesFromBuy + _sellShares;
+            require(totalSharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
+            emit Buy(_buyAmount, totalSharesFromBuy);
             return (actualSharesFromBuy, 0);
         } else if (amountFromSell > _buyAmount) {
-            uint256 sellShares = _sellShares - sharesFromBuy;
-            uint256 sellLpTokens = sellShares * sharePrice * lpTokenPrice;
-            uint256 minAmountFromSell = sellLpTokens * 1e18 / lpTokenPrice * (DENOMINATOR - slippage) / DENOMINATOR;
-            uint256 actualAmountFromSell = _sell(sellLpTokens, minAmountFromSell);
-            uint256 updatedSharePrice = syncPrice();
-            shares -= actualAmountFromSell / updatedSharePrice;
-            require(actualAmountFromSell + _buyAmount >= _minAmountFromSell, "failed min amount from sell");
-            emit Sell(sellShares, actualAmountFromSell);
+            uint256 sellLpTokens = ((((_sellShares - sharesFromBuy) * sharePrice) / PRICE_DECIMALS) * lpTokenPrice) /
+                PRICE_DECIMALS;
+            uint256 actualAmountFromSell = _sell(sellLpTokens);
+            shares -= actualAmountFromSell / this.syncPrice();
+            uint256 totalAmountFromSell = actualAmountFromSell + _buyAmount;
+            require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
+            emit Sell(_sellShares, totalAmountFromSell);
             return (0, actualAmountFromSell);
         }
 
         return (0, 0);
     }
 
-    function _buy(uint256 _buyAmount, uint256 _minLpTokenFromBuy) private returns (uint256) {
+    function _buy(uint256 _buyAmount) private returns (uint256) {
+        uint256 minLpTokenFromBuy = ((_buyAmount * (ICurveFi(pool).get_virtual_price() / PRICE_DECIMALS)) *
+            SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+
         // pull fund from controller
         IERC20(weth).safeTransferFrom(msg.sender, address(this), _buyAmount);
         IWETH(weth).withdraw(_buyAmount);
@@ -134,41 +132,48 @@ contract StrategyCurveEth is IStrategy, Ownable {
         // add liquidity in pool
         uint256[2] memory amounts;
         amounts[supplyTokenIndexInPool] = _buyAmount;
-        ICurveFi(pool).add_liquidity{value: _buyAmount}(amounts, _minLpTokenFromBuy);
+        ICurveFi(pool).add_liquidity{value: _buyAmount}(amounts, minLpTokenFromBuy);
         uint256 obtainedLpTokens = IERC20(lpToken).balanceOf(address(this));
 
         // deposit bought LP tokens to curve gauge to farm CRV
         IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpTokens);
         IGauge(gauge).deposit(obtainedLpTokens);
 
-        return obtainedLpTokens;
+        uint256 actualSharesFromBuy = (obtainedLpTokens * PRICE_DECIMALS) /
+            ICurveFi(pool).get_virtual_price() /
+            this.syncPrice();
+
+        return actualSharesFromBuy;
     }
 
-    function _sell(uint256 _sellLpTokens, uint256 _minAmountFromSell) private {
+    function _sell(uint256 _sellLpTokens) private returns (uint256) {
+        uint256 minAmountFromSell = (((_sellLpTokens * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price()) *
+            SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+
         // pull shares from controller
         IERC20(weth).safeTransferFrom(msg.sender, address(this), _sellLpTokens);
 
         // remove liquidity from pool
-        ICurveFi(pool).remove_liquidity_one_coin(_sellLpTokens, int8(supplyTokenIndexInPool), _minAmountFromSell);
+        ICurveFi(pool).remove_liquidity_one_coin(_sellLpTokens, int8(supplyTokenIndexInPool), minAmountFromSell);
 
-        uint256 ethBalance = address(this).balance;
+        uint256 actualAmountFromSell = address(this).balance;
 
         // wrap ETH and send back to controller
-        IWETH(weth).deposit{value: ethBalance}();
-        IERC20(weth).safeTransfer(msg.sender, ethBalance);
+        IWETH(weth).deposit{value: actualAmountFromSell}();
+        IERC20(weth).safeTransfer(msg.sender, actualAmountFromSell);
 
-        return ethBalance;
+        return actualAmountFromSell;
     }
 
     function syncPrice() external view override returns (uint256) {
         uint256 assetAmount = IERC20(lpToken).balanceOf(address(msg.sender)) / ICurveFi(pool).get_virtual_price();
         if (shares == 0) {
             if (assetAmount == 0) {
-                return 1e18;
+                return PRICE_DECIMALS;
             }
             return MAX_INT;
         }
-        return (assetAmount * 1e18) / shares;
+        return (assetAmount * PRICE_DECIMALS) / shares;
     }
 
     function harvest() external override onlyOwnerOrController {
@@ -188,16 +193,13 @@ contract StrategyCurveEth is IStrategy, Ownable {
                 uint256(0),
                 path,
                 address(this),
-                block.timestamp.add(1800)
+                block.timestamp + 1800
             );
 
             // Re-invest supply token to obtain more lpToken
             uint256 obtainedAssetAmount = address(this).balance;
-            uint256 minMintAmount = obtainedAssetAmount
-             * 1e18)
-            .div(ICurveFi(pool).get_virtual_price())
-             * DENOMINATOR.sub(slippage))
-            .div(DENOMINATOR);
+            uint256 minMintAmount = (((obtainedAssetAmount * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price()) *
+                SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
             uint256[2] memory amounts;
             amounts[supplyTokenIndexInPool] = obtainedAssetAmount;
             ICurveFi(pool).add_liquidity{value: obtainedAssetAmount}(amounts, minMintAmount);
@@ -206,9 +208,6 @@ contract StrategyCurveEth is IStrategy, Ownable {
             uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this));
             IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpToken);
             IGauge(gauge).deposit(obtainedLpToken);
-
-            // add newly obtained supply token amount to asset amount
-            assetAmount = assetAmount.add(obtainedAssetAmount);
         }
     }
 
