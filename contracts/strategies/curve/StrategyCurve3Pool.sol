@@ -22,6 +22,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
     address public mintr; // Curve minter
     address public uniswap; // UniswapV2
     address public crv; // CRV token
+    address public weth;
     uint8 public supplyTokenIndexInPool = 0; // ETH - 0, Other - 1
 
     constructor(
@@ -33,6 +34,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         address _gauge,
         address _mintr,
         address _crv,
+        address _weth,
         address _uniswap
     ) AbstractStrategy(_controller, _supplyToken, _lpToken) {
         supplyTokenIndexInPool = _supplyTokenIndexInPool;
@@ -40,6 +42,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         gauge = _gauge;
         mintr = _mintr;
         crv = _crv;
+        weth = _weth;
         uniswap = _uniswap;
     }
 
@@ -50,7 +53,6 @@ contract StrategyCurve3Pool is AbstractStrategy {
     function buy(uint256 _buyAmount, uint256 _minLpTokenFromBuy) internal override returns (uint256) {
         // pull fund from controller
         IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
-        IWETH(supplyToken).withdraw(_buyAmount);
 
         // add liquidity in pool
         uint256[3] memory amounts;
@@ -72,7 +74,6 @@ contract StrategyCurve3Pool is AbstractStrategy {
         // remove liquidity from pool
         ICurveFi(pool).remove_liquidity_one_coin(_sellLpTokens, int8(supplyTokenIndexInPool), _minAmountFromSell);
         uint256 obtainedSupplyToken = address(this).balance;
-        IWETH(supplyToken).deposit{value: obtainedSupplyToken}();
 
         return obtainedSupplyToken;
     }
@@ -87,7 +88,8 @@ contract StrategyCurve3Pool is AbstractStrategy {
 
             address[] memory path = new address[](2);
             path[0] = crv;
-            path[1] = supplyToken;
+            path[1] = weth;
+            path[2] = supplyToken;
 
             IUniswapV2(uniswap).swapExactTokensForETH(
                 crvBalance,
