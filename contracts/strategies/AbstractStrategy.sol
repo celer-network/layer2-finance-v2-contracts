@@ -51,16 +51,16 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
     /**
      * @notice Buys lp token from defi contract
-     * @param _buyAmount the supply token amount intended to be send to defi contract in exchange for lp token
-     * @param _minAmountFromBuy the minimum supply token equivalent of the lp token intended to be bought from defi
-     * @return The amount of lp tokens bought
+     * @param _buyAmount the amount of underlying asset to be deposited
+     * @param _minAmountFromBuy the minimum amount of underlying asset intended to be deposited after execution
+     * @return The obtained amount of underlying asset after execution
      */
     function buy(uint256 _buyAmount, uint256 _minAmountFromBuy) internal virtual returns (uint256);
 
     /**
      * @notice Sells lp token to defi contract for supply token
-     * @param _sellAmount the amount intended to be redeemed from defi
-     * @param _minAmountFromSell the minimum amount to be redeemed
+     * @param _sellAmount the amount of supply token intended to be redeemed from defi
+     * @param _minAmountFromSell the minimum amount of supply token to be redeemed
      * @return The amount of supply tokens redeemed
      */
     function sell(uint256 _sellAmount, uint256 _minAmountFromSell) internal virtual returns (uint256);
@@ -91,26 +91,20 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         }
 
         if (amountFromSell < _buyAmount) {
-            uint256 actualSharesFromBuy = _doBuy(_buyAmount, amountFromSell);
+            uint256 buyAmount = _buyAmount - amountFromSell;
+            uint256 actualSharesFromBuy = _doBuy(buyAmount);
             shares += actualSharesFromBuy;
             uint256 totalSharesFromBuy = actualSharesFromBuy + _sellShares;
-
             require(totalSharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
-
             emit Buy(_buyAmount, totalSharesFromBuy);
             emit Sell(_sellShares, amountFromSell);
             return (totalSharesFromBuy, amountFromSell);
         } else if (amountFromSell > _buyAmount) {
-            uint256 sellAmount = (((_sellShares - sharesFromBuy) * sharePrice) / PRICE_DECIMALS);
-            uint256 minAmountFromSell = (sellAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
-
-            uint256 actualAmountFromSell = sell(sellAmount, minAmountFromSell);
-            IERC20(supplyToken).safeTransfer(msg.sender, actualAmountFromSell);
+            uint256 sellShares = _sellShares - sharesFromBuy;
+            uint256 actualAmountFromSell = _doSell(sellShares);
             shares -= actualAmountFromSell / this.syncPrice();
-
             uint256 totalAmountFromSell = actualAmountFromSell + _buyAmount;
             require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
-
             emit Buy(_buyAmount, sharesFromBuy);
             emit Sell(_sellShares, totalAmountFromSell);
             return (sharesFromBuy, actualAmountFromSell);
@@ -125,19 +119,21 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         return (IERC20(lpToken).balanceOf(address(msg.sender)) * PRICE_DECIMALS) / getAssetAmount();
     }
 
-    // this function exists only to get around the "stack too deep" issue
-    function _doBuy(uint256 _buyAmount, uint256 _amountFromSell) private returns (uint256) {
+    function _doBuy(uint256 _buyAmount) private returns (uint256) {
         uint256 lpTokenPrice = _getLpTokenPrice();
-        uint256 buyAmount = _buyAmount - _amountFromSell;
         uint256 minAmountFromBuy = (_buyAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
-
-        // execute buy
-        uint256 obtainedLpTokens = buy(buyAmount, minAmountFromBuy);
-        uint256 actualAmountFromBuy = (obtainedLpTokens * PRICE_DECIMALS) / lpTokenPrice;
-        uint256 actualSharesFromBuy = (actualAmountFromBuy * shares) /
-            (actualAmountFromBuy + IERC20(lpToken).balanceOf(address(msg.sender)) / lpTokenPrice);
-
+        uint256 obtainedUnderlyingAsset = buy(_buyAmount, minAmountFromBuy);
+        uint256 actualSharesFromBuy = (obtainedUnderlyingAsset * shares) /
+            (obtainedUnderlyingAsset + IERC20(lpToken).balanceOf(address(msg.sender)) / lpTokenPrice);
         return actualSharesFromBuy;
+    }
+
+    function _doSell(uint256 _sellShares) private returns (uint256) {
+        uint256 sellAmount = (_sellShares * this.syncPrice()) / PRICE_DECIMALS;
+        uint256 minAmountFromSell = (sellAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+        uint256 actualAmountFromSell = sell(sellAmount, minAmountFromSell);
+        IERC20(supplyToken).safeTransfer(msg.sender, actualAmountFromSell);
+        return actualAmountFromSell;
     }
 
     function syncPrice() external view override returns (uint256) {
