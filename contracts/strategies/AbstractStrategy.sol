@@ -15,8 +15,6 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
     uint256 constant MAX_INT = 2**256 - 1;
     uint256 constant PRICE_DECIMALS = 1e8;
-    uint256 public constant SLIPPAGE_NUMERATOR = 500;
-    uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
 
     address public controller;
     address public supplyToken;
@@ -52,18 +50,16 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
     /**
      * @notice Buys lp token from defi contract
      * @param _buyAmount the amount of underlying asset to be deposited
-     * @param _minAmountFromBuy the minimum amount of underlying asset intended to be deposited after execution
      * @return The obtained amount of underlying asset after execution
      */
-    function buy(uint256 _buyAmount, uint256 _minAmountFromBuy) internal virtual returns (uint256);
+    function buy(uint256 _buyAmount) internal virtual returns (uint256);
 
     /**
      * @notice Sells lp token to defi contract for supply token
      * @param _sellAmount the amount of supply token intended to be redeemed from defi
-     * @param _minAmountFromSell the minimum amount of supply token to be redeemed
      * @return The amount of supply tokens redeemed
      */
-    function sell(uint256 _sellAmount, uint256 _minAmountFromSell) internal virtual returns (uint256);
+    function sell(uint256 _sellAmount) internal virtual returns (uint256);
 
     function getAssetAddress() external view override returns (address) {
         return lpToken;
@@ -121,8 +117,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
     function _doBuy(uint256 _buyAmount) private returns (uint256) {
         uint256 lpTokenPrice = _getLpTokenPrice();
-        uint256 minAmountFromBuy = (_buyAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
-        uint256 obtainedUnderlyingAsset = buy(_buyAmount, minAmountFromBuy);
+        uint256 obtainedUnderlyingAsset = buy(_buyAmount);
         uint256 actualSharesFromBuy = (obtainedUnderlyingAsset * shares) /
             (obtainedUnderlyingAsset + IERC20(lpToken).balanceOf(address(msg.sender)) / lpTokenPrice);
         return actualSharesFromBuy;
@@ -130,8 +125,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
     function _doSell(uint256 _sellShares) private returns (uint256) {
         uint256 sellAmount = (_sellShares * this.syncPrice()) / PRICE_DECIMALS;
-        uint256 minAmountFromSell = (sellAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
-        uint256 actualAmountFromSell = sell(sellAmount, minAmountFromSell);
+        uint256 actualAmountFromSell = sell(sellAmount);
         IERC20(supplyToken).safeTransfer(msg.sender, actualAmountFromSell);
         return actualAmountFromSell;
     }
