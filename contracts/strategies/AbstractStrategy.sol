@@ -112,7 +112,8 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             require(totalSharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
 
             emit Buy(_buyAmount, totalSharesFromBuy);
-            return (actualSharesFromBuy, 0);
+            emit Sell(_sellShares, amountFromSell);
+            return (totalSharesFromBuy, amountFromSell);
         } else if (amountFromSell > _buyAmount) {
             uint256 sellLpTokens = ((((_sellShares - sharesFromBuy) * sharePrice) / PRICE_DECIMALS) * lpTokenPrice) /
                 PRICE_DECIMALS;
@@ -132,11 +133,12 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             uint256 totalAmountFromSell = actualAmountFromSell + _buyAmount;
             require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
 
+            emit Buy(_buyAmount, sharesFromBuy);
             emit Sell(_sellShares, totalAmountFromSell);
-            return (0, actualAmountFromSell);
+            return (sharesFromBuy, actualAmountFromSell);
         }
 
-        return (0, 0);
+        return (sharesFromBuy, amountFromSell);
     }
 
     function syncPrice() external view override returns (uint256) {
