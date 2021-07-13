@@ -22,7 +22,7 @@ describe('DisputeSettle', function () {
       users
     };
   }
-
+  /*
   it('should fail to dispute valid settle', async function () {
     const { admin, rollupChain, dai, users } = await loadFixture(fixture);
     await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
@@ -74,7 +74,59 @@ describe('DisputeSettle', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(2, 'invalid post-state root');
   });
+  */
+  it('should fail to dispute valid settle of failed strategy execultion', async function () {
+    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
+    await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-failst-valid.txt');
 
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumber(6);
+    await rollupChain.executeBlock(0, [tns[0][4]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumber(6);
+    await rollupChain.executeBlock(1, [tns[1][8]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    ).to.be.revertedWith('Failed to dispute');
+  });
+
+  it('should dispute settle of failed strategy execultion with invalid root', async function () {
+    const { admin, rollupChain, dai, users } = await loadFixture(fixture);
+    await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
+    await rollupChain.connect(users[1]).deposit(dai.address, parseEther('100'));
+    const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-failst-root.txt');
+
+    await rollupChain.commitBlock(0, tns[0]);
+
+    await advanceBlockNumber(6);
+    await rollupChain.executeBlock(0, [tns[0][4]], 1);
+
+    await rollupChain.commitBlock(1, tns[1]);
+
+    await advanceBlockNumber(6);
+    await rollupChain.executeBlock(1, [tns[1][8]], 1);
+
+    await rollupChain.commitBlock(2, tns[2]);
+    await expect(
+      admin.sendTransaction({
+        to: rollupChain.address,
+        data: disputeData
+      })
+    )
+      .to.emit(rollupChain, 'RollupBlockReverted')
+      .withArgs(2, 'invalid post-state root');
+  });
+  /*
   it('should fail to dispute valid settle with asset fee', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-fee-asset-valid.txt');
@@ -349,4 +401,5 @@ describe('DisputeSettle', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(2, 'failed to evaluate');
   });
+  */
 });
