@@ -22,7 +22,7 @@ describe('DisputeSettle', function () {
       users
     };
   }
-  /*
+
   it('should fail to dispute valid settle', async function () {
     const { admin, rollupChain, dai, users } = await loadFixture(fixture);
     await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
@@ -74,7 +74,7 @@ describe('DisputeSettle', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(2, 'invalid post-state root');
   });
-  */
+
   it('should fail to dispute valid settle of failed strategy execultion', async function () {
     const { admin, rollupChain, dai, users } = await loadFixture(fixture);
     await dai.connect(users[1]).approve(rollupChain.address, parseEther('100'));
@@ -126,7 +126,7 @@ describe('DisputeSettle', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(2, 'invalid post-state root');
   });
-  /*
+
   it('should fail to dispute valid settle with asset fee', async function () {
     const { admin, rollupChain } = await loadFixture(fixture);
     const { tns, disputeData } = await parseInput('test/input/data/dispute-settle-fee-asset-valid.txt');
@@ -401,5 +401,4 @@ describe('DisputeSettle', function () {
       .to.emit(rollupChain, 'RollupBlockReverted')
       .withArgs(2, 'failed to evaluate');
   });
-  */
 });
