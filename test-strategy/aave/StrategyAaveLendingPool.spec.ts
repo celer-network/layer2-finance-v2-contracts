@@ -86,7 +86,7 @@ export async function testStrategyAaveLendingPool(
   await expect(strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('5', supplyTokenDecimals), parseUnits('0')))
     .to.emit(strategy, 'Buy')
 
-  const price1 = await strategy.syncPrice();
+  const price1 = await strategy.callStatic.syncPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
@@ -94,17 +94,17 @@ export async function testStrategyAaveLendingPool(
   await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('2', supplyTokenDecimals)))
     .to.emit(strategy, 'Sell')
 
-  const price2 = await strategy.syncPrice();
+  const price2 = await strategy.callStatic.syncPrice();
   console.log('price2:', price2.toString());
-  expect(price2).to.gte(price1);
+  expect(price2).to.lte(price1);
 
   console.log('===== Buy 1, Sell 2 =====');
   await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals)))
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell')
-  const price3 = await strategy.syncPrice();
+  const price3 = await strategy.callStatic.syncPrice();
   console.log('price3:', price3.toString());
-  expect(price3).to.gte(price2);
+  expect(price3).to.lte(price2);
   
   console.log('===== harvest, and price should be updated =====');
   try {
@@ -129,7 +129,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
       let receipt = await harvestTx.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price4 =  await strategy.syncPrice();
+      const price4 =  await strategy.callStatic.syncPrice();
       console.log(
         `price4:`, price4.toString()
       );
@@ -140,7 +140,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx2.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price5 =  await strategy.syncPrice();
+      const price5 =  await strategy.callStatic.syncPrice();
       console.log(
         `price5:`, price5.toString()
       );
@@ -151,7 +151,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx3 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx3.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price6 =  await strategy.syncPrice();
+      const price6 =  await strategy.callStatic.syncPrice();
       console.log(
         `price6:`, price6.toString()
       );
@@ -162,7 +162,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx4 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx4.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price7 =  await strategy.syncPrice();
+      const price7 =  await strategy.callStatic.syncPrice();
       console.log(
         `price7:`, price7.toString()
       );
@@ -173,7 +173,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx5 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx5.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price8 =  await strategy.syncPrice();
+      const price8 =  await strategy.callStatic.syncPrice();
       console.log(
         `price8:`, price8.toString()
       );
@@ -184,7 +184,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx6 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx6.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price9 =  await strategy.syncPrice();
+      const price9 =  await strategy.callStatic.syncPrice();
       console.log(
         `price9:`, price9.toString()
       );

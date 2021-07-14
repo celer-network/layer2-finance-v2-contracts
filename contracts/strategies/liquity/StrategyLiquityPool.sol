@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../interfaces/IStrategy.sol";
+import "../AbstractStrategy.sol";
 import "../interfaces/uniswap/IUniswapV2.sol";
 import "../interfaces/liquity/IBorrowerOperations.sol";
 import "../interfaces/liquity/IHintHelpers.sol";
@@ -21,15 +21,12 @@ import "../../interfaces/IWETH.sol";
 /**
  * Deposits ETH into Liquity Protocal, opens a trove to borrow LUSD, stakes LUSD to stability pool to yield mining.
  */
-contract StrategyLiquityPool is IStrategy, Ownable {
+contract StrategyLiquityPool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public weth;
     address public uniswap;
     address public lqty;
-
-    address public controller;
 
     // Liqutity contracts
     address public borrowerOperations;
@@ -45,18 +42,13 @@ contract StrategyLiquityPool is IStrategy, Ownable {
 
     // in the Liquity operations, the max fee percentage we are willing to accept in case of a fee slippage
     uint256 public maxFeePercentage;
-
-    uint256 public shares;
-    uint256 internal constant PRICE_PRECISION = 1e18;
-
-    uint256 internal constant MAX_INT = 2**256 - 1;
     uint256 internal constant NICR_PRECISION = 1e20;
     // Minimum amount of net LUSD debt a trove must have
     uint256 internal constant MIN_NET_DEBT = 1950e18;
 
     constructor(
         address _controller,
-        address _weth,
+        address _weth, // weth as supply token
         address _uniswap,
         address _lqty,
         address[6] memory _liquityContracts,
@@ -64,13 +56,11 @@ contract StrategyLiquityPool is IStrategy, Ownable {
         uint256 _icrUpperLimit,
         uint256 _icrLowerLimit,
         uint256 _maxFeePercentage
-    ) {
+    ) AbstractStrategy(_controller, _weth) {
         require(
             _icrInitial < _icrUpperLimit && _icrInitial > _icrLowerLimit, 
             "icrInitial should be between icrLowerLimit and icrUpperLimit!"
         );
-        controller = _controller;
-        weth = _weth;
         uniswap = _uniswap;
         lqty = _lqty;
         borrowerOperations = _liquityContracts[0];
@@ -93,101 +83,60 @@ contract StrategyLiquityPool is IStrategy, Ownable {
         _;
     }
 
-    function getAssetAddress() external view override returns (address) {
-        return weth;
-    }
-
-    function aggregateOrders(
-        uint256 _buyAmount,
-        uint256 _sellShares,
-        uint256 _minSharesFromBuy,
-        uint256 _minAmountFromSell
-    ) external override returns (uint256, uint256) {
-        require(msg.sender == controller, "Not controller");
-        require(shares >= _sellShares, "not enough shares to sell");
-
-        // 1. Deposit or withdrawal
-        uint256 sharesFromBuy;
-        uint256 amountFromSell;
+    function getAssetAmount() internal view override returns (uint256) {
         uint256 assetAmount;
         (,assetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-        if (assetAmount != 0 && shares != 0) {
-            amountFromSell = (_sellShares * assetAmount) / shares;
-        }
-        require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
-
-        if (_buyAmount == amountFromSell) {
-            sharesFromBuy = (_buyAmount * shares) / assetAmount;
-            return (sharesFromBuy, amountFromSell);
-        }
-
-        bool toBuy = _buyAmount > amountFromSell;
-        if (toBuy) {
-            _deposit(_buyAmount - amountFromSell);
-        } else {
-            _withdrawal(amountFromSell - _buyAmount);
-        }
-
-        uint256 newAssetAmount;
-        (,newAssetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-        if (assetAmount == 0) {
-            sharesFromBuy = newAssetAmount; //init buy
-        } else {
-            sharesFromBuy = (shares * newAssetAmount) / assetAmount + _sellShares - shares;
-        }
-        require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
-
-        if (_buyAmount > 0) {
-            emit Buy(_buyAmount, sharesFromBuy);
-        }
-        if (_sellShares > 0) {
-            emit Sell(_sellShares, amountFromSell);
-        }
-
-        shares = shares + sharesFromBuy - _sellShares;
-        
-        // 2. Monitor and adjust CR
-        _monitorAndAdjustCR();
-
-        return (sharesFromBuy, amountFromSell);
+        return assetAmount;
     }
 
-    function _deposit(uint256 _toBuyAmount) private {
+    function buy(uint256 _buyAmount) internal override returns (uint256) {
         // Pull WETH from Controller
-        IERC20(weth).safeTransferFrom(msg.sender, address(this), _toBuyAmount);
+        IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
         // Convert WETH into ETH
-        IWETH(weth).withdraw(_toBuyAmount);
+        IWETH(supplyToken).withdraw(_buyAmount);
 
+        uint256 originalAssetAmount = getAssetAmount();
         if (ITroveManager(troveManager).getTroveStatus(address(this)) != 1) {
             (address upperHint, address lowerHint) = _getHints(MAX_INT);
             // Borrow allowed minimum LUSD, CR will be adjusted later.
-            IBorrowerOperations(borrowerOperations).openTrove{value: _toBuyAmount}(maxFeePercentage, MIN_NET_DEBT, upperHint, lowerHint);
+            IBorrowerOperations(borrowerOperations).openTrove{value: _buyAmount}(maxFeePercentage, MIN_NET_DEBT, upperHint, lowerHint);
         } else {
             (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
             uint256 nicr = MAX_INT;
             if (debt != 0) {
-                nicr = (coll + _toBuyAmount) * NICR_PRECISION / debt;
+                nicr = (coll + _buyAmount) * NICR_PRECISION / debt;
             }
             (address upperHint, address lowerHint) = _getHints(nicr);
-            IBorrowerOperations(borrowerOperations).addColl{value: _toBuyAmount}(upperHint, lowerHint);
+            IBorrowerOperations(borrowerOperations).addColl{value: _buyAmount}(upperHint, lowerHint);
         }
+
+        uint256 newAssetAmount = getAssetAmount();
+        _monitorAndAdjustCR();
+        
+        return newAssetAmount - originalAssetAmount;
     }
 
-    function _withdrawal(uint256 _toSellAmount) private {
+    function sell(uint256 _sellAmount) internal override returns (uint256) {
         // here just withdrawal collateral, CR will be adjusted later
         (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
         uint256 nicr = MAX_INT;
         if (debt != 0) {
-            nicr = (coll - _toSellAmount) * NICR_PRECISION / debt;
+            nicr = (coll - _sellAmount) * NICR_PRECISION / debt;
         }
         (address upperHint, address lowerHint) = _getHints(nicr);
-        IBorrowerOperations(borrowerOperations).withdrawColl(_toSellAmount, upperHint, lowerHint);
+
+        uint256 balanceBeforeSell = address(this).balance;
+        IBorrowerOperations(borrowerOperations).withdrawColl(_sellAmount, upperHint, lowerHint);
 
         // Convert ETH into WETH
-        uint256 ethBalance = address(this).balance;
-        IWETH(weth).deposit{value: ethBalance}();
+        uint256 balanceAfterSell = address(this).balance;
+        IWETH(supplyToken).deposit{value: balanceAfterSell}();
         // Transfer WETH to Controller
-        IERC20(weth).safeTransfer(msg.sender, ethBalance);
+        IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
+
+        _monitorAndAdjustCR();
+
+        return balanceAfterSell - balanceBeforeSell;
     }
 
     function _getHints(uint256 _ncr) private view returns (address, address) {
@@ -228,18 +177,6 @@ contract StrategyLiquityPool is IStrategy, Ownable {
         }
     }
 
-    function syncPrice() external view override returns (uint256) {
-        uint256 assetAmount;
-        (,assetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-        if (shares == 0) {
-            if (assetAmount == 0) {
-                return PRICE_PRECISION;
-            }
-            return MAX_INT;
-        }
-        return (assetAmount * PRICE_PRECISION) / shares;
-    }
-
     function harvest() external override onlyEOA {
         (address upperHint, address lowerHint) = _getHints(ITroveManager(troveManager).getNominalICR(address(this)));
         IStabilityPool(stabilityPool).withdrawETHGainToTrove(upperHint, lowerHint);
@@ -251,7 +188,7 @@ contract StrategyLiquityPool is IStrategy, Ownable {
 
             address[] memory paths = new address[](2);
             paths[0] = lqty;
-            paths[1] = weth;
+            paths[1] = supplyToken;
 
             IUniswapV2(uniswap).swapExactTokensForETH(
                 lqtyBalance,
@@ -265,11 +202,8 @@ contract StrategyLiquityPool is IStrategy, Ownable {
             uint256 obtainedEthAmount = address(this).balance;
             IBorrowerOperations(borrowerOperations).addColl{value: obtainedEthAmount}(upperHint, lowerHint);
         }
-    }
 
-    function setController(address _controller) external onlyOwner {
-        emit ControllerChanged(controller, _controller);
-        controller = _controller;
+        _monitorAndAdjustCR();
     }
 
     // This is needed to receive ETH

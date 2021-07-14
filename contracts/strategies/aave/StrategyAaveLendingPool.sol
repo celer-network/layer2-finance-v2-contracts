@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../interfaces/IStrategy.sol";
+import "../AbstractStrategy.sol";
 import "../interfaces/aave/ILendingPool.sol";
 import "../interfaces/aave/IAToken.sol";
 import "../interfaces/aave/IAaveIncentivesController.sol";
@@ -18,20 +18,15 @@ import "../interfaces/uniswap/IUniswapV2.sol";
 /**
  * Deposits ERC20 token into Aave Lending Pool and issues stAaveLendingToken(e.g. stAaveLendingDAI) in L2. Holds aToken (Aave interest-bearing tokens).
  */
-contract StrategyAaveLendingPool is IStrategy, Ownable {
+contract StrategyAaveLendingPool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
     // The address of Aave Lending Pool
     address public lendingPool;
 
-    // The address of supplying token (e.g. DAI, USDT)
-    address public supplyToken;
-
     // The address of Aave interest-bearing token (e.g. aDAI, aUSDT)
     address public aToken;
-
-    address public controller;
 
     // The address of Aave Incentives Controller
     address public incentivesController;
@@ -46,11 +41,6 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
     // The address of WETH token
     address public weth;
 
-    uint256 internal constant MAX_INT = 2**256 - 1;
-    uint256 internal constant PRICE_PRECISION = 1e18;
-
-    uint256 public shares;
-
     constructor(
         address _lendingPool,
         address _supplyToken,
@@ -61,11 +51,9 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
         address _aave,
         address _uniswap,
         address _weth
-    ) {
+    ) AbstractStrategy(_controller, _supplyToken) {
         lendingPool = _lendingPool;
-        supplyToken = _supplyToken;
         aToken = _aToken;
-        controller = _controller;
         incentivesController = _incentivesController;
         stakedAave = _stakedAave;
         aave = _aave;
@@ -81,68 +69,34 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
         _;
     }
 
-    function getAssetAddress() external view override returns (address) {
-        return supplyToken;
+    function getAssetAmount() internal view override returns (uint256) {
+        return IAToken(aToken).balanceOf(address(this));
     }
 
-    function aggregateOrders(
-        uint256 _buyAmount,
-        uint256 _sellShares,
-        uint256 _minSharesFromBuy,
-        uint256 _minAmountFromSell
-    ) external override returns (uint256, uint256) {
-        require(msg.sender == controller, "Not controller");
-        require(shares >= _sellShares, "not enough shares to sell");
+    function buy(uint256 _buyAmount) internal override returns (uint256) {
+        uint256 originalAssetAmount = getAssetAmount();
 
-        uint256 sharesFromBuy;
-        uint256 amountFromSell;
-        uint256 assetAmount = IAToken(aToken).balanceOf(address(this));
-        if (assetAmount != 0 && shares != 0) {
-            amountFromSell = (_sellShares * assetAmount) / shares;
-        }
-        require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
+        // Pull supplying token(e.g. DAI, USDT) from Controller
+        IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
+        // Deposit supplying token to Aave Lending Pool and mint aToken.
+        IERC20(supplyToken).safeIncreaseAllowance(lendingPool, _buyAmount);
+        ILendingPool(lendingPool).deposit(supplyToken, _buyAmount, address(this), 0);
 
-        if (_buyAmount == amountFromSell) {
-            sharesFromBuy = (_buyAmount * shares) / assetAmount;
-            return (sharesFromBuy, amountFromSell);
-        }
-
-        bool toBuy = _buyAmount > amountFromSell;
-        if (toBuy) {
-            _buy(_buyAmount - amountFromSell);
-        } else {
-            _sell(amountFromSell - _buyAmount);
-        }
-
-        uint256 newAssetAmount = IAToken(aToken).balanceOf(address(this));
-        if (assetAmount == 0) {
-            sharesFromBuy = newAssetAmount; //init buy
-        } else {
-            sharesFromBuy = (shares * newAssetAmount) / assetAmount + _sellShares - shares;
-        }
-        require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
-
-        if (_buyAmount > 0) {
-            emit Buy(_buyAmount, sharesFromBuy);
-        }
-        if (_sellShares > 0) {
-            emit Sell(_sellShares, amountFromSell);
-        }
-
-        shares = shares + sharesFromBuy - _sellShares;
-
-        return (sharesFromBuy, amountFromSell);
+        uint256 newAssetAmount = getAssetAmount();
+        
+        return newAssetAmount - originalAssetAmount;
     }
 
-    function syncPrice() external view override returns (uint256) {
-        uint256 assetAmount = IAToken(aToken).balanceOf(address(this));
-        if (shares == 0) {
-            if (assetAmount == 0) {
-                return PRICE_PRECISION;
-            }
-            return MAX_INT;
-        }
-        return (assetAmount * PRICE_PRECISION) / shares;
+    function sell(uint256 _sellAmount) internal override returns (uint256) {
+        uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
+        
+        // Withdraw supplying token(e.g. DAI, USDT) from Aave Lending Pool.
+        ILendingPool(lendingPool).withdraw(supplyToken, _sellAmount, address(this));
+        // Transfer supplying token to Controller
+        uint256 balanceAfterSell = IERC20(supplyToken).balanceOf(address(this));
+        IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
+
+        return balanceAfterSell - balanceBeforeSell;
     }
 
     function harvest() external override onlyEOA {
@@ -201,28 +155,5 @@ contract StrategyAaveLendingPool is IStrategy, Ownable {
             IERC20(supplyToken).safeIncreaseAllowance(lendingPool, obtainedSupplyTokenAmount);
             ILendingPool(lendingPool).deposit(supplyToken, obtainedSupplyTokenAmount, address(this), 0);
         }
-    }
-
-    function _buy(uint256 _buyAmount) private {
-        // Pull supplying token(e.g. DAI, USDT) from Controller
-        IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
-
-        // Deposit supplying token to Aave Lending Pool and mint aToken.
-        IERC20(supplyToken).safeIncreaseAllowance(lendingPool, _buyAmount);
-        ILendingPool(lendingPool).deposit(supplyToken, _buyAmount, address(this), 0);
-    }
-
-    function _sell(uint256 _sellAmount) private {
-        // Withdraw supplying token(e.g. DAI, USDT) from Aave Lending Pool.
-        ILendingPool(lendingPool).withdraw(supplyToken, _sellAmount, address(this));
-
-        // Transfer supplying token to Controller
-        uint256 supplyTokenBalance = IERC20(supplyToken).balanceOf(address(this));
-        IERC20(supplyToken).safeTransfer(msg.sender, supplyTokenBalance);
-    }
-
-    function setController(address _controller) external onlyOwner {
-        emit ControllerChanged(controller, _controller);
-        controller = _controller;
     }
 }

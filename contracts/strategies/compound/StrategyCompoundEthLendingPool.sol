@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../interfaces/IStrategy.sol";
+import "../AbstractStrategy.sol";
 import "../interfaces/compound/ICEth.sol";
 import "../interfaces/compound/IComptroller.sol";
 import "../interfaces/uniswap/IUniswapV2.sol";
@@ -17,7 +17,7 @@ import "../../interfaces/IWETH.sol";
 /**
  * Deposits ETH into Compound Lending Pool and issues stCompoundLendingETH in L2. Holds cToken (Compound interest-bearing tokens).
  */
-contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
+contract StrategyCompoundEthLendingPool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -30,29 +30,19 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
     address public comp;
 
     address public uniswap;
-    // The address of WETH token
-    address public weth;
-
-    address public controller;
-
-    uint256 internal constant MAX_INT = 2**256 - 1;
-    uint256 internal constant PRICE_PRECISION = 1e18;
-    uint256 public shares;
 
     constructor(
         address payable _cEth,
         address _comptroller,
         address _comp,
         address _uniswap,
-        address _weth,
+        address _weth, // weth as supply token
         address _controller
-    ) {
+    ) AbstractStrategy(_controller, _weth) {
         cEth = _cEth;
         comptroller = _comptroller;
         comp = _comp;
         uniswap = _uniswap;
-        weth = _weth;
-        controller = _controller;
     }
 
     /**
@@ -63,71 +53,38 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
         _;
     }
 
-    /**
-     * @dev Return WETH address. StrategyCompoundETH contract receive WETH from controller.
-     */
-    function getAssetAddress() external view override returns (address) {
-        return weth;
+    function getAssetAmount() internal override returns (uint256) {
+        return ICEth(cEth).balanceOfUnderlying(address(this));
     }
 
-    function aggregateOrders(
-        uint256 _buyAmount,
-        uint256 _sellShares,
-        uint256 _minSharesFromBuy,
-        uint256 _minAmountFromSell
-    ) external override returns (uint256, uint256) {
-        require(msg.sender == controller, "Not controller");
-        require(shares >= _sellShares, "not enough shares to sell");
+    function buy(uint256 _buyAmount) internal override returns (uint256) {
+        uint256 originalAssetAmount = getAssetAmount();
 
-        uint256 sharesFromBuy;
-        uint256 amountFromSell;
-        uint256 assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
-        if (assetAmount != 0 && shares != 0) {
-            amountFromSell = (_sellShares * assetAmount) / shares;
-        }
-        require(amountFromSell >= _minAmountFromSell, "failed min amount from sell");
+        // Pull WETH from Controller
+        IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
+        // Convert WETH into ETH
+        IWETH(supplyToken).withdraw(_buyAmount);
+        // Deposit ETH to Compound ETH Lending Pool and mint cETH.
+        ICEth(cEth).mint{value: _buyAmount}();
 
-        if (_buyAmount == amountFromSell) {
-            sharesFromBuy = (_buyAmount * shares) / assetAmount;
-            return (sharesFromBuy, amountFromSell);
-        }
-
-        bool toBuy = _buyAmount > amountFromSell;
-        if (toBuy) {
-            _buy(_buyAmount - amountFromSell);
-        } else {
-            _sell(amountFromSell - _buyAmount);
-        }
-
-        uint256 newAssetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
-        if (assetAmount == 0) {
-            sharesFromBuy = newAssetAmount; //init buy
-        } else {
-            sharesFromBuy = (shares * newAssetAmount) / assetAmount + _sellShares - shares;
-        }
-        require(sharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
-
-        if (_buyAmount > 0) {
-            emit Buy(_buyAmount, sharesFromBuy);
-        }
-        if (_sellShares > 0) {
-            emit Sell(_sellShares, amountFromSell);
-        }
-
-        shares = shares + sharesFromBuy - _sellShares;
-
-        return (sharesFromBuy, amountFromSell);
+        uint256 newAssetAmount = getAssetAmount();
+        
+        return newAssetAmount - originalAssetAmount;
     }
 
-    function syncPrice() external override returns (uint256) {
-        uint256 assetAmount = ICEth(cEth).balanceOfUnderlying(address(this));
-        if (shares == 0) {
-            if (assetAmount == 0) {
-                return PRICE_PRECISION;
-            }
-            return MAX_INT;
-        }
-        return (assetAmount * PRICE_PRECISION) / shares;
+    function sell(uint256 _sellAmount) internal override returns (uint256) {
+        uint256 balanceBeforeSell = address(this).balance;
+        
+        // Withdraw ETH from Compound ETH Lending Pool based on an amount of ETH.
+        uint256 redeemResult = ICEth(cEth).redeemUnderlying(_sellAmount);
+        require(redeemResult == 0, "Couldn't redeem cToken");
+        // Convert ETH into WETH
+        uint256 balanceAfterSell = address(this).balance;
+        IWETH(supplyToken).deposit{value: balanceAfterSell}();
+        // Transfer WETH to Controller
+        IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
+
+        return balanceAfterSell - balanceBeforeSell;
     }
 
     function harvest() external override onlyEOA {
@@ -140,7 +97,7 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
 
             address[] memory paths = new address[](2);
             paths[0] = comp;
-            paths[1] = weth;
+            paths[1] = supplyToken;
 
             IUniswapV2(uniswap).swapExactTokensForETH(
                 compBalance,
@@ -154,33 +111,6 @@ contract StrategyCompoundEthLendingPool is IStrategy, Ownable {
             uint256 obtainedEthAmount = address(this).balance;
             ICEth(cEth).mint{value: obtainedEthAmount}();
         }
-    }
-
-    function _buy(uint256 _buyAmount) private {
-        // Pull WETH from Controller
-        IERC20(weth).safeTransferFrom(msg.sender, address(this), _buyAmount);
-        // Convert WETH into ETH
-        IWETH(weth).withdraw(_buyAmount);
-
-        // Deposit ETH to Compound ETH Lending Pool and mint cETH.
-        ICEth(cEth).mint{value: _buyAmount}();
-    }
-
-    function _sell(uint256 _sellAmount) private {
-        // Withdraw ETH from Compound ETH Lending Pool based on an amount of ETH.
-        uint256 redeemResult = ICEth(cEth).redeemUnderlying(_sellAmount);
-        require(redeemResult == 0, "Couldn't redeem cToken");
-
-        // Convert ETH into WETH
-        uint256 ethBalance = address(this).balance;
-        IWETH(weth).deposit{value: ethBalance}();
-        // Transfer WETH to Controller
-        IERC20(weth).safeTransfer(msg.sender, ethBalance);
-    }
-
-    function setController(address _controller) external onlyOwner {
-        emit ControllerChanged(controller, _controller);
-        controller = _controller;
     }
 
     // This is needed to receive ETH when calling `ICEth.redeemUnderlying` and `IWETH.withdraw`

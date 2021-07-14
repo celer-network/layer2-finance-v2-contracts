@@ -70,6 +70,6 @@ describe('StrategyLiquityETH', function () {
       .withArgs(parseEther('5'), parseEther('5'));
 
     expect(await strategy.shares()).to.equal(parseEther('5'));
-    expect(await strategy.syncPrice()).to.equal(parseEther('1'));
+    expect(await strategy.callStatic.syncPrice()).to.equal(parseEther('1'));
   });
 });
