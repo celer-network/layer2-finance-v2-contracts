@@ -168,5 +168,5 @@ export async function testStrategyCurveEth(
   // ----- price = 1058548181067491675
 
   console.log('\n>>> aggregateOrders #4 -> buy 1 sell 4');
-  await expect(strategy.aggregateOrders(p('1'), p('4'), p('0.5'), p('3'))).to.throw('not enough shares to sell');
+  await expect(strategy.aggregateOrders(p('1'), p('4'), p('0.5'), p('3'))).to.revertedWith('not enough shares to sell');
 }
