@@ -71,42 +71,12 @@
       "Shares": 1,
       "Fee": 0,
       "Timestamp": 2
-    }
-  },
-  {
-    "Buy": {
-      "AccountId": 1,
-      "StrategyId": 1,
-      "Amount": 2000000000000000000,
-      "MaxSharePrice": 1100000000000000000,
-      "Timestamp": 3
-    }
-  },
-  {
-    "AggregateOrders": {
-      "StrategyId": 1
     },
     "Flag": 99
   },
   {
     "UpdateEpoch": {
       "Epoch": 1450
-    }
-  },
-  {
-    "ExecutionResult": {
-      "StrategyId": 1,
-      "AggregateId": 1,
-      "Success": true,
-      "SharesFromBuy": 2000000000000000000,
-      "AmountFromSell": 0
-    }
-  },
-  {
-    "Settlement": {
-      "StrategyId": 1,
-      "AggregateId": 1,
-      "AccountId": 1
     }
   },
   {

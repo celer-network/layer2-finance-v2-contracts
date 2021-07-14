@@ -1,0 +1,151 @@
+[
+  {
+    "Deposit": {
+      "AccountId": 1,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "Deposit": {
+      "AccountId": 2,
+      "AssetId": 2,
+      "Amount": 100000000000000000000
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 2000000000000000000,
+      "MaxSharePrice": 1100000000000000000,
+      "Timestamp": 1
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 2,
+      "StrategyId": 1,
+      "Amount": 3000000000000000000,
+      "MaxSharePrice": 1050000000000000000,
+      "Timestamp": 2
+    }
+  },
+  {
+    "AggregateOrders": {
+      "StrategyId": 1
+    },
+    "Flag": 99
+  },
+
+  {
+    "ExecutionResult": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "Success": true,
+      "SharesFromBuy": 5000000000000000000,
+      "AmountFromSell": 0
+    }
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "AccountId": 1
+    }
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 0,
+      "AccountId": 2
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Amount": 2000000000000000000,
+      "MaxSharePrice": 900000000000000000,
+      "Fee": 100000000000000000,
+      "Timestamp": 3
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 2,
+      "StrategyId": 1,
+      "Amount": 1000000000000000000,
+      "MaxSharePrice": 900000000000000000,
+      "Fee": 100000000000000000,
+      "Timestamp": 4
+    }
+  },
+  {
+    "Sell": {
+      "AccountId": 1,
+      "StrategyId": 1,
+      "Shares": 1000000000000000000,
+      "MinSharePrice": 1100000000000000000,
+      "Timestamp": 5
+    }
+  },
+  {
+    "Sell": {
+      "AccountId": 2,
+      "StrategyId": 1,
+      "Shares": 1000000000000000000,
+      "MinSharePrice": 1100000000000000000,
+      "Timestamp": 6
+    }
+  },
+  {
+    "Sell": {
+      "AccountId": 2,
+      "StrategyId": 1,
+      "Shares": 500000000000000000,
+      "MinSharePrice": 1100000000000000000,
+      "Timestamp": 7
+    }
+  },
+  {
+    "AggregateOrders": {
+      "StrategyId": 1
+    }
+  },
+  {
+    "Buy": {
+      "AccountId": 1,
+      "StrategyId": 2,
+      "Amount": 5000000000000000000,
+      "MaxSharePrice": 1100000000000000000,
+      "Timestamp": 8
+    },
+    "Flag": 99
+  },
+
+  {
+    "ExecutionResult": {
+      "StrategyId": 1,
+      "AggregateId": 1,
+      "Success": false,
+      "SharesFromBuy": 0,
+      "AmountFromSell": 0
+    }
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 1,
+      "AccountId": 1
+    },
+    "Flag": 1
+  },
+  {
+    "Settlement": {
+      "StrategyId": 1,
+      "AggregateId": 1,
+      "AccountId": 2
+    }
+  }
+]
