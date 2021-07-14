@@ -2,6 +2,7 @@ import { getAddress } from '@ethersproject/address';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
+import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { ERC20 } from '../../typechain/ERC20';
@@ -104,11 +105,7 @@ export async function testStrategyCurveEth(
   const assetAddress = getAddress(await strategy.getAssetAddress());
   console.log('----- asset address', assetAddress);
   expect(assetAddress).to.equal(getAddress(weth.address));
-  const assetAmount = await strategy.getAssetAmount();
-  const shares = await strategy.shares();
-  console.log('----- asset amount', assetAmount.toString(), 'shares', shares.toString());
-  expect(assetAmount).to.be.equal(p('0'));
-  const price = await strategy.syncPrice();
+  const price = await strategy.callStatic.syncPrice();
   console.log('----- price after contract deployment', price.toString());
   expect(price).to.equal(p('1'));
 
@@ -125,14 +122,12 @@ export async function testStrategyCurveEth(
   await expect(await strategy.aggregateOrders(p('5'), p('0'), p('4'), p('0')))
     .to.emit(strategy, 'Buy')
     .to.not.emit(strategy, 'Sell');
-  const assetAmount2 = await strategy.getAssetAmount();
-  console.log('----- assetAmount =', assetAmount2.toString());
   const shares2 = await strategy.shares();
-  console.log('----- shares =', shares2.toString());
-  expect(assetAmount2).to.gt(p('4')).to.lt(p('5'));
-  const price2 = await strategy.syncPrice();
+  const price2 = await strategy.callStatic.syncPrice();
   console.log('----- price =', price2.toString());
-  expect(price2).to.equal(p('1'));
+  const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
+  expect(assetAmount2).to.gte(p('4')).to.lt(p('5'));
+  console.log('----- assetAmount =', assetAmount2.toString());
   // ----- assetAmount = 4834446375949041530
   // ----- shares = 4834446375949041530
   // ----- price = 1000000000000000000
@@ -141,13 +136,13 @@ export async function testStrategyCurveEth(
   await expect(strategy.aggregateOrders(p('0'), p('3'), p('0'), p('2')))
     .to.emit(strategy, 'Sell')
     .to.not.emit(strategy, 'Buy');
-  const assetAmount3 = await strategy.getAssetAmount();
-  console.log('----- assetAmount =', assetAmount3.toString());
   const shares3 = await strategy.shares();
   console.log('----- shares =', shares3.toString());
-  expect(assetAmount3).to.gte(p('1')).to.lt(p('2'));
-  const price3 = await strategy.syncPrice();
+  const price3 = await strategy.callStatic.syncPrice();
   console.log('----- price =', price3.toString());
+  const assetAmount3 = price3.mul(shares3).div(BigNumber.from(10).pow(18));
+  expect(assetAmount3).to.gte(p('1')).to.lt(p('2'));
+  console.log('----- assetAmount =', assetAmount3.toString());
   // ----- assetAmount = 1834446375315760224
   // ----- shares = 1732983352112039842
   // ----- price = 1058548181135187646
@@ -156,13 +151,13 @@ export async function testStrategyCurveEth(
   await expect(strategy.aggregateOrders(p('4'), p('1'), p('3'), p('0.5')))
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
-  const assetAmount4 = await strategy.getAssetAmount();
-  console.log('----- assetAmount =', assetAmount4.toString());
   const shares4 = await strategy.shares();
   console.log('----- shares =', shares4.toString());
-  expect(assetAmount4).to.gte(p('4')).to.lt(p('5'));
-  const price4 = await strategy.syncPrice();
+  const price4 = await strategy.callStatic.syncPrice();
   console.log('----- price =', price4.toString());
+  const assetAmount4 = price4.mul(shares4).div(BigNumber.from(10).pow(18));
+  expect(assetAmount4).to.gte(p('4')).to.lt(p('5'));
+  console.log('----- assetAmount =', assetAmount4.toString());
   // ----- assetAmount = 4678499865988281620
   // ----- shares = 4419728358328000258
   // ----- price = 1058549188248794455

@@ -50,9 +50,8 @@ contract StrategyCurveEth is AbstractStrategy {
         supplyTokenIndexInPool = _supplyTokenIndexInPool;
     }
 
-    function getAssetAmount() public view override returns (uint256) {
+    function getAssetAmount() internal view override returns (uint256) {
         uint256 lpTokenBalance = IGauge(gauge).balanceOf(address(this));
-
         return (lpTokenBalance * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
     }
 
@@ -98,6 +97,9 @@ contract StrategyCurveEth is AbstractStrategy {
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
 
         if (crvBalance > 0) {
+            uint256 originalEthBalance = address(this).balance;
+            uint256 originalLpTokenBalance = IERC20(lpToken).balanceOf(address(this));
+
             // Sell CRV for more supply token
             IERC20(crv).safeIncreaseAllowance(uniswap, crvBalance);
 
@@ -114,7 +116,7 @@ contract StrategyCurveEth is AbstractStrategy {
             );
 
             // Re-invest supply token to obtain more lpToken
-            uint256 obtainedAssetAmount = address(this).balance;
+            uint256 obtainedAssetAmount = address(this).balance - originalEthBalance;
             uint256 minMintAmount = (((obtainedAssetAmount * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price()) *
                 (SLIPPAGE_DENOMINATOR - slippage)) / SLIPPAGE_DENOMINATOR;
             uint256[2] memory amounts;
@@ -122,7 +124,7 @@ contract StrategyCurveEth is AbstractStrategy {
             ICurveFi(pool).add_liquidity{value: obtainedAssetAmount}(amounts, minMintAmount);
 
             // Stake lpToken in Gauge to farm more CRV
-            uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this));
+            uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this)) - originalLpTokenBalance;
             IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpToken);
             IGauge(gauge).deposit(obtainedLpToken);
         }

@@ -51,7 +51,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         supplyTokenIndexInPool = _supplyTokenIndexInPool;
     }
 
-    function getAssetAmount() public view override returns (uint256) {
+    function getAssetAmount() internal view override returns (uint256) {
         return IERC20(lpToken).balanceOf(address(msg.sender)) / ICurveFi(pool).get_virtual_price() / PRICE_DECIMALS;
     }
 
