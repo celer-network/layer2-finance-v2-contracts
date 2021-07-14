@@ -122,7 +122,9 @@ export async function testStrategyCurveEth(
   console.log('----- slippage', newSlippage.toString());
 
   console.log('\n>>> aggregateOrders #1 -> buy 5 sell 0');
-  await expect(strategy.aggregateOrders(p('5'), p('0'), p('4'), p('0')));
+  await expect(await strategy.aggregateOrders(p('5'), p('0'), p('4'), p('0')))
+    .to.emit(strategy, 'Buy')
+    .to.not.emit(strategy, 'Sell');
   const assetAmount2 = await strategy.getAssetAmount();
   console.log('----- assetAmount =', assetAmount2.toString());
   const shares2 = await strategy.shares();
@@ -131,9 +133,14 @@ export async function testStrategyCurveEth(
   const price2 = await strategy.syncPrice();
   console.log('----- price =', price2.toString());
   expect(price2).to.equal(p('1'));
+  // ----- assetAmount = 4834446375949041530
+  // ----- shares = 4834446375949041530
+  // ----- price = 1000000000000000000
 
   console.log('\n>>> aggregateOrders #2 -> buy 0 sell 3');
-  await expect(strategy.aggregateOrders(p('0'), p('3'), p('0'), p('2')));
+  await expect(strategy.aggregateOrders(p('0'), p('3'), p('0'), p('2')))
+    .to.emit(strategy, 'Sell')
+    .to.not.emit(strategy, 'Buy');
   const assetAmount3 = await strategy.getAssetAmount();
   console.log('----- assetAmount =', assetAmount3.toString());
   const shares3 = await strategy.shares();
@@ -141,9 +148,14 @@ export async function testStrategyCurveEth(
   expect(assetAmount3).to.gte(p('1')).to.lt(p('2'));
   const price3 = await strategy.syncPrice();
   console.log('----- price =', price3.toString());
+  // ----- assetAmount = 1834446375315760224
+  // ----- shares = 1732983352112039842
+  // ----- price = 1058548181135187646
 
   console.log('\n>>> aggregateOrders #3 -> buy 4 sell 3');
-  await expect(strategy.aggregateOrders(p('4'), p('3'), p('3'), p('2')));
+  await expect(strategy.aggregateOrders(p('4'), p('3'), p('3'), p('2')))
+    .to.emit(strategy, 'Buy')
+    .to.emit(strategy, 'Sell');
   const assetAmount4 = await strategy.getAssetAmount();
   console.log('----- assetAmount =', assetAmount4.toString());
   const shares4 = await strategy.shares();
@@ -151,14 +163,10 @@ export async function testStrategyCurveEth(
   expect(assetAmount4).to.gte(p('2')).to.lt(p('3'));
   const price4 = await strategy.syncPrice();
   console.log('----- price =', price4.toString());
+  // ----- assetAmount = 2631506827731986772
+  // ----- shares = 2485958480489992235
+  // ----- price = 1058548181067491675
 
   console.log('\n>>> aggregateOrders #4 -> buy 1 sell 4');
-  await expect(strategy.aggregateOrders(p('1'), p('4'), p('0.5'), p('3')));
-  const assetAmount5 = await strategy.getAssetAmount();
-  console.log('----- assetAmount =', assetAmount5.toString());
-  const shares5 = await strategy.shares();
-  console.log('----- shares =', shares5.toString());
-  expect(assetAmount5).to.gte(p('2')).to.lt(p('3'));
-  const price5 = await strategy.syncPrice();
-  console.log('----- price =', price5.toString());
+  await expect(strategy.aggregateOrders(p('1'), p('4'), p('0.5'), p('3'))).to.throw('not enough shares to sell');
 }

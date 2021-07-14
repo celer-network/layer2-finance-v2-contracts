@@ -26,6 +26,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
     address public uniswap;
     address public crv;
     address public weth;
+    address public lpToken;
     uint8 public supplyTokenIndexInPool = 0;
 
     constructor(
@@ -39,14 +40,15 @@ contract StrategyCurve3Pool is AbstractStrategy {
         address _crv,
         address _weth,
         address _uniswap
-    ) AbstractStrategy(_controller, _supplyToken, _lpToken) {
-        supplyTokenIndexInPool = _supplyTokenIndexInPool;
+    ) AbstractStrategy(_controller, _supplyToken) {
         pool = _pool;
         gauge = _gauge;
         mintr = _mintr;
         crv = _crv;
         weth = _weth;
         uniswap = _uniswap;
+        lpToken = _lpToken;
+        supplyTokenIndexInPool = _supplyTokenIndexInPool;
     }
 
     function getAssetAmount() public view override returns (uint256) {
@@ -80,6 +82,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         uint256 minAmountFromSell = (_sellAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
         ICurveFi(pool).remove_liquidity_one_coin(sellLpTokens, int8(supplyTokenIndexInPool), minAmountFromSell);
         uint256 obtainedSupplyToken = IERC20(supplyToken).balanceOf(address(this));
+        IERC20(supplyToken).safeTransfer(msg.sender, obtainedSupplyToken);
 
         return obtainedSupplyToken;
     }

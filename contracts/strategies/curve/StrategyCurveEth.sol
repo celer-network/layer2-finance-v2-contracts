@@ -27,6 +27,7 @@ contract StrategyCurveEth is AbstractStrategy {
     address public mintr;
     address public uniswap;
     address public crv;
+    address public lpToken;
     uint8 public supplyTokenIndexInPool = 0;
 
     constructor(
@@ -39,17 +40,19 @@ contract StrategyCurveEth is AbstractStrategy {
         address _mintr,
         address _crv,
         address _uniswap
-    ) AbstractStrategy(_controller, _supplyToken, _lpToken) {
-        supplyTokenIndexInPool = _supplyTokenIndexInPool;
+    ) AbstractStrategy(_controller, _supplyToken) {
         pool = _pool;
         gauge = _gauge;
         mintr = _mintr;
         crv = _crv;
         uniswap = _uniswap;
+        lpToken = _lpToken;
+        supplyTokenIndexInPool = _supplyTokenIndexInPool;
     }
 
     function getAssetAmount() public view override returns (uint256) {
         uint256 lpTokenBalance = IGauge(gauge).balanceOf(address(this));
+
         return (lpTokenBalance * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
     }
 
@@ -65,13 +68,9 @@ contract StrategyCurveEth is AbstractStrategy {
         ICurveFi(pool).add_liquidity{value: _buyAmount}(amounts, minAmountFromBuy);
         uint256 obtainedLpTokens = IERC20(lpToken).balanceOf(address(this));
 
-        console.log("obtainedLpTokens", obtainedLpTokens);
-
         // deposit bought LP tokens to curve gauge to farm CRV
         IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpTokens);
         IGauge(gauge).deposit(obtainedLpTokens);
-
-        console.log("lpToken balance in gauge", IGauge(gauge).balanceOf(address(this)));
 
         uint256 obtainedUnderlyingAsset = (obtainedLpTokens * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
         return obtainedUnderlyingAsset;
@@ -87,6 +86,7 @@ contract StrategyCurveEth is AbstractStrategy {
         ICurveFi(pool).remove_liquidity_one_coin(sellLpTokens, int8(supplyTokenIndexInPool), minAmountFromSell);
         uint256 obtainedSupplyToken = address(this).balance;
         IWETH(supplyToken).deposit{value: obtainedSupplyToken}();
+        IERC20(supplyToken).safeTransfer(msg.sender, obtainedSupplyToken);
 
         return obtainedSupplyToken;
     }
