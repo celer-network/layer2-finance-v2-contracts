@@ -121,7 +121,6 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         uint256 assetAmountBeforeSell = getAssetAmount();
         uint256 sellAmount = (_sellShares * this.syncPrice()) / PRICE_DECIMALS;
         uint256 redeemedUnderlyingAsset = sell(sellAmount);
-        IERC20(supplyToken).safeTransfer(msg.sender, redeemedUnderlyingAsset);
         uint256 actualSharesFromSell = (redeemedUnderlyingAsset * shares) / assetAmountBeforeSell;
         shares -= actualSharesFromSell;
         return redeemedUnderlyingAsset;
