@@ -20,18 +20,12 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
     address public controller;
     address public supplyToken;
-    address public lpToken;
 
     uint256 public shares;
 
-    constructor(
-        address _controller,
-        address _supplyToken,
-        address _lpToken
-    ) {
+    constructor(address _controller, address _supplyToken) {
         controller = _controller;
         supplyToken = _supplyToken;
-        lpToken = _lpToken;
     }
 
     modifier onlyController() {
@@ -99,11 +93,14 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             uint256 actualAmountFromSell = _doSell(sellShares);
             totalAmountFromSell = actualAmountFromSell + _buyAmount;
             require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
-            return (sharesFromBuy, totalAmountFromSell);
         }
 
-        emit Buy(_buyAmount, totalSharesFromBuy);
-        emit Sell(_sellShares, totalAmountFromSell);
+        if (totalSharesFromBuy > 0) {
+            emit Buy(_buyAmount, totalSharesFromBuy);
+        }
+        if (totalAmountFromSell > 0) {
+            emit Sell(_sellShares, totalAmountFromSell);
+        }
         return (totalSharesFromBuy, totalAmountFromSell);
     }
 
