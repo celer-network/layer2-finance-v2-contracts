@@ -14,4 +14,6 @@ interface IGauge {
     function rewarded_token() external returns (address);
 
     function reward_tokens(uint256) external returns (address);
+
+    function claimable_tokens(address) external returns (uint256);
 }

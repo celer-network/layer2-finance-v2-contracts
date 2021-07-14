@@ -123,6 +123,7 @@ export async function testStrategyCurveEth(
     .to.emit(strategy, 'Buy')
     .to.not.emit(strategy, 'Sell');
   const shares2 = await strategy.shares();
+  console.log('----- shares =', shares2.toString());
   const price2 = await strategy.callStatic.syncPrice();
   console.log('----- price =', price2.toString());
   const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
@@ -164,4 +165,38 @@ export async function testStrategyCurveEth(
 
   console.log('\n>>> aggregateOrders #4 -> buy 1 sell 8');
   await expect(strategy.aggregateOrders(p('1'), p('8'), p('0.5'), p('7'))).to.revertedWith('not enough shares to sell');
+
+  const harvestGas = await strategy.estimateGas.harvest();
+  console.log('\n>>> estimated harvest gas =', harvestGas.toString());
+  if (harvestGas.gt(2000000)) {
+    console.log('Harvest gas is greater than 2mil!');
+  }
+
+  console.log('\n>>> harvest #1 after 0.5 days');
+  await ethers.provider.send('evm_increaseTime', [60 * 60 * 12]);
+  const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
+  const receipt = await harvestTx.wait();
+  console.log('---- gas used =', receipt.gasUsed.toString());
+  const price5 = await strategy.callStatic.syncPrice();
+  const shares5 = await strategy.shares();
+  const assetAmount5 = price5.mul(shares4).div(BigNumber.from(10).pow(18));
+  console.log('---- shares =', shares5.toString());
+  console.log('---- price =', price5.toString());
+  console.log('---- assetAmount =', assetAmount5.toString());
+  expect(shares5).to.eq(shares4);
+  expect(assetAmount5).to.gte(assetAmount4);
+
+  console.log('\n>>> harvest #2 after another 0.5 days');
+  await ethers.provider.send('evm_increaseTime', [60 * 60 * 12]);
+  const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
+  const receipt2 = await harvestTx2.wait();
+  console.log('---- gas used =', receipt2.gasUsed.toString());
+  const price6 = await strategy.callStatic.syncPrice();
+  const shares6 = await strategy.shares();
+  const assetAmount6 = price6.mul(shares4).div(BigNumber.from(10).pow(18));
+  console.log('---- shares =', shares6.toString());
+  console.log('---- price =', price6.toString());
+  console.log('---- assetAmount =', assetAmount6.toString());
+  expect(shares6).to.eq(shares4);
+  expect(assetAmount6).to.gte(assetAmount4);
 }
