@@ -80,8 +80,8 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             sharesFromBuy = (_buyAmount * PRICE_DECIMALS) / sharePrice;
         }
 
-        uint256 totalSharesFromBuy = amountFromSell;
-        uint256 totalAmountFromSell = sharesFromBuy;
+        uint256 totalSharesFromBuy = sharesFromBuy;
+        uint256 totalAmountFromSell = amountFromSell;
 
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
@@ -90,6 +90,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             require(totalSharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
         } else if (amountFromSell > _buyAmount) {
             uint256 sellShares = _sellShares - sharesFromBuy;
+            require(shares >= sellShares, "not enough shares to sell");
             uint256 actualAmountFromSell = _doSell(sellShares);
             totalAmountFromSell = actualAmountFromSell + _buyAmount;
             require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
