@@ -68,6 +68,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
         require(msg.sender == controller, "Not controller");
+        require(shares >= _sellShares, "not enough shares to sell");
 
         uint256 amountFromSell;
         uint256 sharesFromBuy;
@@ -80,8 +81,8 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             sharesFromBuy = (_buyAmount * PRICE_DECIMALS) / sharePrice;
         }
 
-        uint256 totalSharesFromBuy = amountFromSell;
-        uint256 totalAmountFromSell = sharesFromBuy;
+        uint256 totalSharesFromBuy = sharesFromBuy;
+        uint256 totalAmountFromSell = amountFromSell;
 
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
