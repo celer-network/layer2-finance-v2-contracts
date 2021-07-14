@@ -41,7 +41,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
     /**
      * @return The underlying asset amount of the supply token with 18 decimals
      */
-    function getAssetAmount() public view virtual returns (uint256);
+    function getAssetAmount() internal virtual returns (uint256);
 
     /**
      * @notice Buys lp token from defi contract
@@ -127,7 +127,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         return redeemedUnderlyingAsset;
     }
 
-    function syncPrice() external view override returns (uint256) {
+    function syncPrice() external override returns (uint256) {
         uint256 assetAmount = getAssetAmount();
         if (shares == 0) {
             if (assetAmount == 0) {
