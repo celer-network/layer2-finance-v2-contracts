@@ -9,12 +9,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IStrategy.sol";
 
+import "hardhat/console.sol";
+
 abstract contract AbstractStrategy is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
 
     uint256 constant MAX_INT = 2**256 - 1;
-    uint256 constant PRICE_DECIMALS = 1e8;
+    uint256 constant PRICE_DECIMALS = 1e18;
 
     address public controller;
     address public supplyToken;
@@ -62,7 +64,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
     function sell(uint256 _sellAmount) internal virtual returns (uint256);
 
     function getAssetAddress() external view override returns (address) {
-        return lpToken;
+        return supplyToken;
     }
 
     function aggregateOrders(
@@ -72,14 +74,12 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         uint256 _minAmountFromSell
     ) external override onlyController returns (uint256, uint256) {
         require(msg.sender == controller, "Not controller");
-        require(shares >= _sellShares, "not enough shares to sell");
 
         uint256 amountFromSell;
         uint256 sharesFromBuy;
         uint256 sharePrice = this.syncPrice();
 
         if (shares == 0) {
-            shares = _buyAmount;
             sharesFromBuy = _buyAmount;
         } else {
             amountFromSell = (_sellShares * sharePrice) / PRICE_DECIMALS;
@@ -89,7 +89,6 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
             uint256 actualSharesFromBuy = _doBuy(buyAmount);
-            shares += actualSharesFromBuy;
             uint256 totalSharesFromBuy = actualSharesFromBuy + _sellShares;
             require(totalSharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
             emit Buy(_buyAmount, totalSharesFromBuy);
@@ -98,7 +97,6 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         } else if (amountFromSell > _buyAmount) {
             uint256 sellShares = _sellShares - sharesFromBuy;
             uint256 actualAmountFromSell = _doSell(sellShares);
-            shares -= actualAmountFromSell / this.syncPrice();
             uint256 totalAmountFromSell = actualAmountFromSell + _buyAmount;
             require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
             emit Buy(_buyAmount, sharesFromBuy);
@@ -111,23 +109,27 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         return (sharesFromBuy, amountFromSell);
     }
 
-    function _getLpTokenPrice() private view returns (uint256) {
-        return (IERC20(lpToken).balanceOf(address(msg.sender)) * PRICE_DECIMALS) / getAssetAmount();
-    }
-
     function _doBuy(uint256 _buyAmount) private returns (uint256) {
-        uint256 lpTokenPrice = _getLpTokenPrice();
+        uint256 assetAmountBeforeBuy = getAssetAmount();
         uint256 obtainedUnderlyingAsset = buy(_buyAmount);
-        uint256 actualSharesFromBuy = (obtainedUnderlyingAsset * shares) /
-            (obtainedUnderlyingAsset + IERC20(lpToken).balanceOf(address(msg.sender)) / lpTokenPrice);
+        uint256 actualSharesFromBuy;
+        if (shares == 0) {
+            actualSharesFromBuy = obtainedUnderlyingAsset;
+        } else {
+            actualSharesFromBuy = (obtainedUnderlyingAsset * shares) / assetAmountBeforeBuy;
+        }
+        shares += actualSharesFromBuy;
         return actualSharesFromBuy;
     }
 
     function _doSell(uint256 _sellShares) private returns (uint256) {
+        uint256 assetAmountBeforeSell = getAssetAmount();
         uint256 sellAmount = (_sellShares * this.syncPrice()) / PRICE_DECIMALS;
-        uint256 actualAmountFromSell = sell(sellAmount);
-        IERC20(supplyToken).safeTransfer(msg.sender, actualAmountFromSell);
-        return actualAmountFromSell;
+        uint256 redeemedUnderlyingAsset = sell(sellAmount);
+        IERC20(supplyToken).safeTransfer(msg.sender, redeemedUnderlyingAsset);
+        uint256 actualSharesFromSell = (redeemedUnderlyingAsset * shares) / assetAmountBeforeSell;
+        shares -= actualSharesFromSell;
+        return redeemedUnderlyingAsset;
     }
 
     function syncPrice() external view override returns (uint256) {
