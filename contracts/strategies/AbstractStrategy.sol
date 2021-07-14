@@ -86,27 +86,25 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
             sharesFromBuy = (_buyAmount * PRICE_DECIMALS) / sharePrice;
         }
 
+        uint256 totalSharesFromBuy = amountFromSell;
+        uint256 totalAmountFromSell = sharesFromBuy;
+
         if (amountFromSell < _buyAmount) {
             uint256 buyAmount = _buyAmount - amountFromSell;
             uint256 actualSharesFromBuy = _doBuy(buyAmount);
-            uint256 totalSharesFromBuy = actualSharesFromBuy + _sellShares;
+            totalSharesFromBuy = actualSharesFromBuy + _sellShares;
             require(totalSharesFromBuy >= _minSharesFromBuy, "failed min shares from buy");
-            emit Buy(_buyAmount, totalSharesFromBuy);
-            emit Sell(_sellShares, amountFromSell);
-            return (totalSharesFromBuy, amountFromSell);
         } else if (amountFromSell > _buyAmount) {
             uint256 sellShares = _sellShares - sharesFromBuy;
             uint256 actualAmountFromSell = _doSell(sellShares);
-            uint256 totalAmountFromSell = actualAmountFromSell + _buyAmount;
+            totalAmountFromSell = actualAmountFromSell + _buyAmount;
             require(totalAmountFromSell >= _minAmountFromSell, "failed min amount from sell");
-            emit Buy(_buyAmount, sharesFromBuy);
-            emit Sell(_sellShares, totalAmountFromSell);
-            return (sharesFromBuy, actualAmountFromSell);
+            return (sharesFromBuy, totalAmountFromSell);
         }
 
-        emit Buy(_buyAmount, sharesFromBuy);
-        emit Sell(_sellShares, amountFromSell);
-        return (sharesFromBuy, amountFromSell);
+        emit Buy(_buyAmount, totalSharesFromBuy);
+        emit Sell(_sellShares, totalAmountFromSell);
+        return (totalSharesFromBuy, totalAmountFromSell);
     }
 
     function _doBuy(uint256 _buyAmount) private returns (uint256) {
