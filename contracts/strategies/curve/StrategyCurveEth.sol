@@ -13,11 +13,13 @@ import "../interfaces/curve/IGauge.sol";
 import "../interfaces/curve/IMintr.sol";
 import "../AbstractStrategy.sol";
 
+import "hardhat/console.sol";
+
 contract StrategyCurveEth is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    uint256 public constant SLIPPAGE_NUMERATOR = 500;
+    uint256 public slippage = 500;
     uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
 
     address public pool;
@@ -47,7 +49,8 @@ contract StrategyCurveEth is AbstractStrategy {
     }
 
     function getAssetAmount() public view override returns (uint256) {
-        return IERC20(lpToken).balanceOf(address(msg.sender)) / ICurveFi(pool).get_virtual_price() / PRICE_DECIMALS;
+        uint256 lpTokenBalance = IGauge(gauge).balanceOf(address(this));
+        return (lpTokenBalance * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -58,15 +61,20 @@ contract StrategyCurveEth is AbstractStrategy {
         // add liquidity in pool
         uint256[2] memory amounts;
         amounts[supplyTokenIndexInPool] = _buyAmount;
-        uint256 minAmountFromBuy = (_buyAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+        uint256 minAmountFromBuy = (_buyAmount * (SLIPPAGE_DENOMINATOR - slippage)) / SLIPPAGE_DENOMINATOR;
         ICurveFi(pool).add_liquidity{value: _buyAmount}(amounts, minAmountFromBuy);
         uint256 obtainedLpTokens = IERC20(lpToken).balanceOf(address(this));
+
+        console.log("obtainedLpTokens", obtainedLpTokens);
 
         // deposit bought LP tokens to curve gauge to farm CRV
         IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpTokens);
         IGauge(gauge).deposit(obtainedLpTokens);
 
-        return obtainedLpTokens;
+        console.log("lpToken balance in gauge", IGauge(gauge).balanceOf(address(this)));
+
+        uint256 obtainedUnderlyingAsset = (obtainedLpTokens * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
+        return obtainedUnderlyingAsset;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
@@ -75,7 +83,7 @@ contract StrategyCurveEth is AbstractStrategy {
         IGauge(gauge).withdraw(sellLpTokens);
 
         // remove liquidity from pool
-        uint256 minAmountFromSell = (_sellAmount * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+        uint256 minAmountFromSell = (_sellAmount * (SLIPPAGE_DENOMINATOR - slippage)) / SLIPPAGE_DENOMINATOR;
         ICurveFi(pool).remove_liquidity_one_coin(sellLpTokens, int8(supplyTokenIndexInPool), minAmountFromSell);
         uint256 obtainedSupplyToken = address(this).balance;
         IWETH(supplyToken).deposit{value: obtainedSupplyToken}();
@@ -106,7 +114,7 @@ contract StrategyCurveEth is AbstractStrategy {
             // Re-invest supply token to obtain more lpToken
             uint256 obtainedAssetAmount = address(this).balance;
             uint256 minMintAmount = (((obtainedAssetAmount * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price()) *
-                SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+                (SLIPPAGE_DENOMINATOR - slippage)) / SLIPPAGE_DENOMINATOR;
             uint256[2] memory amounts;
             amounts[supplyTokenIndexInPool] = obtainedAssetAmount;
             ICurveFi(pool).add_liquidity{value: obtainedAssetAmount}(amounts, minMintAmount);
@@ -117,4 +125,13 @@ contract StrategyCurveEth is AbstractStrategy {
             IGauge(gauge).deposit(obtainedLpToken);
         }
     }
+
+    function setSlippage(uint256 _slippage) external onlyOwner {
+        slippage = _slippage;
+    }
+
+    // This is needed to receive ETH when calling `ICurveFi.remove_liquidity_one_coin` and `IWETH.withdraw`
+    receive() external payable {}
+
+    fallback() external payable {}
 }
