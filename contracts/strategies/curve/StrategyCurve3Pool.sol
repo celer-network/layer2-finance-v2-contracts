@@ -70,6 +70,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         // deposit bought LP tokens to curve gauge to farm CRV
         IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpTokens);
         IGauge(gauge).deposit(obtainedLpTokens);
+
         uint256 obtainedUnderlyingAsset = ((obtainedLpTokens * ICurveFi(pool).get_virtual_price()) / decimalDiff) /
             PRICE_DECIMALS;
         return obtainedUnderlyingAsset;
@@ -91,15 +92,17 @@ contract StrategyCurve3Pool is AbstractStrategy {
     }
 
     function harvest() external override onlyOwnerOrController {
+        console.log("supplyTokenIndex", supplyTokenIndexInPool);
+        console.log("lp balance at gauge", IGauge(gauge).balanceOf(address(this)));
         IMintr(mintr).mint(gauge);
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+        console.log("minted crv", crvBalance);
 
         if (crvBalance > 0) {
             uint256 originalBalance = IERC20(supplyToken).balanceOf(address(this));
 
             // Sell CRV for more supply token
             IERC20(crv).safeIncreaseAllowance(uniswap, crvBalance);
-
             address[] memory path = new address[](3);
             path[0] = crv;
             path[1] = weth;
@@ -130,7 +133,9 @@ contract StrategyCurve3Pool is AbstractStrategy {
         uint256[3] memory amounts;
         amounts[supplyTokenIndexInPool] = _buyAmount;
         IERC20(supplyToken).safeIncreaseAllowance(pool, _buyAmount);
+        console.log("_buyAmount", _buyAmount, "minMintAmount", minMintAmount);
         ICurveFi(pool).add_liquidity(amounts, minMintAmount);
+
         uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this)) - originalLpTokenBalance;
         return obtainedLpToken;
     }

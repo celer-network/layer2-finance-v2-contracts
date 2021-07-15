@@ -17,12 +17,14 @@ const ETH_DECIMALS = 18;
 
 interface IDeployInfo {
   strategy: StrategyCurveEth;
-  weth: ERC20;
+  supplyTokenContract: ERC20;
   deployerSigner: SignerWithAddress;
 }
 
 async function deploy(
   deployedAddress: string | undefined,
+  supplyToken: string,
+  supplyTokenDecimal: number,
   supplyTokenIndex: number,
   poolAddress: string,
   lpTokenAddress: string,
@@ -55,7 +57,7 @@ async function deploy(
       .deploy(
         deployerSigner.address,
         lpTokenAddress,
-        process.env.DAI as string,
+        supplyToken,
         supplyTokenIndex,
         poolAddress,
         gaugeAddress,
@@ -63,22 +65,28 @@ async function deploy(
         process.env.CURVE_CRV as string,
         process.env.WETH as string,
         process.env.UNISWAP_ROUTER as string,
-        18
+        supplyTokenDecimal
       );
     await strategy.deployed();
     console.log('strategy address', strategy.address);
   }
 
-  const weth = ERC20__factory.connect(process.env.DAI as string, deployerSigner);
+  const supplyTokenContract = ERC20__factory.connect(supplyToken, deployerSigner);
 
-  return { strategy, weth, deployerSigner };
+  return { strategy, supplyTokenContract, deployerSigner };
 }
 
-const p = parseEther;
+const getUnitParser = (decimals: number) => {
+  return (value: string) => {
+    return parseUnits(value, decimals);
+  };
+};
 
 export async function testStrategyCurve3Pool(
   context: Mocha.Context,
   deployedAddress: string | undefined,
+  supplyToken: string,
+  supplyTokenDecimal: number,
   index: number,
   poolAddress: string,
   lpTokenAddress: string,
@@ -96,25 +104,40 @@ export async function testStrategyCurve3Pool(
   );
 
   context.timeout(300000);
-  const { strategy, weth, deployerSigner } = await deploy(
+  const { strategy, supplyTokenContract, deployerSigner } = await deploy(
     deployedAddress,
+    supplyToken,
+    supplyTokenDecimal,
     index,
     poolAddress,
     lpTokenAddress,
     gaugeAddress
   );
 
+  const p = getUnitParser(supplyTokenDecimal);
+
   console.log('\n>>> ensuring contract deployment');
   const assetAddress = getAddress(await strategy.getAssetAddress());
   console.log('----- asset address', assetAddress);
-  expect(assetAddress).to.equal(getAddress(weth.address));
+  expect(assetAddress).to.equal(getAddress(supplyToken));
   const price = await strategy.callStatic.syncPrice();
   console.log('----- price after contract deployment', price.toString());
-  expect(price).to.equal(p('1'));
+  expect(price).to.equal(parseEther('1'));
 
   console.log('\n>>> ensuring balance and approval...');
-  const balance = parseUnits('10', ETH_DECIMALS);
-  await ensureBalanceAndApproval(weth, 'WETH', balance, deployerSigner, strategy.address, supplyTokenFunder);
+  const fundAmount = parseUnits('10', supplyTokenDecimal);
+  const supplyTokenBalanceBefore = await supplyTokenContract.balanceOf(deployerSigner.address);
+  console.log('----- supplyTokenBalance', supplyTokenBalanceBefore.toString());
+  await ensureBalanceAndApproval(
+    supplyTokenContract,
+    '',
+    fundAmount,
+    deployerSigner,
+    strategy.address,
+    supplyTokenFunder
+  );
+  const supplyTokenBalance = await supplyTokenContract.balanceOf(deployerSigner.address);
+  console.log('----- supplyTokenBalance', supplyTokenBalance.toString());
 
   console.log('\n>>> set slippage to 10%');
   await strategy.setSlippage(1000);
@@ -168,6 +191,7 @@ export async function testStrategyCurve3Pool(
 
   console.log('\n>>> aggregateOrders #4 -> buy 1 sell 8');
   await expect(strategy.aggregateOrders(p('1'), p('8'), p('0.5'), p('7'))).to.revertedWith('not enough shares to sell');
+  console.log('----- reverted');
 
   const harvestGas = await strategy.estimateGas.harvest();
   console.log('\n>>> estimated harvest gas =', harvestGas.toString());

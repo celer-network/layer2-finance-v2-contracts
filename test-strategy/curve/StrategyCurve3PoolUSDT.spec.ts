@@ -3,18 +3,18 @@ import { testStrategyCurve3Pool } from './StrategyCurve3Pool.spec';
 
 dotenv.config();
 
-describe('StrategyCurve3PoolDAI', async function () {
+describe('StrategyCurve3PoolUSDT', async function () {
   it('should work', async function () {
     await testStrategyCurve3Pool(
       this,
-      process.env.STRATEGY_CURVE_3POOL_DAI,
-      process.env.DAI as string,
-      18,
-      0,
+      process.env.STRATEGY_CURVE_3POOL_USDT,
+      process.env.USDT as string,
+      6,
+      2,
       process.env.CURVE_3POOL as string,
       process.env.CURVE_3POOL_3CRV as string,
       process.env.CURVE_3POOL_GAUGE as string,
-      process.env.DAI_FUNDER as string
+      process.env.USDT_FUNDER as string
     );
   });
 });
