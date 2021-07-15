@@ -52,7 +52,7 @@ contract StrategyCurveEth is AbstractStrategy {
 
     function getAssetAmount() internal view override returns (uint256) {
         uint256 lpTokenBalance = IGauge(gauge).balanceOf(address(this));
-        return (lpTokenBalance * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
+        return (lpTokenBalance * ICurveFi(pool).get_virtual_price()) / PRICE_DECIMALS;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -72,12 +72,12 @@ contract StrategyCurveEth is AbstractStrategy {
         IERC20(lpToken).safeIncreaseAllowance(gauge, obtainedLpTokens);
         IGauge(gauge).deposit(obtainedLpTokens);
 
-        uint256 obtainedUnderlyingAsset = (obtainedLpTokens * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
+        uint256 obtainedUnderlyingAsset = (obtainedLpTokens * ICurveFi(pool).get_virtual_price()) / PRICE_DECIMALS;
         return obtainedUnderlyingAsset;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
-        uint256 sellLpTokens = (_sellAmount * ICurveFi(pool).get_virtual_price()) / PRICE_DECIMALS;
+        uint256 sellLpTokens = (_sellAmount * PRICE_DECIMALS) / ICurveFi(pool).get_virtual_price();
         uint256 balanceBeforeSell = address(this).balance;
         // unstake from needed lpTokens for sell from gauge
         IGauge(gauge).withdraw(sellLpTokens);

@@ -5,9 +5,9 @@ import * as dotenv from 'dotenv';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { StrategyCurve3Pool__factory } from '../../typechain';
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
-import { StrategyCurveEth__factory } from '../../typechain/factories/StrategyCurveEth__factory';
 import { StrategyCurveEth } from '../../typechain/StrategyCurveEth';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
@@ -15,87 +15,90 @@ dotenv.config();
 
 const ETH_DECIMALS = 18;
 
-interface DeployStrategyCurveEthInfo {
+interface IDeployInfo {
   strategy: StrategyCurveEth;
   weth: ERC20;
   deployerSigner: SignerWithAddress;
 }
 
-async function deployStrategyCurveEth(
+async function deploy(
   deployedAddress: string | undefined,
-  ethIndexInPool: number,
+  supplyTokenIndex: number,
   poolAddress: string,
   lpTokenAddress: string,
   gaugeAddress: string
-): Promise<DeployStrategyCurveEthInfo> {
+): Promise<IDeployInfo> {
   const deployerSigner = await getDeployerSigner();
 
   let strategy: StrategyCurveEth;
 
   // connect to strategy contract, deploy the contract if it's not deployed yet
   if (deployedAddress) {
-    strategy = StrategyCurveEth__factory.connect(deployedAddress, deployerSigner);
+    strategy = StrategyCurve3Pool__factory.connect(deployedAddress, deployerSigner);
   } else {
-    const strategyCurveEthFactory = (await ethers.getContractFactory('StrategyCurveEth')) as StrategyCurveEth__factory;
+    const factory = (await ethers.getContractFactory('StrategyCurve3Pool')) as StrategyCurve3Pool__factory;
     console.log(
-      'Deploying strategy contract',
-      deployerSigner.address,
-      lpTokenAddress,
-      process.env.WETH as string,
-      ethIndexInPool,
-      poolAddress,
-      gaugeAddress,
-      process.env.CURVE_MINTR as string,
-      process.env.CURVE_CRV as string,
-      process.env.UNISWAP_ROUTER as string
+      'Deploying strategy contract\n',
+      deployerSigner.address + '\n',
+      lpTokenAddress + '\n',
+      (process.env.CURVE_3POOL_3CRV as string) + '\n',
+      supplyTokenIndex + '\n',
+      poolAddress + '\n',
+      gaugeAddress + '\n',
+      (process.env.CURVE_MINTR as string) + '\n',
+      (process.env.CURVE_CRV as string) + '\n',
+      (process.env.WETH as string) + '\n',
+      (process.env.UNISWAP_ROUTER as string) + '\n'
     );
-    strategy = await strategyCurveEthFactory
+    strategy = await factory
       .connect(deployerSigner)
       .deploy(
         deployerSigner.address,
         lpTokenAddress,
-        process.env.WETH as string,
-        ethIndexInPool,
+        process.env.DAI as string,
+        supplyTokenIndex,
         poolAddress,
         gaugeAddress,
         process.env.CURVE_MINTR as string,
         process.env.CURVE_CRV as string,
-        process.env.UNISWAP_ROUTER as string
+        process.env.WETH as string,
+        process.env.UNISWAP_ROUTER as string,
+        18
       );
     await strategy.deployed();
     console.log('strategy address', strategy.address);
   }
 
-  const weth = ERC20__factory.connect(process.env.WETH as string, deployerSigner);
+  const weth = ERC20__factory.connect(process.env.DAI as string, deployerSigner);
 
   return { strategy, weth, deployerSigner };
 }
 
 const p = parseEther;
 
-export async function testStrategyCurveEth(
+export async function testStrategyCurve3Pool(
   context: Mocha.Context,
   deployedAddress: string | undefined,
-  ethIndexInPool: number,
+  index: number,
   poolAddress: string,
   lpTokenAddress: string,
   gaugeAddress: string,
   supplyTokenFunder: string
 ): Promise<void> {
   console.log(
-    'Testing strategy with params',
-    deployedAddress,
-    ethIndexInPool,
-    poolAddress,
-    lpTokenAddress,
-    gaugeAddress,
-    supplyTokenFunder
+    'Testing strategy with params \n',
+    deployedAddress + '\n',
+    index + '\n',
+    poolAddress + '\n',
+    lpTokenAddress + '\n',
+    gaugeAddress + '\n',
+    supplyTokenFunder + '\n'
   );
 
   context.timeout(300000);
-  const { strategy, weth, deployerSigner } = await deployStrategyCurveEth(
+  const { strategy, weth, deployerSigner } = await deploy(
     deployedAddress,
-    ethIndexInPool,
+    index,
     poolAddress,
     lpTokenAddress,
     gaugeAddress
