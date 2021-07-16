@@ -166,14 +166,13 @@ export async function testStrategyCurveEth(
   console.log('\n>>> aggregateOrders #4 -> buy 1 sell 8');
   await expect(strategy.aggregateOrders(p('1'), p('8'), p('0.5'), p('7'))).to.revertedWith('not enough shares to sell');
 
+  console.log('\n>>> harvest #1 after 1 days');
+  await ethers.provider.send('evm_increaseTime', [60 * 60 * 24]);
   const harvestGas = await strategy.estimateGas.harvest();
   console.log('\n>>> estimated harvest gas =', harvestGas.toString());
   if (harvestGas.gt(2000000)) {
     console.log('Harvest gas is greater than 2mil!');
   }
-
-  console.log('\n>>> harvest #1 after 1 days');
-  await ethers.provider.send('evm_increaseTime', [60 * 60 * 24]);
   const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
   const receipt = await harvestTx.wait();
   console.log('---- gas used =', receipt.gasUsed.toString());

@@ -11,9 +11,6 @@ describe('StrategyCurve3PoolDAI', async function () {
       process.env.DAI as string,
       18,
       0,
-      process.env.CURVE_3POOL as string,
-      process.env.CURVE_3POOL_3CRV as string,
-      process.env.CURVE_3POOL_GAUGE as string,
       process.env.DAI_FUNDER as string
     );
   });

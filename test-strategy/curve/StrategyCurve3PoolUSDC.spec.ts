@@ -11,9 +11,6 @@ describe('StrategyCurve3PoolUSDC', async function () {
       process.env.USDC as string,
       6,
       1,
-      process.env.CURVE_3POOL as string,
-      process.env.CURVE_3POOL_3CRV as string,
-      process.env.CURVE_3POOL_GAUGE as string,
       process.env.USDC_FUNDER as string
     );
   });

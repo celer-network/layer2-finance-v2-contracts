@@ -13,8 +13,6 @@ import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
 dotenv.config();
 
-const ETH_DECIMALS = 18;
-
 interface IDeployInfo {
   strategy: StrategyCurveEth;
   supplyTokenContract: ERC20;
@@ -88,20 +86,9 @@ export async function testStrategyCurve3Pool(
   supplyToken: string,
   supplyTokenDecimal: number,
   index: number,
-  poolAddress: string,
-  lpTokenAddress: string,
-  gaugeAddress: string,
   supplyTokenFunder: string
 ): Promise<void> {
-  console.log(
-    'Testing strategy with params \n',
-    deployedAddress + '\n',
-    index + '\n',
-    poolAddress + '\n',
-    lpTokenAddress + '\n',
-    gaugeAddress + '\n',
-    supplyTokenFunder + '\n'
-  );
+  console.log('Testing strategy with params \n', deployedAddress + '\n', index + '\n', supplyTokenFunder + '\n');
 
   context.timeout(300000);
   const { strategy, supplyTokenContract, deployerSigner } = await deploy(
@@ -109,9 +96,9 @@ export async function testStrategyCurve3Pool(
     supplyToken,
     supplyTokenDecimal,
     index,
-    poolAddress,
-    lpTokenAddress,
-    gaugeAddress
+    process.env.CURVE_3POOL as string,
+    process.env.CURVE_3POOL_3CRV as string,
+    process.env.CURVE_3POOL_GAUGE as string
   );
 
   const p = getUnitParser(supplyTokenDecimal);
@@ -125,7 +112,7 @@ export async function testStrategyCurve3Pool(
   expect(price).to.equal(parseEther('1'));
 
   console.log('\n>>> ensuring balance and approval...');
-  const fundAmount = parseUnits('10', supplyTokenDecimal);
+  const fundAmount = parseUnits('100', supplyTokenDecimal);
   const supplyTokenBalanceBefore = await supplyTokenContract.balanceOf(deployerSigner.address);
   console.log('----- supplyTokenBalance', supplyTokenBalanceBefore.toString());
   await ensureBalanceAndApproval(
@@ -139,91 +126,106 @@ export async function testStrategyCurve3Pool(
   const supplyTokenBalance = await supplyTokenContract.balanceOf(deployerSigner.address);
   console.log('----- supplyTokenBalance', supplyTokenBalance.toString());
 
-  console.log('\n>>> set slippage to 10%');
-  await strategy.setSlippage(1000);
+  console.log('\n>>> set slippage to 6%');
+  await strategy.setSlippage(600);
   const newSlippage = await strategy.slippage();
   console.log('----- slippage', newSlippage.toString());
 
-  console.log('\n>>> aggregateOrders #1 -> buy 5 sell 0');
-  await expect(await strategy.aggregateOrders(p('5'), p('0'), p('4'), p('0')))
+  console.log('\n>>> aggregateOrders #1 -> buy 100 sell 0');
+  const aggregateOrder1Gas = await strategy.estimateGas.aggregateOrders(p('100'), p('0'), p('90'), p('0'));
+  await expect(await strategy.aggregateOrders(p('100'), p('0'), p('90'), p('0')))
     .to.emit(strategy, 'Buy')
     .to.not.emit(strategy, 'Sell');
   const shares2 = await strategy.shares();
-  console.log('----- shares =', shares2.toString());
   const price2 = await strategy.callStatic.syncPrice();
-  console.log('----- price =', price2.toString());
   const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
-  expect(assetAmount2).to.gte(p('4.5')).to.lt(p('5.5'));
+  console.log('----- estimated gas =', aggregateOrder1Gas.toString());
+  console.log('----- shares =', shares2.toString());
+  console.log('----- price =', price2.toString());
   console.log('----- assetAmount =', assetAmount2.toString());
-  // ----- assetAmount = 4834446375949041530
-  // ----- shares = 4834446375949041530
-  // ----- price = 1000000000000000000
+  expect(assetAmount2).to.gte(p('95')).to.lt(p('105'));
+  expect(aggregateOrder1Gas).to.lt(1000000);
 
-  console.log('\n>>> aggregateOrders #2 -> buy 0 sell 3');
-  await expect(strategy.aggregateOrders(p('0'), p('3'), p('0'), p('2')))
+  console.log('\n>>> aggregateOrders #2 -> buy 0 sell 50');
+  const aggregateOrder2Gas = await strategy.estimateGas.aggregateOrders(p('0'), p('50'), p('0'), p('45'));
+  await expect(strategy.aggregateOrders(p('0'), p('50'), p('0'), p('45')))
     .to.emit(strategy, 'Sell')
     .to.not.emit(strategy, 'Buy');
   const shares3 = await strategy.shares();
-  console.log('----- shares =', shares3.toString());
   const price3 = await strategy.callStatic.syncPrice();
-  console.log('----- price =', price3.toString());
   const assetAmount3 = price3.mul(shares3).div(BigNumber.from(10).pow(18));
-  expect(assetAmount3).to.gte(p('1.5')).to.lt(p('2.5'));
+  console.log('----- estimated gas =', aggregateOrder2Gas.toString());
+  console.log('----- shares =', shares3.toString());
+  console.log('----- price =', price3.toString());
   console.log('----- assetAmount =', assetAmount3.toString());
-  // ----- assetAmount = 1834446375315760224
-  // ----- shares = 1732983352112039842
-  // ----- price = 1058548181135187646
+  expect(assetAmount3).to.gte(p('45')).to.lt(p('65'));
+  expect(aggregateOrder2Gas).to.lt(1000000);
 
-  console.log('\n>>> aggregateOrders #3 -> buy 4 sell 1');
-  await expect(strategy.aggregateOrders(p('4'), p('1'), p('3'), p('0.5')))
+  console.log('\n>>> aggregateOrders #3 -> buy 40 sell 10');
+  const aggregateOrder3Gas = await strategy.estimateGas.aggregateOrders(p('40'), p('10'), p('35'), p('8'));
+  await expect(strategy.aggregateOrders(p('40'), p('10'), p('35'), p('8')))
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   const shares4 = await strategy.shares();
-  console.log('----- shares =', shares4.toString());
   const price4 = await strategy.callStatic.syncPrice();
-  console.log('----- price =', price4.toString());
   const assetAmount4 = price4.mul(shares4).div(BigNumber.from(10).pow(18));
-  expect(assetAmount4).to.gte(p('4.5')).to.lt(p('5.5'));
+  console.log('----- estimated gas =', aggregateOrder3Gas.toString());
+  console.log('----- shares =', shares4.toString());
+  console.log('----- price =', price4.toString());
   console.log('----- assetAmount =', assetAmount4.toString());
-  // ----- assetAmount = 4678499865988281620
-  // ----- shares = 4419728358328000258
-  // ----- price = 1058549188248794455
+  expect(assetAmount4).to.gte(p('75')).to.lt(p('85'));
+  expect(aggregateOrder3Gas).to.lt(1000000);
 
-  console.log('\n>>> aggregateOrders #4 -> buy 1 sell 8');
-  await expect(strategy.aggregateOrders(p('1'), p('8'), p('0.5'), p('7'))).to.revertedWith('not enough shares to sell');
-  console.log('----- reverted');
+  console.log('\n>>> aggregateOrders #4 -> buy 10 sell 100 (oversell)');
+  await expect(strategy.aggregateOrders(p('10'), p('100'), p('8'), p('95'))).to.revertedWith(
+    'not enough shares to sell'
+  );
+  console.log('----- successfully reverted');
 
+  console.log('\n>>> aggregateOrders #4 -> buy 10 minBuy 11 (fail min buy)');
+  await expect(strategy.aggregateOrders(p('10'), p('0'), p('11'), p('0'))).to.revertedWith(
+    'failed min shares from buy'
+  );
+  console.log('----- successfully reverted');
+
+  console.log('\n>>> aggregateOrders #4 -> sell 10 minSell 11 (fail min sell)');
+  await expect(strategy.aggregateOrders(p('0'), p('10'), p('0'), p('11'))).to.revertedWith(
+    'failed min amount from sell'
+  );
+  console.log('----- successfully reverted');
+
+  // estimate gas for harvest
   const harvestGas = await strategy.estimateGas.harvest();
   console.log('\n>>> estimated harvest gas =', harvestGas.toString());
   if (harvestGas.gt(2000000)) {
     console.log('Harvest gas is greater than 2mil!');
   }
 
-  console.log('\n>>> harvest #1 after 1 days');
-  await ethers.provider.send('evm_increaseTime', [60 * 60 * 24]);
+  console.log('\n>>> harvest #1 after 30 days');
+  await ethers.provider.send('evm_increaseTime', [60 * 60 * 24 * 30]);
   const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
   const receipt = await harvestTx.wait();
   console.log('---- gas used =', receipt.gasUsed.toString());
   const price5 = await strategy.callStatic.syncPrice();
   const shares5 = await strategy.shares();
-  const assetAmount5 = price5.mul(shares4).div(BigNumber.from(10).pow(18));
+  const assetAmount5 = price5.mul(shares5).div(BigNumber.from(10).pow(18));
   console.log('---- shares =', shares5.toString());
   console.log('---- price =', price5.toString());
   console.log('---- assetAmount =', assetAmount5.toString());
-  expect(shares5).to.eq(shares4);
-  expect(assetAmount5).to.gte(assetAmount4);
+  expect(shares5).to.eq(shares5);
+  expect(assetAmount5).to.gte(assetAmount5);
 
-  console.log('\n>>> harvest #2 after another 1 days');
-  await ethers.provider.send('evm_increaseTime', [60 * 60 * 24]);
+  console.log('\n>>> harvest #2 after another 2 days');
+  await ethers.provider.send('evm_increaseTime', [60 * 60 * 24 * 2]);
   const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
   const receipt2 = await harvestTx2.wait();
   console.log('---- gas used =', receipt2.gasUsed.toString());
   const price6 = await strategy.callStatic.syncPrice();
   const shares6 = await strategy.shares();
-  const assetAmount6 = price6.mul(shares4).div(BigNumber.from(10).pow(18));
+  const assetAmount6 = price6.mul(shares6).div(BigNumber.from(10).pow(18));
   console.log('---- shares =', shares6.toString());
   console.log('---- price =', price6.toString());
   console.log('---- assetAmount =', assetAmount6.toString());
-  expect(shares6).to.eq(shares4);
-  expect(assetAmount6).to.gte(assetAmount4);
+  expect(shares6).to.eq(shares6);
+  expect(assetAmount6).to.gte(assetAmount6);
 }

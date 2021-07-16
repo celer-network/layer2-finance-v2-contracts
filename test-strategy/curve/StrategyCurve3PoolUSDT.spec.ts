@@ -11,10 +11,7 @@ describe('StrategyCurve3PoolUSDT', async function () {
       process.env.USDT as string,
       6,
       2,
-      process.env.CURVE_3POOL as string,
-      process.env.CURVE_3POOL_3CRV as string,
-      process.env.CURVE_3POOL_GAUGE as string,
-      process.env.USDT_FUNDER as string
+      process.env.CURVE_3POOL as string
     );
   });
 });
