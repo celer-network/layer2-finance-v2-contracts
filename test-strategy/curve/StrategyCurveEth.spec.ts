@@ -119,52 +119,64 @@ export async function testStrategyCurveEth(
   console.log('----- slippage', newSlippage.toString());
 
   console.log('\n>>> aggregateOrders #1 -> buy 5 sell 0');
+  const aggregateOrder1Gas = await strategy.estimateGas.aggregateOrders(p('5'), p('0'), p('4'), p('0'));
   await expect(await strategy.aggregateOrders(p('5'), p('0'), p('4'), p('0')))
     .to.emit(strategy, 'Buy')
     .to.not.emit(strategy, 'Sell');
   const shares2 = await strategy.shares();
-  console.log('----- shares =', shares2.toString());
   const price2 = await strategy.callStatic.syncPrice();
-  console.log('----- price =', price2.toString());
   const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
-  expect(assetAmount2).to.gte(p('4.5')).to.lt(p('5.5'));
+  console.log('----- estimated gas =', aggregateOrder1Gas.toString());
+  console.log('----- shares =', shares2.toString());
+  console.log('----- price =', price2.toString());
   console.log('----- assetAmount =', assetAmount2.toString());
-  // ----- assetAmount = 4834446375949041530
-  // ----- shares = 4834446375949041530
-  // ----- price = 1000000000000000000
+  expect(assetAmount2).to.gte(p('4.5')).to.lt(p('5.5'));
+  expect(aggregateOrder1Gas).to.lt(2000000);
 
   console.log('\n>>> aggregateOrders #2 -> buy 0 sell 3');
+  const aggregateOrder2Gas = await strategy.estimateGas.aggregateOrders(p('0'), p('3'), p('0'), p('2'));
   await expect(strategy.aggregateOrders(p('0'), p('3'), p('0'), p('2')))
     .to.emit(strategy, 'Sell')
     .to.not.emit(strategy, 'Buy');
   const shares3 = await strategy.shares();
-  console.log('----- shares =', shares3.toString());
   const price3 = await strategy.callStatic.syncPrice();
-  console.log('----- price =', price3.toString());
   const assetAmount3 = price3.mul(shares3).div(BigNumber.from(10).pow(18));
-  expect(assetAmount3).to.gte(p('1.5')).to.lt(p('2.5'));
+  console.log('----- estimated gas =', aggregateOrder2Gas.toString());
+  console.log('----- shares =', shares3.toString());
+  console.log('----- price =', price3.toString());
   console.log('----- assetAmount =', assetAmount3.toString());
-  // ----- assetAmount = 1834446375315760224
-  // ----- shares = 1732983352112039842
-  // ----- price = 1058548181135187646
+  expect(assetAmount3).to.gte(p('1.5')).to.lt(p('2.5'));
+  expect(aggregateOrder2Gas).to.lt(2000000);
 
   console.log('\n>>> aggregateOrders #3 -> buy 4 sell 1');
+  const aggregateOrder3Gas = await strategy.estimateGas.aggregateOrders(p('4'), p('1'), p('3'), p('0.5'));
   await expect(strategy.aggregateOrders(p('4'), p('1'), p('3'), p('0.5')))
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   const shares4 = await strategy.shares();
-  console.log('----- shares =', shares4.toString());
   const price4 = await strategy.callStatic.syncPrice();
-  console.log('----- price =', price4.toString());
   const assetAmount4 = price4.mul(shares4).div(BigNumber.from(10).pow(18));
-  expect(assetAmount4).to.gte(p('4.5')).to.lt(p('5.5'));
+  console.log('----- estimated gas =', aggregateOrder3Gas.toString());
+  console.log('----- shares =', shares4.toString());
+  console.log('----- price =', price4.toString());
   console.log('----- assetAmount =', assetAmount4.toString());
-  // ----- assetAmount = 4678499865988281620
-  // ----- shares = 4419728358328000258
-  // ----- price = 1058549188248794455
+  expect(assetAmount4).to.gte(p('4.5')).to.lt(p('5.5'));
+  expect(aggregateOrder3Gas).to.lt(2000000);
 
-  console.log('\n>>> aggregateOrders #4 -> buy 1 sell 8');
+  console.log('\n>>> aggregateOrders #4 -> buy 1 sell 8 (not enough shares)');
   await expect(strategy.aggregateOrders(p('1'), p('8'), p('0.5'), p('7'))).to.revertedWith('not enough shares to sell');
+
+  console.log('\n>>> aggregateOrders #4 -> buy 1 minBuy 1.1 (fail min buy)');
+  await expect(strategy.aggregateOrders(p('1'), p('0'), p('1.1'), p('0'))).to.revertedWith(
+    'failed min shares from buy'
+  );
+  console.log('----- successfully reverted');
+
+  console.log('\n>>> aggregateOrders #4 -> sell 1 minSell 1.1 (fail min sell)');
+  await expect(strategy.aggregateOrders(p('0'), p('1'), p('0'), p('1.1'))).to.revertedWith(
+    'failed min amount from sell'
+  );
+  console.log('----- successfully reverted');
 
   console.log('\n>>> harvest #1 after 1 days');
   await ethers.provider.send('evm_increaseTime', [60 * 60 * 24]);
