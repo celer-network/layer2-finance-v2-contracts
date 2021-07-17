@@ -1,0 +1,200 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.6;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+import "../interfaces/uniswap/IUniswapV2.sol";
+import "../interfaces/idle/IIdleToken.sol";
+import "../interfaces/aave/IStakedAave.sol";
+import "./GovTokenRegistry.sol";
+import "../AbstractStrategy.sol";
+
+contract StrategyIdleLendingPool is AbstractStrategy {
+    using SafeERC20 for IERC20;
+    using Address for address;
+
+    // Governance token registry
+    GovTokenRegistry govTokenRegistry;
+
+    // The address of Idle Lending Pool(e.g. IdleDAI, IdleUSDC)
+    address public iToken;
+
+    // Info of supplying erc20 token to Aave lending pool
+    // The symbol of the supplying token
+    string public symbol;
+    uint256 public supplyTokenDecimal;
+
+    // The address of Aave StakedAave contract
+    address public stakedAave;
+
+    address public weth;
+    address public sushiswap;
+
+    uint256 constant public FULL_ALLOC = 100000;
+
+    constructor(
+        address _iToken,
+        string memory _symbol,
+        address _supplyToken,
+        uint8 _supplyTokenDecimal,
+        address _govTokenRegistryAddress,
+        address _stakedAave,
+        address _weth,
+        address _sushiswap,
+        address _controller
+    ) AbstractStrategy(_controller, _supplyToken) {
+        iToken = _iToken;
+        symbol = _symbol;
+        supplyToken = _supplyToken;
+        supplyTokenDecimal = _supplyTokenDecimal;
+        govTokenRegistry = GovTokenRegistry(_govTokenRegistryAddress);
+        stakedAave = _stakedAave;
+        weth = _weth;
+        sushiswap = _sushiswap;
+    }
+
+    function getAssetAmount() internal view override returns (uint256) {
+        uint256 iTokenBalance = IERC20(iToken).balanceOf(address(this));
+        return ((iTokenBalance * IIdleToken(iToken).tokenPrice()) / (10**supplyTokenDecimal)) / (10**(18 - supplyTokenDecimal));
+    }
+
+    function buy(uint256 _buyAmount) internal override returns (uint256) {
+        // Pull supply token from Controller
+        IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
+
+        // Deposit supply token to Idle Lending Pool
+        IERC20(supplyToken).safeIncreaseAllowance(iToken, _buyAmount);
+        uint256 iTokenMintedAmount = IIdleToken(iToken).mintIdleToken(_buyAmount, false, address(0));
+        uint256 obtainedUnderlyingAsset = ((iTokenMintedAmount * IIdleToken(iToken).tokenPrice()) / (10**supplyTokenDecimal)) / (10**(18 - supplyTokenDecimal));
+        return obtainedUnderlyingAsset;
+    }
+
+    function sell(uint256 _sellAmount) internal override returns (uint256) {
+        // Redeem supply token amount + interests and claim governance tokens
+        // When `harvest` function is called, this contract lend obtained governance token to save gas
+        uint256 iTokenBurnAmount = ((_sellAmount * (10**supplyTokenDecimal)) / getRedeemPrice()) * (10**(18 - supplyTokenDecimal));
+        IIdleToken(iToken).redeemIdleToken(iTokenBurnAmount);
+
+        // Transfer supply token to Controller
+        uint256 obtainedSupplyTokenAmount = IERC20(supplyToken).balanceOf(address(this));
+        IERC20(supplyToken).safeTransfer(msg.sender, obtainedSupplyTokenAmount);
+
+        return obtainedSupplyTokenAmount;
+    }
+
+    function harvest() external override onlyOwnerOrController {
+        // Claim governance tokens without redeeming supply token
+        IIdleToken(iToken).redeemIdleToken(uint256(0));
+
+        harvestAAVE();
+        swapGovTokensToSupplyToken();
+
+        // Deposit obtained supply token to Idle Lending Pool
+        uint256 obtainedSupplyTokenAmount = IERC20(supplyToken).balanceOf(address(this));
+        IERC20(supplyToken).safeIncreaseAllowance(iToken, obtainedSupplyTokenAmount);
+        IIdleToken(iToken).mintIdleToken(obtainedSupplyTokenAmount, false, address(0));
+    }
+
+    // Refer to IdleTokenHelper.sol (https://github.com/emilianobonassi/idle-token-helper/blob/master/IdleTokenHelper.sol)
+    function getRedeemPrice() public view returns (uint256) {
+        /*
+         *  As per https://github.com/Idle-Labs/idle-contracts/blob/ad0f18fef670ea6a4030fe600f64ece3d3ac2202/contracts/IdleTokenGovernance.sol#L878-L900
+         *
+         *  Price on minting is currentPrice
+         *  Price on redeem must consider the fee
+         *
+         *  Below the implementation of the following redeemPrice formula
+         *
+         *  redeemPrice := underlyingAmount/idleTokenAmount
+         *
+         *  redeemPrice = currentPrice * (1 - scaledFee * ΔP%)
+         *
+         *  where:
+         *  - scaledFee   := fee/FULL_ALLOC
+         *  - ΔP% := 0 when currentPrice < userAvgPrice (no gain) and (currentPrice-userAvgPrice)/currentPrice
+         *
+         *  n.b: gain := idleTokenAmount * ΔP% * currentPrice
+         */
+        uint256 userAvgPrice = IIdleToken(iToken).userAvgPrices(address(this));
+        uint256 currentPrice = IIdleToken(iToken).tokenPrice();
+
+        // When no deposits userAvgPrice is 0 equiv currentPrice
+        // and in the case of
+        uint256 redeemPrice;
+        if (userAvgPrice == 0 || currentPrice < userAvgPrice) {
+            redeemPrice = currentPrice;
+        } else {
+            uint256 fee = IIdleToken(iToken).fee();
+
+            redeemPrice = ((currentPrice * (FULL_ALLOC)) - (fee * (currentPrice - userAvgPrice))) / (FULL_ALLOC);
+        }
+
+        return redeemPrice;
+    }
+
+    function harvestAAVE() private {
+        // Idle finance transfer stkAAVE to this contract
+        // Activates the cooldown period if not already activated
+        uint256 stakedAaveBalance = IERC20(stakedAave).balanceOf(address(this));
+        if (stakedAaveBalance > 0 && IStakedAave(stakedAave).stakersCooldowns(address(this)) == 0) {
+            IStakedAave(stakedAave).cooldown();
+        }
+
+        // Claims the AAVE staking rewards
+        uint256 stakingRewards = IStakedAave(stakedAave).getTotalRewardsBalance(address(this));
+        if (stakingRewards > 0) {
+            IStakedAave(stakedAave).claimRewards(address(this), stakingRewards);
+        }
+
+        // Redeems staked AAVE if possible
+        uint256 cooldownStartTimestamp = IStakedAave(stakedAave).stakersCooldowns(address(this));
+        if (
+            stakedAaveBalance > 0 &&
+            block.timestamp > cooldownStartTimestamp + IStakedAave(stakedAave).COOLDOWN_SECONDS() &&
+            block.timestamp <=
+            cooldownStartTimestamp + IStakedAave(stakedAave).COOLDOWN_SECONDS() + IStakedAave(stakedAave).UNSTAKE_WINDOW()
+        ) {
+            IStakedAave(stakedAave).redeem(address(this), stakedAaveBalance);
+        }
+    }
+
+    function swapGovTokensToSupplyToken() private {
+        uint govTokenLength = govTokenRegistry.getGovTokensLength();
+        address[] memory govTokens = govTokenRegistry.getGovTokens();
+        for(uint32 i = 0; i < govTokenLength; i++) {
+            uint256 govTokenBalance = IERC20(govTokens[i]).balanceOf(address(this));
+            if (govTokenBalance > 0) {
+                IERC20(govTokens[i]).safeIncreaseAllowance(sushiswap, govTokenBalance);
+                if (supplyToken != weth) {
+                    address[] memory paths = new address[](3);
+                    paths[0] = govTokens[i];
+                    paths[1] = weth;
+                    paths[2] = supplyToken;
+
+                    IUniswapV2(sushiswap).swapExactTokensForTokens(
+                        govTokenBalance,
+                        uint(0),
+                        paths,
+                        address(this),
+                        block.timestamp + 1800
+                    );
+                } else {
+                    address[] memory paths = new address[](2);
+                    paths[0] = govTokens[i];
+                    paths[1] = weth;
+
+                    IUniswapV2(sushiswap).swapExactTokensForTokens(
+                        govTokenBalance,
+                        uint(0),
+                        paths,
+                        address(this),
+                        block.timestamp + 1800
+                    );
+                }
+            }
+        }
+    }
+}
