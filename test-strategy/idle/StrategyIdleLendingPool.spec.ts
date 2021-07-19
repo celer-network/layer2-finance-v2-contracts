@@ -136,6 +136,9 @@ export async function testStrategyIdleLendingPool(
     console.log('----- supplyTokenBalance', supplyTokenBalance.toString());
 
     console.log('\n>>> aggregateOrders #1 -> buy 500 sell 0');
+    const aggregateOrders1Gas = await strategy.estimateGas.aggregateOrders(p('500'), p('0'), p('99'), p('0'));
+    console.log('----- estimated gas =', aggregateOrders1Gas.toString());
+    expect(aggregateOrders1Gas).to.lt(1250000);
     await expect(await strategy.aggregateOrders(p('500'), p('0'), p('99'), p('0')))
         .to.emit(strategy, 'Buy')
         .to.not.emit(strategy, 'Sell');
@@ -148,6 +151,9 @@ export async function testStrategyIdleLendingPool(
     console.log('----- assetAmount =', assetAmount2.toString());
 
     console.log('\n>>> aggregateOrders #2 -> buy 0 sell 250');
+    const aggregateOrders2Gas = await strategy.estimateGas.aggregateOrders(p('0'), p('250'), p('0'), p('249'));
+    console.log('----- estimated gas =', aggregateOrders2Gas.toString());
+    expect(aggregateOrders2Gas).to.lt(1250000);
     await expect(strategy.aggregateOrders(p('0'), p('250'), p('0'), p('249')))
         .to.emit(strategy, 'Sell')
         .to.not.emit(strategy, 'Buy');
@@ -160,6 +166,9 @@ export async function testStrategyIdleLendingPool(
     console.log('----- assetAmount =', assetAmount3.toString());
 
     console.log('\n>>> aggregateOrders #3 -> buy 250 sell 100');
+    const aggregateOrders3Gas = await strategy.estimateGas.aggregateOrders(p('250'), p('100'), p('249'), p('99'));
+    console.log('----- estimated gas =', aggregateOrders3Gas.toString());
+    expect(aggregateOrders3Gas).to.lt(1250000);
     await expect(strategy.aggregateOrders(p('250'), p('100'), p('249'), p('99')))
         .to.emit(strategy, 'Buy')
         .to.emit(strategy, 'Sell');
@@ -171,9 +180,21 @@ export async function testStrategyIdleLendingPool(
     expect(assetAmount4).to.gte(p('399.9')).to.lt(p('400.1'));
     console.log('----- assetAmount =', assetAmount4.toString());
 
-    console.log('\n>>> aggregateOrders #4 -> buy 10 sell 400');
-    await expect(strategy.aggregateOrders(p('10'), p('400'), p('9'), p('399'))).to.revertedWith('not enough shares to sell');
-    console.log('----- reverted');
+    console.log('\n>>> aggregateOrders #4 -> buy 10 sell 500 (oversell)');
+    await expect(strategy.aggregateOrders(p('10'), p('500'), p('9'), p('499'))).to.revertedWith('not enough shares to sell');
+    console.log('----- successfully reverted');
+
+    console.log('\n>>> aggregateOrders #4 -> buy 10 minBuy 11 (fail min buy)');
+    await expect(strategy.aggregateOrders(p('10'), p('0'), p('11'), p('0'))).to.revertedWith(
+      'failed min shares from buy'
+    );
+    console.log('----- successfully reverted');
+
+    console.log('\n>>> aggregateOrders #4 -> sell 10 minSell 11 (fail min sell)');
+    await expect(strategy.aggregateOrders(p('0'), p('10'), p('0'), p('11'))).to.revertedWith(
+      'failed min amount from sell'
+    );
+    console.log('----- successfully reverted');
 
     const harvestGas = await strategy.estimateGas.harvest();
     console.log('\n>>> estimated harvest gas =', harvestGas.toString());
@@ -202,10 +223,36 @@ export async function testStrategyIdleLendingPool(
     console.log('---- gas used =', receipt2.gasUsed.toString());
     const price6 = await strategy.callStatic.syncPrice();
     const shares6 = await strategy.shares();
-    const assetAmount6 = price6.mul(shares4).div(BigNumber.from(10).pow(18));
+    const assetAmount6 = price6.mul(shares6).div(BigNumber.from(10).pow(18));
     console.log('---- shares =', shares6.toString());
     console.log('---- price =', price6.toString());
     console.log('---- assetAmount =', assetAmount6.toString());
-    expect(shares6).to.eq(shares4);
-    expect(assetAmount6).to.gte(assetAmount4);
+    expect(shares6).to.eq(shares5);
+    expect(assetAmount6).to.gte(assetAmount5);
+
+    console.log('\n>>> register governance token to GovTokenRegistry');
+    await expect(govTokenRegistry.registerGovToken('0xc84f7abe4904ee4f20a8c5dfa3cc4bf1829330ab'))
+        .to.emit(govTokenRegistry, 'GovTokenRegistered');
+    const govTokenLength = await govTokenRegistry.callStatic.getGovTokensLength();
+    expect(govTokenLength).to.eq(4);
+
+    console.log('\n>>> unregister governance token from GovTokenRegistry');
+    await expect(govTokenRegistry.unregisterGovToken('0xc84f7abe4904ee4f20a8c5dfa3cc4bf1829330ab'))
+        .to.emit(govTokenRegistry, 'GovTokenUnregistered');
+    const govTokenLength2 = await govTokenRegistry.callStatic.getGovTokensLength();
+    expect(govTokenLength2).to.eq(3);
+
+    console.log('\n>>> harvest #3 after another 1 days');
+    await ethers.provider.send('evm_increaseTime', [60 * 60 * 24]);
+    const harvestTx3 = await strategy.harvest({ gasLimit: 2000000 });
+    const receipt3 = await harvestTx3.wait();
+    console.log('---- gas used =', receipt3.gasUsed.toString());
+    const price7 = await strategy.callStatic.syncPrice();
+    const shares7 = await strategy.shares();
+    const assetAmount7 = price7.mul(shares7).div(BigNumber.from(10).pow(18));
+    console.log('---- shares =', shares7.toString());
+    console.log('---- price =', price7.toString());
+    console.log('---- assetAmount =', assetAmount7.toString());
+    expect(shares7).to.eq(shares6);
+    expect(assetAmount7).to.gte(assetAmount6);
 }

@@ -4,9 +4,10 @@ pragma solidity 0.8.6;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GovTokenRegistry is Ownable {
-    // Array of governance token addresses 
+    // Array of governance token addresses
     // Governance tokens are ditributed by Idle finance
     address[] public govTokens;
+    uint govTokensLength;
 
     event GovTokenRegistered(address govTokenAddress);
     event GovTokenUnregistered(address govTokenAddress);
@@ -19,6 +20,7 @@ contract GovTokenRegistry is Ownable {
         govTokens.push(_comp);
         govTokens.push(_idle);
         govTokens.push(_aave);
+        govTokensLength = 3;
     }
 
     function getGovTokens() public view returns (address[] memory) {
@@ -26,7 +28,7 @@ contract GovTokenRegistry is Ownable {
     }
 
     function getGovTokensLength() public view returns (uint) {
-        return govTokens.length;
+        return govTokensLength;
     }
 
     /**
@@ -35,7 +37,12 @@ contract GovTokenRegistry is Ownable {
      */
     function registerGovToken(address _govToken) external onlyOwner {
         require(_govToken != address(0), "Invalid governance token");
-        govTokens.push(_govToken);
+        if (govTokensLength < govTokens.length) {
+          govTokens[govTokensLength] = _govToken;
+        } else {
+          govTokens.push(_govToken);
+        }
+        govTokensLength++;
 
         emit GovTokenRegistered(_govToken);
     }
@@ -46,11 +53,12 @@ contract GovTokenRegistry is Ownable {
      */
     function unregisterGovToken(address _govToken) external onlyOwner {
         require(_govToken != address(0), "Invalid governance token");
-        for (uint i = 0; i < govTokens.length; i++) {
+        for (uint i = 0; i < govTokensLength; i++) {
             if (govTokens[i] == _govToken) {
-                govTokens[i] = govTokens[govTokens.length-1];
-                delete govTokens[govTokens.length-1];
-                
+                govTokens[i] = govTokens[govTokensLength-1];
+                delete govTokens[govTokensLength-1];
+                govTokensLength--;
+
                 emit GovTokenUnregistered(_govToken);
             }
         }
