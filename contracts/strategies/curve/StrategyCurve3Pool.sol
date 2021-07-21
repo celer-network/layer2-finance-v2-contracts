@@ -51,7 +51,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         uniswap = _uniswap;
         lpToken = _lpToken;
         supplyTokenIndexInPool = _supplyTokenIndexInPool;
-        decimalDiff = PRICE_DECIMALS / 10**_supplyTokenDecimal; // curve lp token as they have 18 decimals but tokens like USDC USDT actually have 6 decimals
+        decimalDiff = PRICE_DECIMALS / 10**_supplyTokenDecimal; // curve treats supply tokens as they have 18 decimals but tokens like USDC and USDT actually have 6 decimals
     }
 
     function getAssetAmount() internal view override returns (uint256) {
