@@ -33,7 +33,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
     constructor(
         address _controller,
         address _lpToken,
-        address _supplyToken, // has to be weth in this strategy
+        address _supplyToken,
         uint8 _supplyTokenIndexInPool,
         address _pool,
         address _gauge,
