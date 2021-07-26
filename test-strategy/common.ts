@@ -7,7 +7,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../typechain/ERC20.d';
 
-export const DESCRIPTION = 'should commit, uncommit and optionally harvest';
+export const DESCRIPTION = 'should buy, sell and optionally harvest';
 
 export async function getDeployerSigner(): Promise<SignerWithAddress> {
   const impersonatedDeployer = process.env.IMPERSONATED_DEPLOYER;
