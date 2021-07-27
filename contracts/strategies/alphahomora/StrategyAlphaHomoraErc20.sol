@@ -68,7 +68,24 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
         return balanceAfterSell - balanceBeforeSell;
     }    
 
+    // no-op just to satisfy IStrategy
     function harvest() external override onlyEOA {
-        // no op
+    }
+
+    // SafeBox requires bytes32[] proof to claim. see alpha-homora-v2-contract/blob/master/contracts/SafeBox.sol#L67
+    // for more details
+    function harvest(uint totalAmount, bytes32[] memory proof) external onlyEOA {
+        uint256 balanceBeforeClaim = IERC20(supplyToken).balanceOf(address(this));
+
+        // Claim from homora v2. after verify merkle root, we get totalAmount - claimed[msg.sender]
+        // then claimed[msg.sender] is set to totalAmount
+        ISafeBox(ibToken).claim(totalAmount, proof);
+
+        uint256 balanceAfterClaim = IERC20(supplyToken).balanceOf(address(this));
+
+        // deposit new usdt into ibToken
+        uint256 _buyAmount = balanceAfterClaim - balanceBeforeClaim;
+        IERC20(supplyToken).safeIncreaseAllowance(ibToken, _buyAmount);
+        ISafeBox(ibToken).deposit(_buyAmount);
     }
 }

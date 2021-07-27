@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // interface for SafeBox.sol, interest bearing erc20. only include funcs not require gov
 interface ISafeBox is IERC20 {
     function deposit(uint amount) external;
-    function withdraw(uint amount) public;
+    function withdraw(uint amount) external;
 
-    function claim(uint totalAmount, bytes32[] memory proof) public;
+    function claim(uint totalAmount, bytes32[] memory proof) external;
     function claimAndWithdraw(
         uint totalAmount,
         bytes32[] memory proof,
