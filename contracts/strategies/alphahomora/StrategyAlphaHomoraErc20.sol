@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../AbstractStrategy.sol";
 import "../interfaces/alphahomora/ISafeBox.sol";
+import "../interfaces/alphahomora/IYearnToken.sol";
 
 /**
  * Deposits ERC20 token into Alpha Homora v2 SafeBox Interest Bearing ERC20 token contract
@@ -36,7 +37,9 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
     }
 
     function getAssetAmount() internal override returns (uint256) {
-        return ISafeBox(ibToken).balanceOf(address(this));
+        // ib token equals cyToken
+        uint256 tokenBal = ISafeBox(ibToken).balanceOf(address(this));
+        return tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateStored() / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
