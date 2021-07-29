@@ -54,23 +54,20 @@ contract StrategyUniswapV2 is AbstractStrategy {
         IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(IUniswapV2(uniswap).factory(), _supplyToken, _pairToken));
         uint256 myLiquidity = pair.balanceOf(address(this));
         if (myLiquidity == 0) {
-            return 0;
-        }
-        uint256 totalSupply = pair.totalSupply();
-        uint256 estimateAssetAmt;
-        {
-            (address token0,) = UniswapV2Library.sortTokens(_supplyToken, _pairToken);
-            (uint reserve0, uint reserve1,) = pair.getReserves();
-            if (_supplyToken != token0) {
-                (reserve0, reserve1) = (reserve1, reserve0);
-            }
-            uint myReserve0 = myLiquidity * reserve0 / totalSupply;
-            uint myReserve1 = myLiquidity * reserve1 / totalSupply;
-            uint myReserve1Out = UniswapV2Library.getAmountOut(myReserve1, reserve1, reserve0);
-            estimateAssetAmt = myReserve0 + myReserve1Out + IERC20(supplyToken).balanceOf(address(this)); // should include the assets not yet adjusted
+            return IERC20(supplyToken).balanceOf(address(this)); // should include the assets not yet adjusted
         }
         
-        return estimateAssetAmt;
+        uint256 totalSupply = pair.totalSupply();
+        (address token0,) = UniswapV2Library.sortTokens(_supplyToken, _pairToken);
+        (uint reserve0, uint reserve1,) = pair.getReserves();
+        if (_supplyToken != token0) {
+            (reserve0, reserve1) = (reserve1, reserve0);
+        }
+        uint myReserve0 = myLiquidity * reserve0 / totalSupply;
+        uint myReserve1 = myLiquidity * reserve1 / totalSupply;
+        uint myReserve1Out = UniswapV2Library.getAmountOut(myReserve1, reserve1, reserve0);
+        
+        return myReserve0 + myReserve1Out + IERC20(supplyToken).balanceOf(address(this)); // should include the assets not yet adjusted        
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -82,46 +79,40 @@ contract StrategyUniswapV2 is AbstractStrategy {
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
-        uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
-        uint256 remainAmt = _sellAmount;
+        address _supplyToken = supplyToken;
+        uint256 balanceBeforeSell = IERC20(_supplyToken).balanceOf(address(this));
+        uint256 amtFromUniswap;
 
-        if (balanceBeforeSell != 0) {
-            IERC20(supplyToken).safeTransfer(msg.sender, min(balanceBeforeSell, remainAmt));
-            if (balanceBeforeSell < remainAmt) {
-                remainAmt -= balanceBeforeSell;
-            } else {
-                remainAmt = 0;
-            }
-        }
+        if (balanceBeforeSell < _sellAmount) {
+            amtFromUniswap = _sellAmount - balanceBeforeSell;
+        } 
 
-        if (remainAmt > 0) {
-            address _supplyToken = supplyToken;
+        if (amtFromUniswap > 0) {
             address _pairToken = pairToken;
-            IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(IUniswapV2(uniswap).factory(), _supplyToken, _pairToken));
-            uint256 myLiquidity = pair.balanceOf(address(this));
-            uint256 myEstAmount = getAssetAmount(); 
-            (uint amountS, uint amountP) = IUniswapV2(uniswap).removeLiquidity(_supplyToken, _pairToken, myLiquidity * remainAmt / myEstAmount, 
-                0, 0, address(this), block.timestamp + 1800);
+            address _uniswap = uniswap;
             
+            IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(IUniswapV2(_uniswap).factory(), _supplyToken, _pairToken));
+            uint256 toSellLiquidity = pair.balanceOf(address(this)) * amtFromUniswap / (getAssetAmount() - balanceBeforeSell);
+            pair.approve(_uniswap, toSellLiquidity);
+            (uint amountS, uint amountP) = IUniswapV2(_uniswap).removeLiquidity(_supplyToken, _pairToken, toSellLiquidity, 
+                0, 0, address(this), block.timestamp + 1800);
 
             IERC20(_pairToken).safeIncreaseAllowance(uniswap, amountP);
-            address[] memory paths = new address[](3);
+            address[] memory paths = new address[](2);
             paths[0] = _pairToken;
             paths[1] = _supplyToken;
-
-            uint[] memory amounts = IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2(_uniswap).swapExactTokensForTokens(
                 amountP,
-                (remainAmt - amountS) * (1e18 - maxSlippage) / 1e18,
+                (amtFromUniswap - amountS) * (1e18 - maxSlippage) / 1e18,
                 paths,
                 address(this),
                 block.timestamp + 1800
             );
-            uint256 soldAmount = amountS + amounts[0];
-            IERC20(supplyToken).safeTransfer(msg.sender, soldAmount);
 
-            _sellAmount = balanceBeforeSell + soldAmount;
+            _sellAmount = IERC20(_supplyToken).balanceOf(address(this));
         }
-        
+
+        IERC20(_supplyToken).safeTransfer(msg.sender, _sellAmount);
         return _sellAmount;
     }
 
@@ -132,40 +123,42 @@ contract StrategyUniswapV2 is AbstractStrategy {
     function adjust() external onlyController {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
+        address _uniswap = uniswap;
+
         uint256 balance = IERC20(_supplyToken).balanceOf(address(this));
         require(balance > 0, "StrategyUniswapV2: no balance");
 
         uint256 toBuy = min(balance, maxOneDeposit);
         uint256 half = toBuy / 2;
-        uint256 swappedPairTokenAmt;
         
         // swap half for pair token
         {
-            IERC20(_supplyToken).safeIncreaseAllowance(uniswap, half);
-            address[] memory paths = new address[](3);
+            IERC20(_supplyToken).safeIncreaseAllowance(_uniswap, half);
+            address[] memory paths = new address[](2);
             paths[0] = _supplyToken;
             paths[1] = _pairToken;
 
-            (uint reserve0, uint reserve1) = UniswapV2Library.getReserves(IUniswapV2(uniswap).factory(), _supplyToken, _pairToken);
+            (uint reserve0, uint reserve1) = UniswapV2Library.getReserves(IUniswapV2(_uniswap).factory(), _supplyToken, _pairToken);
             uint256 expectOut = UniswapV2Library.getAmountOut(half, reserve0, reserve1);
 
-            uint[] memory amounts = IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2(_uniswap).swapExactTokensForTokens(
                 half,
                 expectOut * (1e18 - maxSlippage) / 1e18,
                 paths,
                 address(this),
                 block.timestamp + 1800
             );
-            swappedPairTokenAmt = amounts[0];
         }
 
-        IERC20(_supplyToken).safeIncreaseAllowance(uniswap, half);
-        IERC20(_pairToken).safeIncreaseAllowance(uniswap, swappedPairTokenAmt);
-        IUniswapV2(uniswap).addLiquidity(_supplyToken, _pairToken, half, swappedPairTokenAmt, 0, 0, address(this), block.timestamp + 1800);
+        uint256 swappedPairTokenAmt = IERC20(_pairToken).balanceOf(address(this));
+        IERC20(_supplyToken).safeIncreaseAllowance(_uniswap, half);
+        IERC20(_pairToken).safeIncreaseAllowance(_uniswap, swappedPairTokenAmt);
+        IUniswapV2(_uniswap).addLiquidity(_supplyToken, _pairToken, half, swappedPairTokenAmt, 0, 0, address(this), block.timestamp + 1800);
     }
 
     function harvest() external override {
         // Not supported
+        // TODO: consider to swap the left pair token in my address back to supply token
     }
 
     function setMaxOneDeposit(uint256 _maxOneDeposit) external onlyController {

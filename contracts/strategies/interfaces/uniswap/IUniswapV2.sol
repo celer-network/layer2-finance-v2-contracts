@@ -9,7 +9,7 @@ interface IUniswapV2 {
         address[] calldata,
         address,
         uint256
-    ) external returns (uint[] memory amounts);
+    ) external;
 
     function swapExactTokensForETH(
         uint256 amountIn,
