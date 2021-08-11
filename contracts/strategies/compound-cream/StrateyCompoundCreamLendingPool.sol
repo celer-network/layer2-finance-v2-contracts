@@ -12,7 +12,7 @@ import "../interfaces/compound/ICErc20.sol";
 import "../interfaces/compound/IComptroller.sol";
 import "../interfaces/uniswap/IUniswapV2.sol";
 
-contract StrategyCompoundErc20LendingPool is AbstractStrategy {
+contract StrategyCompoundCreamLendingPool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -105,15 +105,17 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
 
         uint256 redeemResult;
         uint256 lowRateBalance = lowRateProtocol.balanceOfUnderlying(address(this));
-        if (_sellAmount < lowRateBalance) {
+        if (_sellAmount <= lowRateBalance) {
             lowRateBalance = _sellAmount;
         } else {
             redeemResult = highRateProtocol.redeemUnderlying(_sellAmount - lowRateBalance);
-            require(redeemResult == 0, "Couldn't redeem cToken");
+            require(redeemResult == 0, "Couldn't redeem cToken/crToken");
         }
 
-        redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
-        require(redeemResult == 0, "Couldn't redeem cToken");
+        if (lowRateBalance > 0) {
+            redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
+            require(redeemResult == 0, "Couldn't redeem cToken/crToken");
+        }
 
         // Transfer supplying token(e.g. DAI, USDT) to Controller
         uint256 balanceAfterSell = IERC20(supplyToken).balanceOf(address(this));
@@ -176,6 +178,8 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
         if (lowRateProtocol.supplyRatePerBlock() > highRateProtocol.supplyRatePerBlock()) {
             lowRateProtocol = ICErc20(crErc20);
             highRateProtocol = ICErc20(cErc20);
+        } else if (lowRateProtocol.supplyRatePerBlock() == highRateProtocol.supplyRatePerBlock()) {
+            return;
         }
 
         uint256 lowRateBalance = lowRateProtocol.balanceOfUnderlying(address(this));
