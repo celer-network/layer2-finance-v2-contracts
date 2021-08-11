@@ -183,13 +183,14 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
         }
 
         uint256 lowRateBalance = lowRateProtocol.balanceOfUnderlying(address(this));
+        if (lowRateBalance > 0) {
+            uint256 redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
+            require(redeemResult == 0, "Couldn't redeem cToken/crToken");
 
-        uint256 redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
-        require(redeemResult == 0, "Couldn't redeem cToken/crToken");
-
-        uint256 supplyTokenBalance = IERC20(supplyToken).balanceOf(address(this));
-        IERC20(supplyToken).safeIncreaseAllowance(address(highRateProtocol), supplyTokenBalance);
-        uint256 mintResult = highRateProtocol.mint(supplyTokenBalance);
-        require(mintResult == 0, "Couldn't mint cToken/crToken");
+            uint256 supplyTokenBalance = IERC20(supplyToken).balanceOf(address(this));
+            IERC20(supplyToken).safeIncreaseAllowance(address(highRateProtocol), supplyTokenBalance);
+            uint256 mintResult = highRateProtocol.mint(supplyTokenBalance);
+            require(mintResult == 0, "Couldn't mint cToken/crToken");
+        }
     }
 }
