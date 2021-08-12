@@ -9,7 +9,9 @@
     "report-gas:benchmark": "hardhat test benchmark/*.ts",
     "report-gas:summary": "REPORT_GAS=true hardhat test test/Staking.spec.ts test/BuySell.spec.ts test/DepositWithdraw.spec.ts test/DisputeBuy.spec.ts",
     "size-contracts": "hardhat size-contracts > reports/contract_sizes.txt",
-    "test": "hardhat compile && sh ./scripts/test_all.sh"
+    "test": "hardhat compile && sh ./scripts/test_all.sh",
+    "test:curve": "hardhat test test-strategy/curve/StrategyCurveEthSETh.spec.ts --network localhost",
+    "fork-mainnet": "hardhat node --no-deploy --fork $ALCHEMY_MAINNET_RPC"
   },
   "repository": {
     "type": "git",

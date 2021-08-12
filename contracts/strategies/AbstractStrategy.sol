@@ -9,8 +9,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IStrategy.sol";
 
-import "hardhat/console.sol";
-
 abstract contract AbstractStrategy is IStrategy, Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
