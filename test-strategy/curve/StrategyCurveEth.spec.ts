@@ -1,10 +1,12 @@
-import { getAddress } from '@ethersproject/address';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+
+import { getAddress } from '@ethersproject/address';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
+
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
 import { StrategyCurveEth__factory } from '../../typechain/factories/StrategyCurveEth__factory';
@@ -47,7 +49,7 @@ async function deployStrategyCurveEth(
       gaugeAddress,
       process.env.CURVE_MINTR as string,
       process.env.CURVE_CRV as string,
-      process.env.UNISWAP_ROUTER as string
+      process.env.UNISWAP_V2_ROUTER as string
     );
     strategy = await strategyCurveEthFactory
       .connect(deployerSigner)
@@ -60,7 +62,7 @@ async function deployStrategyCurveEth(
         gaugeAddress,
         process.env.CURVE_MINTR as string,
         process.env.CURVE_CRV as string,
-        process.env.UNISWAP_ROUTER as string
+        process.env.UNISWAP_V2_ROUTER as string
       );
     await strategy.deployed();
     console.log('strategy address', strategy.address);

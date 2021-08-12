@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
@@ -8,41 +7,39 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
-import { StrategyUniswapV2__factory } from '../../typechain/factories/StrategyUniswapV2__factory';
-import { StrategyUniswapV2 } from '../../typechain/StrategyUniswapV2';
+import { StrategyUniswapV3Gelato__factory } from '../../typechain/factories/StrategyUniswapV3Gelato__factory';
+import { StrategyUniswapV3Gelato } from '../../typechain/StrategyUniswapV3Gelato.d';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
-interface DeployStrategyUniswapV2 {
-  strategy: StrategyUniswapV2;
+interface DeployStrategyUniswapV3GelatoInfo {
+  strategy: StrategyUniswapV3Gelato;
   supplyToken: ERC20;
   deployerSigner: SignerWithAddress;
 }
 
-async function deployStrategyUniswapV2(
+async function deployStrategyUniswapV3Gelato(
   deployedAddress: string | undefined,
   supplyTokenAddress: string,
-  pairTokenAddress: string,
-  maxSlippage: BigNumber,
-  maxOneDeposit: BigNumber
-): Promise<DeployStrategyUniswapV2> {
+  gUniPoolAddress: string
+): Promise<DeployStrategyUniswapV3GelatoInfo> {
   const deployerSigner = await getDeployerSigner();
 
-  let strategy: StrategyUniswapV2;
+  let strategy: StrategyUniswapV3Gelato;
   if (deployedAddress) {
-    strategy = StrategyUniswapV2__factory.connect(deployedAddress, deployerSigner);
+    strategy = StrategyUniswapV3Gelato__factory.connect(deployedAddress, deployerSigner);
   } else {
-    const strategyUniswapV2Factory = (await ethers.getContractFactory(
-      'StrategyUniswapV2'
-    )) as StrategyUniswapV2__factory;
-    strategy = await strategyUniswapV2Factory
+    const strategyUniswapV3GelatoFactory = (await ethers.getContractFactory(
+      'StrategyUniswapV3Gelato'
+    )) as StrategyUniswapV3Gelato__factory;
+    strategy = await strategyUniswapV3GelatoFactory
       .connect(deployerSigner)
       .deploy(
-        deployerSigner.address,
         supplyTokenAddress,
-        pairTokenAddress,
-        process.env.UNISWAP_V2_ROUTER as string,
-        maxSlippage,
-        maxOneDeposit
+        gUniPoolAddress,
+        process.env.GUNI_RESOLVER as string,
+        process.env.GUNI_ROUTER as string,
+        process.env.UNISWAP_V3_ROUTER as string,
+        deployerSigner.address
       );
     await strategy.deployed();
   }
@@ -52,25 +49,21 @@ async function deployStrategyUniswapV2(
   return { strategy, supplyToken, deployerSigner };
 }
 
-export async function testStrategyUniswapV2(
+export async function testStrategyUniswapV3Gelato(
   context: Mocha.Context,
   deployedAddress: string | undefined,
   supplyTokenSymbol: string,
   supplyTokenDecimals: number,
   supplyTokenAddress: string,
-  pairTokenAddress: string,
-  maxSlippage: BigNumber,
-  maxOneDeposit: BigNumber,
+  gUniPoolAddress: string,
   supplyTokenFunder: string
 ): Promise<void> {
   context.timeout(300000);
 
-  const { strategy, supplyToken, deployerSigner } = await deployStrategyUniswapV2(
+  const { strategy, supplyToken, deployerSigner } = await deployStrategyUniswapV3Gelato(
     deployedAddress,
     supplyTokenAddress,
-    pairTokenAddress,
-    maxSlippage,
-    maxOneDeposit
+    gUniPoolAddress
   );
 
   expect(getAddress(await strategy.getAssetAddress())).to.equal(getAddress(supplyToken.address));
@@ -87,11 +80,12 @@ export async function testStrategyUniswapV2(
   );
 
   console.log('===== Buy 10 =====');
+  strategy;
   await expect(
     strategy.aggregateOrders(
       parseUnits('10', supplyTokenDecimals),
       parseUnits('0'),
-      parseUnits('10', supplyTokenDecimals),
+      parseUnits('9.95', supplyTokenDecimals),
       parseUnits('0')
     )
   ).to.emit(strategy, 'Buy');
@@ -106,47 +100,28 @@ export async function testStrategyUniswapV2(
       parseUnits('0'),
       parseUnits('2', supplyTokenDecimals),
       parseUnits('0'),
-      parseUnits('2', supplyTokenDecimals)
+      parseUnits('1.95', supplyTokenDecimals)
     )
   ).to.emit(strategy, 'Sell');
 
   const price2 = await strategy.callStatic.syncPrice();
   console.log('price2:', price2.toString());
-  expect(price2).to.equal(price1);
+  // TODO: Add stricter check
+  expect(price2.gte(price1)).to.be.true;
 
   console.log('===== Buy 1, Sell 2 =====');
   await expect(
     strategy.aggregateOrders(
       parseUnits('1', supplyTokenDecimals),
       parseUnits('2', supplyTokenDecimals),
-      parseUnits('1', supplyTokenDecimals),
-      parseUnits('2', supplyTokenDecimals)
+      parseUnits('0.95', supplyTokenDecimals),
+      parseUnits('1.95', supplyTokenDecimals)
     )
   )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   const price3 = await strategy.callStatic.syncPrice();
   console.log('price3:', price3.toString());
-  expect(price3).to.equal(price2);
-
-  console.log('===== adjust =====');
-  await strategy.adjust();
-  const price4 = await strategy.callStatic.syncPrice();
-  console.log('price4:', price4.toString());
-  expect(price4).to.lt(price3);
-
-  console.log('===== Buy 1, Sell 2 after adjust =====');
-  await expect(
-    strategy.aggregateOrders(
-      parseUnits('1', supplyTokenDecimals),
-      parseUnits('2', supplyTokenDecimals),
-      parseUnits('1', supplyTokenDecimals),
-      parseUnits('1', supplyTokenDecimals)
-    )
-  )
-    .to.emit(strategy, 'Buy')
-    .to.emit(strategy, 'Sell');
-  const price5 = await strategy.callStatic.syncPrice();
-  console.log('price5:', price5.toString());
-  expect(price5).to.lt(price4);
+  // TODO: Add stricter check
+  expect(price3.gte(price2)).to.be.true;
 }
