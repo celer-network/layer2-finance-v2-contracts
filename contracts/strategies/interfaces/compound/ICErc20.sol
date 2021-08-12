@@ -12,6 +12,13 @@ interface ICErc20 {
     function balanceOfUnderlying(address owner) external returns (uint256);
 
     /**
+     * @notice Get the token balance of the `owner`
+     * @param owner The address of the account to query
+     * @return The number of tokens owned by `owner`
+     */
+    function balanceOf(address owner) external view returns (uint256);
+
+    /**
      * @notice Supply ERC20 token to the market, receive cTokens in exchange.
      *
      * @param mintAmount The amount of the underlying asset to supply
@@ -26,6 +33,14 @@ interface ICErc20 {
      * @return 0 = success, otherwise a failure
      */
     function redeemUnderlying(uint256 redeemAmount) external returns (uint256);
+
+    /**
+     * @notice Sender redeems cTokens in exchange for the underlying asset
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param redeemTokens The number of cTokens to redeem into underlying
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function redeem(uint redeemTokens) external returns (uint);
 
     /**
      * @notice Returns the current per-block supply interest rate for this cToken

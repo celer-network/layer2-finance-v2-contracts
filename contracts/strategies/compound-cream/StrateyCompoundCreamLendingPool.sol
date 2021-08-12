@@ -113,8 +113,11 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
         }
 
         if (lowRateBalance > 0) {
-            redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
-            require(redeemResult == 0, "Couldn't redeem cToken/crToken");
+            uint256 lowRateTokenBalance = lowRateProtocol.balanceOf(address(this));
+            if (lowRateTokenBalance > 0 /* to avoid redeemTokens zero error */) {
+                redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
+                require(redeemResult == 0, "Couldn't redeem cToken/crToken");
+            }
         }
 
         // Transfer supplying token(e.g. DAI, USDT) to Controller
@@ -126,7 +129,11 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
 
     function harvest() external override onlyEOA {
         // Claim COMP token.
-        IComptroller(comptroller).claimComp(address(this));
+        address[] memory holders = new address[](1);
+        holders[0] = address(this);
+        ICErc20[] memory cTokens = new ICErc20[](1);
+        cTokens[0] = ICErc20(cErc20);
+        IComptroller(comptroller).claimComp(holders, cTokens, false, true);
         uint256 compBalance = IERC20(comp).balanceOf(address(this));
         if (compBalance > 0) {
             // Sell COMP token for obtain more supplying token(e.g. DAI, USDT)
@@ -147,7 +154,8 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
         }
 
         // Claim CREAM token.
-        IComptroller(creamtroller).claimComp(address(this));
+        cTokens[0] = ICErc20(crErc20);
+        IComptroller(creamtroller).claimComp(holders, cTokens, false, true);
         uint256 creamBalance = IERC20(cream).balanceOf(address(this));
         if (creamBalance > 0) {
             // Sell CREAM token for obtain more supplying token(e.g. DAI, USDT)
@@ -182,15 +190,21 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
             highRateProtocol = ICErc20(cErc20);
         }
 
-        uint256 lowRateBalance = lowRateProtocol.balanceOfUnderlying(address(this));
-        if (lowRateBalance > 0) {
-            uint256 redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
+        uint256 lowRateTokenBalance = lowRateProtocol.balanceOf(address(this));
+        if (lowRateTokenBalance > 0) {
+            uint256 redeemResult = lowRateProtocol.redeem(lowRateTokenBalance);
             require(redeemResult == 0, "Couldn't redeem cToken/crToken");
         }
 
         uint256 supplyTokenBalance = IERC20(supplyToken).balanceOf(address(this));
-        IERC20(supplyToken).safeIncreaseAllowance(address(highRateProtocol), supplyTokenBalance);
-        uint256 mintResult = highRateProtocol.mint(supplyTokenBalance);
-        require(mintResult == 0, "Couldn't mint cToken/crToken");
+        if (supplyTokenBalance > 0) {
+            IERC20(supplyToken).safeIncreaseAllowance(address(highRateProtocol), supplyTokenBalance);
+            uint256 mintResult = highRateProtocol.mint(supplyTokenBalance);
+            require(mintResult == 0, "Couldn't mint cToken/crToken");
+        }
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 }

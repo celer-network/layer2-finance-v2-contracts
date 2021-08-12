@@ -10,6 +10,7 @@ import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
 import { StrategyCompoundCreamLendingPool__factory } from '../../typechain/factories/StrategyCompoundCreamLendingPool__factory';
 import { StrategyCompoundCreamLendingPool } from '../../typechain/StrategyCompoundCreamLendingPool';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
+import { ICErc20__factory } from '../../typechain';
 
 interface DeployStrategyCompoundCreamLendingPoolInfo {
   strategy: StrategyCompoundCreamLendingPool;
@@ -109,6 +110,78 @@ export async function testStrategyCompoundCreamLendingPool(
   const price3 = await strategy.callStatic.syncPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.gte(price2);
+
+  console.log('===== Add 1 for low rate protocal  =====');
+  const cErc20 = ICErc20__factory.connect(compoundSupplyTokenAddress, deployerSigner);
+  const crErc20 = ICErc20__factory.connect(creamSupplytokenAddress, deployerSigner);
+  const cErc20Rate = await cErc20.callStatic.supplyRatePerBlock();
+  console.log(
+    `cErc20Rate:`, cErc20Rate.toString()
+  );
+  const crErc20Rate = await crErc20.callStatic.supplyRatePerBlock();
+  console.log(
+    `crErc20Rate:`, crErc20Rate.toString()
+  );
+
+  await network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [strategy.address]
+  });
+  (
+    await deployerSigner.sendTransaction({
+      to: strategy.address,
+      value: parseEther('0.01')
+    })
+  ).wait();
+  const toMint = parseUnits('1', supplyTokenDecimals);
+  await (
+    await supplyToken.transfer(strategy.address, toMint)
+  ).wait();
+  if(cErc20Rate > crErc20Rate) {
+    await (await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(creamSupplytokenAddress, toMint)).wait();
+    await (
+      await crErc20
+        .connect(await ethers.getSigner(strategy.address))
+        .mint(toMint)
+    ).wait();
+  } else if (cErc20Rate < crErc20Rate) {
+    await (await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(compoundSupplyTokenAddress, toMint)).wait();
+    await (
+      await cErc20
+        .connect(await ethers.getSigner(strategy.address))
+        .mint(toMint)
+    ).wait();
+  }
+
+  console.log('===== Sell 0.5 =====');
+  let cErc20Balance = await cErc20.callStatic.balanceOfUnderlying(strategy.address);
+  let crErc20Balance = await crErc20.callStatic.balanceOfUnderlying(strategy.address);
+  console.log(
+    `before sell: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}` 
+  );
+  await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('0.5', supplyTokenDecimals), parseUnits('0'), parseUnits('0.5', supplyTokenDecimals)))
+    .to.emit(strategy, 'Sell');
+  const price4 = await strategy.callStatic.syncPrice();
+  console.log('price4:', price4.toString());
+  expect(price4).to.gte(price3);
+
+  console.log('===== adjust =====');
+  cErc20Balance = await cErc20.callStatic.balanceOfUnderlying(strategy.address);
+  crErc20Balance = await crErc20.callStatic.balanceOfUnderlying(strategy.address);
+  console.log(
+    `before adjust: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}` 
+  );
+  await strategy.adjust();
+  cErc20Balance = await cErc20.callStatic.balanceOfUnderlying(strategy.address);
+  crErc20Balance = await crErc20.callStatic.balanceOfUnderlying(strategy.address);
+  console.log(
+    `after adjust: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}` 
+  );  
+  if (cErc20Rate < crErc20Rate) {
+    expect(cErc20Balance).equals(0);
+  } else if (cErc20Rate > crErc20Rate) {
+    expect(crErc20Balance).equals(0);
+  }
   
   console.log('===== harvest, and price should be updated =====');
   try {
@@ -123,18 +196,15 @@ export async function testStrategyCompoundCreamLendingPool(
         .connect(await ethers.getSigner(process.env.COMPOUND_COMP_FUNDER as string))
         .transfer(strategy.address, parseEther('0.01'))
     ).wait();
-    console.log('===== Sent COMP to the strategy, harvesting =====');
-    const harvestGas = await strategy.estimateGas.harvest();
-    if (harvestGas.lte(2000000)) {
-      const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
-      const receipt = await harvestTx.wait();
-      console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price4 =  await strategy.callStatic.syncPrice();
-      console.log(
-        `price4:`, price4.toString()
-      );
-      expect(price4).to.gte(price3);
-    }
+    console.log('===== harvesting =====');
+    const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
+    const receipt = await harvestTx.wait();
+    console.log('Harvest gas used:', receipt.gasUsed.toString());
+    const price5 =  await strategy.callStatic.syncPrice();
+    console.log(
+      `price5:`, price5.toString()
+    );
+    expect(price5).to.gte(price4);
   } catch (e) {
     console.log('Cannot harvest:', e);
   }

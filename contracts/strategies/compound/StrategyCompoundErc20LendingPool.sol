@@ -92,7 +92,11 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
 
     function harvest() external override onlyEOA {
         // Claim COMP token.
-        IComptroller(comptroller).claimComp(address(this));
+        address[] memory holders = new address[](1);
+        holders[0] = address(this);
+        ICErc20[] memory cTokens = new ICErc20[](1);
+        cTokens[0] = ICErc20(cErc20);
+        IComptroller(comptroller).claimComp(holders, cTokens, false, true);
         uint256 compBalance = IERC20(comp).balanceOf(address(this));
         if (compBalance > 0) {
             // Sell COMP token for obtain more supplying token(e.g. DAI, USDT)
