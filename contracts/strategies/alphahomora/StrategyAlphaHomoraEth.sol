@@ -14,7 +14,7 @@ import "../../interfaces/IWETH.sol";
 /**
  * Deposits WETH into Alpha Homora v2 SafeBox Interest Bearing ERC20 token contract
  */
-contract StrategyAlphaHomoraErc20 is AbstractStrategy {
+contract StrategyAlphaHomoraEth is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
