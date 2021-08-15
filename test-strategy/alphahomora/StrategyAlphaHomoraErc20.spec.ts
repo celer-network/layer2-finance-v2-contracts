@@ -74,4 +74,34 @@ export async function testStrategyAlphaHomoraErc20(
         strategy.address,
         supplyTokenFunder
     );
+    console.log('===== Buy 5 =====');
+    let receipt = await (await strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('4.99', supplyTokenDecimals), parseUnits('0'))).wait();
+    receipt.events?.forEach((evt)=>{
+    if (evt.event=='Buy') {
+        console.log("buy  amount:", evt.args![0].toString(), "sharesFromBuy:", evt.args![1].toString());
+      }
+    });
+    console.log("price:", (await strategy.callStatic.syncPrice()).toString());
+
+    console.log('===== Sell 2 =====');
+    receipt = await (await strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('1.99', supplyTokenDecimals))).wait();
+    receipt.events?.forEach((evt)=>{
+    if (evt.event=='Sell') {
+        console.log("sell shares:", evt.args![0].toString(), "amountFromSell:", evt.args![1].toString());
+      }
+    });
+    console.log("price:", (await strategy.callStatic.syncPrice()).toString());
+
+    console.log('===== Buy 1, Sell 2 =====');
+    receipt = await (await strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('1.99', supplyTokenDecimals))).wait();
+    receipt.events?.forEach((evt)=>{
+      if (evt.event=='Buy') {
+        console.log("buy  amount:", evt.args![0].toString(), "sharesFromBuy:", evt.args![1].toString());
+      }
+      if (evt.event=='Sell') {
+          console.log("sell shares:", evt.args![0].toString(), "amountFromSell:", evt.args![1].toString());
+        }
+      });
+      console.log("price:", (await strategy.callStatic.syncPrice()).toString());
   }
+

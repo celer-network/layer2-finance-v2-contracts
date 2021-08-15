@@ -7,4 +7,6 @@ pragma solidity 0.8.6;
 interface IYearnToken {
     // exchange rate scaled by 1e18
     function exchangeRateStored() external view returns (uint);
+    // current to ensure token computed for sell is accurate
+    function exchangeRateCurrent() external returns (uint);
 }

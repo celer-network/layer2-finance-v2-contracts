@@ -39,7 +39,7 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
     function getAssetAmount() internal override returns (uint256) {
         // ib token equals cyToken
         uint256 tokenBal = ISafeBox(ibToken).balanceOf(address(this));
-        return tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateStored() / 1e18;
+        return tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateCurrent() / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -53,19 +53,18 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
         ISafeBox(ibToken).deposit(_buyAmount);
 
         uint256 newAssetAmount = getAssetAmount();
-
         return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
-        
         // Withdraw from homora v2
-        ISafeBox(ibToken).withdraw(_sellAmount);
+        // as withdraw expects ibToken, need to convert by divide price
+        uint256 yrate = IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateCurrent();
+        ISafeBox(ibToken).withdraw(_sellAmount * 1e18 / yrate);
         // Transfer supplying token(e.g. DAI, USDT) to Controller
         uint256 balanceAfterSell = IERC20(supplyToken).balanceOf(address(this));
         IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
-
         return balanceAfterSell - balanceBeforeSell;
     }    
 
