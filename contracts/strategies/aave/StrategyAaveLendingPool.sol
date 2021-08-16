@@ -6,12 +6,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../AbstractStrategy.sol";
-import "../interfaces/aave/ILendingPool.sol";
-import "../interfaces/aave/IAToken.sol";
-import "../interfaces/aave/IAaveIncentivesController.sol";
-import "../interfaces/aave/IStakedAave.sol";
-import "../interfaces/uniswap/IUniswapV2.sol";
+import "../base/AbstractStrategy.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
+import "./interfaces/ILendingPool.sol";
+import "./interfaces/IAToken.sol";
+import "./interfaces/IAaveIncentivesController.sol";
+import "./interfaces/IStakedAave.sol";
 
 /**
  * Deposits ERC20 token into Aave Lending Pool and issues stAaveLendingToken(e.g. stAaveLendingDAI) in L2. Holds aToken (Aave interest-bearing tokens).
@@ -81,13 +81,13 @@ contract StrategyAaveLendingPool is AbstractStrategy {
         ILendingPool(lendingPool).deposit(supplyToken, _buyAmount, address(this), 0);
 
         uint256 newAssetAmount = getAssetAmount();
-        
+
         return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
-        
+
         // Withdraw supplying token(e.g. DAI, USDT) from Aave Lending Pool.
         ILendingPool(lendingPool).withdraw(supplyToken, _sellAmount, address(this));
         // Transfer supplying token to Controller
@@ -101,8 +101,10 @@ contract StrategyAaveLendingPool is AbstractStrategy {
         // 1. Claims the liquidity incentives
         address[] memory assets = new address[](1);
         assets[0] = aToken;
-        uint256 rewardsBalance =
-            IAaveIncentivesController(incentivesController).getRewardsBalance(assets, address(this));
+        uint256 rewardsBalance = IAaveIncentivesController(incentivesController).getRewardsBalance(
+            assets,
+            address(this)
+        );
         if (rewardsBalance > 0) {
             IAaveIncentivesController(incentivesController).claimRewards(assets, rewardsBalance, address(this));
         }
@@ -125,7 +127,9 @@ contract StrategyAaveLendingPool is AbstractStrategy {
             stakedAaveBalance > 0 &&
             block.timestamp > cooldownStartTimestamp + IStakedAave(stakedAave).COOLDOWN_SECONDS() &&
             block.timestamp <=
-            cooldownStartTimestamp + IStakedAave(stakedAave).COOLDOWN_SECONDS() + IStakedAave(stakedAave).UNSTAKE_WINDOW()
+            cooldownStartTimestamp +
+                IStakedAave(stakedAave).COOLDOWN_SECONDS() +
+                IStakedAave(stakedAave).UNSTAKE_WINDOW()
         ) {
             IStakedAave(stakedAave).redeem(address(this), stakedAaveBalance);
         }
@@ -140,7 +144,7 @@ contract StrategyAaveLendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 aaveBalance,
                 uint256(0),
                 paths,

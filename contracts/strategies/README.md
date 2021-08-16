@@ -14,7 +14,7 @@ Currently, each strategy accepts a single type of `ERC-20` asset like `DAI`.
 1. Fork the repo and run `yarn install` to install the dependencies. We primarily use `ethers`, `hardhat` and
    `waffle` for development and testing.
 
-2. Take a look the [`IStrategy`](./interfaces/IStrategy.sol) interfaces:
+2. Take a look the [`IStrategy`](../interfaces/IStrategy.sol) interfaces:
 
    `getAssetAddress` simply returns the address of the asset token.
 
@@ -28,7 +28,7 @@ Currently, each strategy accepts a single type of `ERC-20` asset like `DAI`.
    usually sells the harvested tokens into the asset token and re-invests the gains back into the protocol. Beware of
    flashloans when implementing this method and if required, restrict it to Externally Owned Accounts (EOA).
 
-3. Read [`StrategyDummy`](./StrategyDummy.sol) for a skeleton implementation and
+3. Read [`StrategyDummy`](./dummy/StrategyDummy.sol) for a skeleton implementation and
    [`StrategyCompoundErc20LendingPool`](./compound/StrategyCompoundErc20LendingPool.sol) for a real
    implementation. Most of the strategies can be implemented by extending [`AbstractStrategy`](./AbstractStrategy.sol).
 

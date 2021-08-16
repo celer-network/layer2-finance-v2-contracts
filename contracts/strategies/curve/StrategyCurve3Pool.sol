@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -7,11 +8,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "../../interfaces/IWETH.sol";
-import "../interfaces/uniswap/IUniswapV2.sol";
-import "../interfaces/curve/ICurveFi.sol";
-import "../interfaces/curve/IGauge.sol";
-import "../interfaces/curve/IMintr.sol";
-import "../AbstractStrategy.sol";
+import "../base/AbstractStrategy.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
+import "./interfaces/ICurveFi.sol";
+import "./interfaces/IGauge.sol";
+import "./interfaces/IMintr.sol";
 
 contract StrategyCurve3Pool is AbstractStrategy {
     using SafeERC20 for IERC20;
@@ -103,7 +104,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
             path[1] = weth;
             path[2] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 crvBalance,
                 uint256(0),
                 path,
