@@ -6,11 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../AbstractStrategy.sol";
-import "../interfaces/compound/ICEth.sol";
-import "../interfaces/compound/IComptroller.sol";
-import "../interfaces/uniswap/IUniswapV2.sol";
 import "../../interfaces/IWETH.sol";
+import "../base/AbstractStrategy.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
+import "./interfaces/ICEth.sol";
+import "./interfaces/IComptroller.sol";
 
 /**
  * Deposits ETH into Compound Lending Pool and issues stCompoundLendingETH in L2. Holds cToken (Compound interest-bearing tokens).
@@ -66,13 +66,13 @@ contract StrategyCompoundEthLendingPool is AbstractStrategy {
         ICEth(cEth).mint{value: _buyAmount}();
 
         uint256 newAssetAmount = getAssetAmount();
-        
+
         return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         uint256 balanceBeforeSell = address(this).balance;
-        
+
         // Withdraw ETH from Compound ETH Lending Pool based on an amount of ETH.
         uint256 redeemResult = ICEth(cEth).redeemUnderlying(_sellAmount);
         require(redeemResult == 0, "Couldn't redeem cToken");
@@ -97,7 +97,7 @@ contract StrategyCompoundEthLendingPool is AbstractStrategy {
             paths[0] = comp;
             paths[1] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForETH(
+            IUniswapV2Router02(uniswap).swapExactTokensForETH(
                 compBalance,
                 uint256(0),
                 paths,

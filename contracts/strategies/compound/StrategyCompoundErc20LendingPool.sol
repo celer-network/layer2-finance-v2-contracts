@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../AbstractStrategy.sol";
-import "../interfaces/compound/ICErc20.sol";
-import "../interfaces/compound/IComptroller.sol";
-import "../interfaces/uniswap/IUniswapV2.sol";
+import "../base/AbstractStrategy.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
+import "./interfaces/ICErc20.sol";
+import "./interfaces/IComptroller.sol";
 
 /**
  * Deposits ERC20 token into Compound Lending Pool and issues stCompoundLendingToken(e.g. stCompoundLendingDAI) in L2. Holds cToken (Compound interest-bearing tokens).
@@ -70,13 +70,13 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
         require(mintResult == 0, "Couldn't mint cToken");
 
         uint256 newAssetAmount = getAssetAmount();
-        
+
         return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
-        
+
         // Withdraw supplying token from Compound Erc20 Lending Pool
         // based on an amount of the supplying token(e.g. DAI, USDT).
         uint256 redeemResult = ICErc20(cErc20).redeemUnderlying(_sellAmount);
@@ -86,7 +86,7 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
         IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
 
         return balanceAfterSell - balanceBeforeSell;
-    }    
+    }
 
     function harvest() external override onlyEOA {
         // Claim COMP token.
@@ -101,7 +101,7 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 compBalance,
                 uint256(0),
                 paths,
