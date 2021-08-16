@@ -1,10 +1,11 @@
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
-import * as dotenv from 'dotenv';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
+
+import * as dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/types';
 
 dotenv.config();
