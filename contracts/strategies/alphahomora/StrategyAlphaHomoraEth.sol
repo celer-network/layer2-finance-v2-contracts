@@ -19,9 +19,9 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
     using Address for address;
 
     // The address of Alpha Homora v2 interest-bearing token, eg. ibUSDTv2
-    address public ibToken;
+    address payable public ibToken;
     constructor(
-        address _ibToken,
+        address payable _ibToken,
         address _supplyToken,
         address _controller
     ) AbstractStrategy(_controller, _supplyToken) {
@@ -39,7 +39,7 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
     function getAssetAmount() internal override returns (uint256) {
         // ib token equals cyToken
         uint256 tokenBal = ISafeBoxEth(ibToken).balanceOf(address(this));
-        return tokenBal * IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateStored() / 1e18;
+        return tokenBal * IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateCurrent() / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -50,12 +50,10 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
 
         // convert to actual ETH as deposit will do weth convert internally
         IWETH(supplyToken).withdraw(_buyAmount);
-
-        // Deposit supplying token to ibToken        
+        // Deposit supplying token to ibToken
         ISafeBoxEth(ibToken).deposit{value: _buyAmount}();
 
         uint256 newAssetAmount = getAssetAmount();
-
         return newAssetAmount - originalAssetAmount;
     }
 
@@ -63,7 +61,8 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
         uint256 balanceBeforeSell = address(this).balance;
         
         // Withdraw from homora v2
-        ISafeBoxEth(ibToken).withdraw(_sellAmount);
+        uint256 yrate = IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateCurrent();
+        ISafeBoxEth(ibToken).withdraw(_sellAmount * 1e18 / yrate);
 
         // Deposit to WETH and transfer to Controller
         uint256 balanceAfterSell = address(this).balance;
@@ -88,8 +87,12 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
 
         uint256 balanceAfterClaim = address(this).balance;
 
-        // deposit new usdt into ibToken
+        // deposit new eth into ibToken
         uint256 _buyAmount = balanceAfterClaim - balanceBeforeClaim;
         ISafeBoxEth(ibToken).deposit{value: _buyAmount}();
     }
+
+    // needed for weth.withdraw
+    receive() external payable {}
+    fallback() external payable {}
 }

@@ -11,6 +11,9 @@ import { StrategyAlphaHomoraEth__factory } from '../../typechain/factories/Strat
 import { StrategyAlphaHomoraEth } from '../../typechain/StrategyAlphaHomoraEth';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 describe('StrategyAlphaHomoraEth', function () {
   async function deploy() {
@@ -55,29 +58,35 @@ describe('StrategyAlphaHomoraEth', function () {
       strategy.address,
       process.env.WETH_FUNDER as string
     );
-
+    const supplyTokenDecimals = 18;
     console.log('===== Buy 5 =====');
-    await expect(strategy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('4'), parseEther('0')))
-      .to.emit(strategy, 'Buy')
-
-    const price1 = await strategy.callStatic.syncPrice();
-    console.log('price1:', price1.toString());
-    expect(price1).to.lte(parseEther('1'));
+    let receipt = await (await strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('4.99', supplyTokenDecimals), parseUnits('0'))).wait();
+    receipt.events?.forEach((evt)=>{
+    if (evt.event=='Buy') {
+        console.log("buy  amount:", evt.args![0].toString(), "sharesFromBuy:", evt.args![1].toString());
+      }
+    });
+    console.log("price:", (await strategy.callStatic.syncPrice()).toString());
 
     console.log('===== Sell 2 =====');
-    await expect(strategy.aggregateOrders(parseEther('0'), parseEther('2'), parseEther('0'), parseEther('2')))
-      .to.emit(strategy, 'Sell');
-    const price2 = await strategy.callStatic.syncPrice();
-    console.log('price2:', price2.toString());
-    expect(price2).to.gte(price1);
+    receipt = await (await strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('1.99', supplyTokenDecimals))).wait();
+    receipt.events?.forEach((evt)=>{
+    if (evt.event=='Sell') {
+        console.log("sell shares:", evt.args![0].toString(), "amountFromSell:", evt.args![1].toString());
+      }
+    });
+    console.log("price:", (await strategy.callStatic.syncPrice()).toString());
 
     console.log('===== Buy 1, Sell 2 =====');
-    await expect(strategy.aggregateOrders(parseEther('1'), parseEther('2'), parseEther('0.5'), parseEther('2')))
-      .to.emit(strategy, 'Buy')
-      .to.emit(strategy, 'Sell');
-    expect(await strategy.shares()).to.lte(parseEther('2'));
-    const price3 = await strategy.callStatic.syncPrice();
-    console.log('price3:', price3.toString());
-    expect(price3).to.gte(price2);    
+    receipt = await (await strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('1.99', supplyTokenDecimals))).wait();
+    receipt.events?.forEach((evt)=>{
+      if (evt.event=='Buy') {
+        console.log("buy  amount:", evt.args![0].toString(), "sharesFromBuy:", evt.args![1].toString());
+      }
+      if (evt.event=='Sell') {
+          console.log("sell shares:", evt.args![0].toString(), "amountFromSell:", evt.args![1].toString());
+        }
+      });
+      console.log("price:", (await strategy.callStatic.syncPrice()).toString());
   });
 });
