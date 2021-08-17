@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../AbstractStrategy.sol";
-import "../interfaces/alphahomora/ISafeBox.sol";
-import "../interfaces/alphahomora/IYearnToken.sol";
+import "../base/AbstractStrategy.sol";
+import "./interfaces/ISafeBox.sol";
+import "./interfaces/IYearnToken.sol";
 
 /**
  * Deposits ERC20 token into Alpha Homora v2 SafeBox Interest Bearing ERC20 token contract
