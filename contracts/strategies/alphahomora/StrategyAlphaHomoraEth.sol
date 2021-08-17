@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../base/AbstractStrategy.sol";
-import "./interfaces/alphahomora/ISafeBoxEth.sol";
-import "./interfaces/alphahomora/IYearnToken.sol";
 import "../../interfaces/IWETH.sol";
+import "../base/AbstractStrategy.sol";
+import "./interfaces/ISafeBoxEth.sol";
+import "./interfaces/IYearnToken.sol";
 
 /**
  * Deposits WETH into Alpha Homora v2 SafeBox Interest Bearing ERC20 token contract
