@@ -8,18 +8,17 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../AbstractStrategy.sol";
-import "../interfaces/uniswap/IUniswapV2.sol";
-import "../interfaces/liquity/IBorrowerOperations.sol";
-import "../interfaces/liquity/IHintHelpers.sol";
-import "../interfaces/liquity/ISortedTroves.sol";
-import "../interfaces/liquity/IStabilityPool.sol";
-import "../interfaces/liquity/ITroveManager.sol";
-import "../interfaces/liquity/IPriceFeed.sol";
 import "../../interfaces/IWETH.sol";
+import "../base/AbstractStrategy.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
+import "./interfaces/IBorrowerOperations.sol";
+import "./interfaces/IPriceFeed.sol";
+import "./interfaces/ISortedTroves.sol";
+import "./interfaces/IStabilityPool.sol";
+import "./interfaces/ITroveManager.sol";
 
 /**
- * Deposits ETH into Liquity Protocal, opens a trove to borrow LUSD, stakes LUSD to stability pool to yield mining.
+ * Deposits ETH into Liquity Protocol, opens a trove to borrow LUSD, stakes LUSD to stability pool to yield mining.
  */
 contract StrategyLiquityPool is AbstractStrategy {
     using SafeERC20 for IERC20;
@@ -28,7 +27,7 @@ contract StrategyLiquityPool is AbstractStrategy {
     address public uniswap;
     address public lqty;
 
-    // Liqutity contracts
+    // Liquity contracts
     address public borrowerOperations;
     address public stabilityPool;
     address public hintHelpers;
@@ -58,7 +57,7 @@ contract StrategyLiquityPool is AbstractStrategy {
         uint256 _maxFeePercentage
     ) AbstractStrategy(_controller, _weth) {
         require(
-            _icrInitial < _icrUpperLimit && _icrInitial > _icrLowerLimit, 
+            _icrInitial < _icrUpperLimit && _icrInitial > _icrLowerLimit,
             "icrInitial should be between icrLowerLimit and icrUpperLimit!"
         );
         uniswap = _uniswap;
@@ -85,7 +84,7 @@ contract StrategyLiquityPool is AbstractStrategy {
 
     function getAssetAmount() internal view override returns (uint256) {
         uint256 assetAmount;
-        (,assetAmount,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
+        (, assetAmount, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
         return assetAmount;
     }
 
@@ -99,12 +98,17 @@ contract StrategyLiquityPool is AbstractStrategy {
         if (ITroveManager(troveManager).getTroveStatus(address(this)) != 1) {
             (address upperHint, address lowerHint) = _getHints(MAX_INT);
             // Borrow allowed minimum LUSD, CR will be adjusted later.
-            IBorrowerOperations(borrowerOperations).openTrove{value: _buyAmount}(maxFeePercentage, MIN_NET_DEBT, upperHint, lowerHint);
+            IBorrowerOperations(borrowerOperations).openTrove{value: _buyAmount}(
+                maxFeePercentage,
+                MIN_NET_DEBT,
+                upperHint,
+                lowerHint
+            );
         } else {
-            (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
+            (uint256 debt, uint256 coll, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
             uint256 nicr = MAX_INT;
             if (debt != 0) {
-                nicr = (coll + _buyAmount) * NICR_PRECISION / debt;
+                nicr = ((coll + _buyAmount) * NICR_PRECISION) / debt;
             }
             (address upperHint, address lowerHint) = _getHints(nicr);
             IBorrowerOperations(borrowerOperations).addColl{value: _buyAmount}(upperHint, lowerHint);
@@ -112,16 +116,16 @@ contract StrategyLiquityPool is AbstractStrategy {
 
         uint256 newAssetAmount = getAssetAmount();
         _monitorAndAdjustCR();
-        
+
         return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         // here just withdrawal collateral, CR will be adjusted later
-        (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
+        (uint256 debt, uint256 coll, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
         uint256 nicr = MAX_INT;
         if (debt != 0) {
-            nicr = (coll - _sellAmount) * NICR_PRECISION / debt;
+            nicr = ((coll - _sellAmount) * NICR_PRECISION) / debt;
         }
         (address upperHint, address lowerHint) = _getHints(nicr);
 
@@ -147,7 +151,7 @@ contract StrategyLiquityPool is AbstractStrategy {
         // return ISortedTroves(sortedTroves).findInsertPosition(_ncr, approxHint, approxHint);
     }
 
-    /* 
+    /*
      * Continuously monitor the collateral ratio
      * If collateral ratio is smaller than icrLowerLimit, withdrawal LUSD from stability pool and repay the debt to rebalance CR back to 300%
      * If collateral ratio is larger than icrUpperLimit, generate more LUSD from the trove and stake to Stability Pool and bring CR back to 300%
@@ -156,23 +160,28 @@ contract StrategyLiquityPool is AbstractStrategy {
         uint256 currentEthPrice = IPriceFeed(priceFeed).fetchPrice();
         uint256 currentICR = ITroveManager(troveManager).getCurrentICR(address(this), currentEthPrice);
         if (currentICR < icrLowerLimit) {
-            (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-            uint256 expectDebt = debt * currentICR / icrInitial;
-            
-            uint256 nicr = coll * NICR_PRECISION / expectDebt;
+            (uint256 debt, uint256 coll, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
+            uint256 expectDebt = (debt * currentICR) / icrInitial;
+
+            uint256 nicr = (coll * NICR_PRECISION) / expectDebt;
             (address upperHint, address lowerHint) = _getHints(nicr);
 
             // TODO: make sure the LUSD in the stability pool is enough to withdrawal;
             IStabilityPool(stabilityPool).withdrawFromSP(debt - expectDebt);
             IBorrowerOperations(borrowerOperations).repayLUSD(debt - expectDebt, upperHint, lowerHint);
         } else if (currentICR > icrUpperLimit) {
-            (uint256 debt,uint256 coll,,) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-            uint256 expectDebt = coll * currentEthPrice / icrInitial;
+            (uint256 debt, uint256 coll, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
+            uint256 expectDebt = (coll * currentEthPrice) / icrInitial;
 
-            uint256 nicr = coll * NICR_PRECISION / expectDebt;
+            uint256 nicr = (coll * NICR_PRECISION) / expectDebt;
             (address upperHint, address lowerHint) = _getHints(nicr);
 
-            IBorrowerOperations(borrowerOperations).withdrawLUSD(maxFeePercentage, expectDebt - debt, upperHint, lowerHint);
+            IBorrowerOperations(borrowerOperations).withdrawLUSD(
+                maxFeePercentage,
+                expectDebt - debt,
+                upperHint,
+                lowerHint
+            );
             IStabilityPool(stabilityPool).provideToSP(expectDebt - debt, address(0));
         }
     }
@@ -190,7 +199,7 @@ contract StrategyLiquityPool is AbstractStrategy {
             paths[0] = lqty;
             paths[1] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForETH(
+            IUniswapV2Router02(uniswap).swapExactTokensForETH(
                 lqtyBalance,
                 uint256(0),
                 paths,

@@ -10,8 +10,8 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {DataTypes as dt} from "./libraries/DataTypes.sol";
 import {Transitions as tn} from "./libraries/Transitions.sol";
 import "./libraries/ErrMsg.sol";
+import "./interfaces/IStrategy.sol";
 import "./Registry.sol";
-import "./strategies/interfaces/IStrategy.sol";
 
 contract TransitionApplier1 {
     uint128 public constant UINT128_MAX = 2**128 - 1;
