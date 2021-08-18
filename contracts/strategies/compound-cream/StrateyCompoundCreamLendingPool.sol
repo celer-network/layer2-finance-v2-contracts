@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../AbstractStrategy.sol";
-import "../interfaces/compound/ICErc20.sol";
-import "../interfaces/compound/IComptroller.sol";
-import "../interfaces/uniswap/IUniswapV2.sol";
+import "../base/AbstractStrategy.sol";
+import "../compound/interfaces/ICErc20.sol";
+import "../compound/interfaces/IComptroller.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
 
 contract StrategyCompoundCreamLendingPool is AbstractStrategy {
     using SafeERC20 for IERC20;
@@ -144,7 +144,7 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 compBalance,
                 uint256(0),
                 paths,
@@ -166,7 +166,7 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
-            IUniswapV2(uniswap).swapExactTokensForTokens(
+            IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 creamBalance,
                 uint256(0),
                 paths,
