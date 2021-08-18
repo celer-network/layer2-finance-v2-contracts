@@ -58,7 +58,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
 
     function getAssetAmount() internal view override returns (uint256) {
         uint256 iTokenBalance = IERC20(iToken).balanceOf(address(this));
-        return ((iTokenBalance * IIdleToken(iToken).tokenPrice()) / (10**supplyTokenDecimal)) / (10**(18 - supplyTokenDecimal));
+        return ((iTokenBalance * tokenPriceWithFee()) / (10**supplyTokenDecimal)) / (10**(18 - supplyTokenDecimal));
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -75,7 +75,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         // Redeem supply token amount + interests and claim governance tokens
         // When `harvest` function is called, this contract lend obtained governance token to save gas
-        uint256 iTokenBurnAmount = ((_sellAmount * (10**supplyTokenDecimal)) / getRedeemPrice()) * (10**(18 - supplyTokenDecimal));
+        uint256 iTokenBurnAmount = ((_sellAmount * (10**supplyTokenDecimal)) / tokenPriceWithFee()) * (10**(18 - supplyTokenDecimal));
         IIdleToken(iToken).redeemIdleToken(iTokenBurnAmount);
 
         // Transfer supply token to Controller
@@ -98,41 +98,15 @@ contract StrategyIdleLendingPool is AbstractStrategy {
         IIdleToken(iToken).mintIdleToken(obtainedSupplyTokenAmount, false, address(0));
     }
 
-    // Refer to IdleTokenHelper.sol (https://github.com/emilianobonassi/idle-token-helper/blob/master/IdleTokenHelper.sol)
-    function getRedeemPrice() public view returns (uint256) {
-        /*
-         *  As per https://github.com/Idle-Labs/idle-contracts/blob/ad0f18fef670ea6a4030fe600f64ece3d3ac2202/contracts/IdleTokenGovernance.sol#L878-L900
-         *
-         *  Price on minting is currentPrice
-         *  Price on redeem must consider the fee
-         *
-         *  Below the implementation of the following redeemPrice formula
-         *
-         *  redeemPrice := underlyingAmount/idleTokenAmount
-         *
-         *  redeemPrice = currentPrice * (1 - scaledFee * ΔP%)
-         *
-         *  where:
-         *  - scaledFee   := fee/FULL_ALLOC
-         *  - ΔP% := 0 when currentPrice < userAvgPrice (no gain) and (currentPrice-userAvgPrice)/currentPrice
-         *
-         *  n.b: gain := idleTokenAmount * ΔP% * currentPrice
-         */
+    // Refer to IdleTokenGovernance.sol (https://github.com/Idle-Labs/idle-contracts/blob/develop/contracts/IdleTokenGovernance.sol#L340)
+    function tokenPriceWithFee() public view returns (uint256) {
         uint256 userAvgPrice = IIdleToken(iToken).userAvgPrices(address(this));
-        uint256 currentPrice = IIdleToken(iToken).tokenPrice();
-
-        // When no deposits userAvgPrice is 0 equiv currentPrice
-        // and in the case of
-        uint256 redeemPrice;
-        if (userAvgPrice == 0 || currentPrice < userAvgPrice) {
-            redeemPrice = currentPrice;
-        } else {
-            uint256 fee = IIdleToken(iToken).fee();
-
-            redeemPrice = ((currentPrice * (FULL_ALLOC)) - (fee * (currentPrice - userAvgPrice))) / (FULL_ALLOC);
+        uint256 priceWFee = IIdleToken(iToken).tokenPrice();
+        uint256 fee = IIdleToken(iToken).fee();
+        if (userAvgPrice != 0 && priceWFee > userAvgPrice) {
+            priceWFee = ((priceWFee * (FULL_ALLOC)) - (fee * (priceWFee - userAvgPrice))) / FULL_ALLOC;
         }
-
-        return redeemPrice;
+        return priceWFee;
     }
 
     function harvestAAVE() private {
