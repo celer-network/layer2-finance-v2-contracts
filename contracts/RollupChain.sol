@@ -15,7 +15,7 @@ import "./libraries/MerkleTree.sol";
 import "./Registry.sol";
 import "./PriorityOperations.sol";
 import "./TransitionDisputer.sol";
-import "./strategies/interfaces/IStrategy.sol";
+import "./interfaces/IStrategy.sol";
 import "./interfaces/IWETH.sol";
 
 contract RollupChain is Ownable, Pausable {

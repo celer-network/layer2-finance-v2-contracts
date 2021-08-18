@@ -1,9 +1,9 @@
-import 'hardhat-contract-sizer';
-import 'hardhat-deploy';
-import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
+import 'hardhat-contract-sizer';
+import 'hardhat-deploy';
+import 'hardhat-gas-reporter';
 
 import * as dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/types';
@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
     version: '0.8.6',
     settings: {
       optimizer: {
-        enabled: true, 
+        enabled: true,
         runs: 800
       }
     }
