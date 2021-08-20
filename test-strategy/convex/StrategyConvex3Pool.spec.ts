@@ -141,7 +141,7 @@ export async function testStrategyConvex3Pool(
   console.log('----- price =', price2.toString());
   console.log('----- assetAmount =', assetAmount2.toString());
   expect(assetAmount2).to.gte(p('95')).to.lt(p('105'));
-  expect(aggregateOrder1Gas).to.lt(1000000);
+  expect(aggregateOrder1Gas).to.lt(10000000);
 
   console.log('\n>>> aggregateOrders #2 -> buy 0 sell 50');
   const aggregateOrder2Gas = await strategy.estimateGas.aggregateOrders(p('0'), p('50'), p('0'), p('45'));
@@ -156,7 +156,7 @@ export async function testStrategyConvex3Pool(
   console.log('----- price =', price3.toString());
   console.log('----- assetAmount =', assetAmount3.toString());
   expect(assetAmount3).to.gte(p('45')).to.lt(p('65'));
-  expect(aggregateOrder2Gas).to.lt(1000000);
+  expect(aggregateOrder2Gas).to.lt(10000000);
 
   console.log('\n>>> aggregateOrders #3 -> buy 40 sell 10');
   const aggregateOrder3Gas = await strategy.estimateGas.aggregateOrders(p('40'), p('10'), p('35'), p('8'));
@@ -171,7 +171,7 @@ export async function testStrategyConvex3Pool(
   console.log('----- price =', price4.toString());
   console.log('----- assetAmount =', assetAmount4.toString());
   expect(assetAmount4).to.gte(p('75')).to.lt(p('85'));
-  expect(aggregateOrder3Gas).to.lt(1000000);
+  expect(aggregateOrder3Gas).to.lt(10000000);
 
   console.log('\n>>> aggregateOrders #4 -> buy 10 sell 100 (oversell)');
   await expect(strategy.aggregateOrders(p('10'), p('100'), p('8'), p('95'))).to.revertedWith(
