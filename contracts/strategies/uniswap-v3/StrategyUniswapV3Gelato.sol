@@ -8,16 +8,17 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+
 import "../base/AbstractStrategy.sol";
 import "./interfaces/gelato/IGUniPool.sol";
 import "./interfaces/gelato/IGUniResolver.sol";
 import "./interfaces/gelato/IGUniRouter.sol";
-import "./interfaces/ISwapRouter.sol";
-import "./interfaces/IUniswapV3Pool.sol";
 import "./libraries/FullMath.sol";
 
 /**
- * Deposits ERC20 token into Gelato Uniswap V3 Pool and issues stGUniPool in L2. Holds G-UNI LP tokens.
+ * Deposits ERC20 token into Gelato Uniswap V3 Pool. Holds G-UNI LP tokens.
  */
 contract StrategyUniswapV3Gelato is AbstractStrategy {
     using SafeERC20 for IERC20;
@@ -34,6 +35,7 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
 
     uint256 public slippage = 2000;
     uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
+    bool supply0;
 
     constructor(
         address _supplyToken,
@@ -47,6 +49,8 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
         gUniResolver = _gUniResolver;
         gUniRouter = _gUniRouter;
         swapRouter = _swapRouter;
+
+        supply0 = (supplyToken == IGUniPool(gUniPoolAddress).token0());
     }
 
     function getAssetAmount() internal view override returns (uint256) {
@@ -56,7 +60,7 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
             address(this),
             gUniPool.balanceOf(address(this))
         );
-        if (supplyToken != gUniPool.token0()) {
+        if (!supply0) {
             (amount0, amount1) = (amount1, amount0);
         }
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(gUniPool.pool()).slot0();
@@ -65,21 +69,22 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
+        if (_buyAmount == 0) {
+            return 0;
+        }
+
         uint256 originalAssetAmount = getAssetAmount();
 
         // Pull supply token from Controller.
         IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
 
-        // Deposit supply token to the G-Uni Pool.
+        // Deposit supply token to the G-Uni pool.
         IGUniPool gUniPool = IGUniPool(gUniPoolAddress);
         IERC20(supplyToken).safeIncreaseAllowance(gUniRouter, _buyAmount);
         uint256 amount0In = _buyAmount;
-        uint256 amount0Min = 0;
         uint256 amount1In = 0;
-        uint256 amount1Min = 0;
-        if (supplyToken != gUniPool.token0()) {
+        if (!supply0) {
             (amount0In, amount1In) = (amount1In, amount0In);
-            (amount0Min, amount1Min) = (amount1Min, amount0Min);
         }
         (bool zeroForOne, uint256 swapAmount, uint160 swapThreshold) = IGUniResolver(gUniResolver).getRebalanceParams(
             gUniPool,
@@ -95,41 +100,40 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
             zeroForOne,
             swapAmount,
             swapThreshold,
-            amount0Min,
-            amount1Min,
+            0,
+            0,
             address(this)
         );
 
         uint256 newAssetAmount = getAssetAmount();
-
         return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
+        if (_sellAmount == 0) {
+            return 0;
+        }
+
         uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
 
-        // Withdraw supply token from the G-Uni Pool.
+        // Withdraw supply token from the G-Uni pool.
         IGUniPool gUniPool = IGUniPool(gUniPoolAddress);
         uint256 amount0Max = _sellAmount;
         uint256 amount1Max = 0;
-        bool isSupplyToken1 = supplyToken != gUniPool.token0();
-        if (isSupplyToken1) {
+        if (!supply0) {
             (amount0Max, amount1Max) = (amount1Max, amount0Max);
         }
         uint256 burnAmount = FullMath.mulDiv(_sellAmount, gUniPool.balanceOf(address(this)), getAssetAmount());
-        if (burnAmount == 0) {
-            return 0;
-        }
         IERC20(gUniPoolAddress).safeIncreaseAllowance(gUniRouter, burnAmount);
         // TODO: Check price
         (uint256 removedAmount0, uint256 removedAmount1, ) = gUniPool.burn(burnAmount, address(this));
 
         // Swap to supply token if necessary
-        if ((isSupplyToken1 && removedAmount0 > 0) || (!isSupplyToken1 && removedAmount1 > 0)) {
+        if ((!supply0 && removedAmount0 > 0) || (supply0 && removedAmount1 > 0)) {
             address tokenIn = gUniPool.token1();
             address tokenOut = gUniPool.token0();
             uint256 amountIn = removedAmount1;
-            if (isSupplyToken1) {
+            if (!supply0) {
                 (tokenIn, tokenOut) = (tokenOut, tokenIn);
                 amountIn = removedAmount0;
             }
@@ -146,7 +150,7 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
             IERC20(tokenIn).safeIncreaseAllowance(swapRouter, amountIn);
             ISwapRouter(swapRouter).exactInputSingle(params);
         }
-        // Transfer supplying token(e.g. DAI, USDT) to Controller
+        // Transfer supply token to Controller
         uint256 balanceAfterSell = IERC20(supplyToken).balanceOf(address(this));
         IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
 

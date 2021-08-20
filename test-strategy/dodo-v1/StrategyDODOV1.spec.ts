@@ -1,44 +1,46 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
+import { ethers, network } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
-import { parseUnits } from '@ethersproject/units';
+import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
-import { StrategyUniswapV3Gelato__factory } from '../../typechain/factories/StrategyUniswapV3Gelato__factory';
-import { StrategyUniswapV3Gelato } from '../../typechain/StrategyUniswapV3Gelato.d';
+import { StrategyDODOV1__factory } from '../../typechain/factories/StrategyDODOV1__factory';
+import { StrategyDODOV1 } from '../../typechain/StrategyDODOV1.d';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
-interface DeployStrategyUniswapV3GelatoInfo {
-  strategy: StrategyUniswapV3Gelato;
+interface DeployStrategyDODOV1Info {
+  strategy: StrategyDODOV1;
   supplyToken: ERC20;
   deployerSigner: SignerWithAddress;
 }
 
-async function deployStrategyUniswapV3Gelato(
+async function deployStrategyDODOV1(
   deployedAddress: string | undefined,
   supplyTokenAddress: string,
-  gUniPoolAddress: string
-): Promise<DeployStrategyUniswapV3GelatoInfo> {
+  dodoPairAddress: string
+): Promise<DeployStrategyDODOV1Info> {
   const deployerSigner = await getDeployerSigner();
 
-  let strategy: StrategyUniswapV3Gelato;
+  let strategy: StrategyDODOV1;
   if (deployedAddress) {
-    strategy = StrategyUniswapV3Gelato__factory.connect(deployedAddress, deployerSigner);
+    strategy = StrategyDODOV1__factory.connect(deployedAddress, deployerSigner);
   } else {
-    const strategyUniswapV3GelatoFactory = (await ethers.getContractFactory(
-      'StrategyUniswapV3Gelato'
-    )) as StrategyUniswapV3Gelato__factory;
-    strategy = await strategyUniswapV3GelatoFactory
+    const strategyDODOV1Factory = (await ethers.getContractFactory('StrategyDODOV1')) as StrategyDODOV1__factory;
+    strategy = await strategyDODOV1Factory
       .connect(deployerSigner)
       .deploy(
         supplyTokenAddress,
-        gUniPoolAddress,
-        process.env.GUNI_RESOLVER as string,
-        process.env.GUNI_ROUTER as string,
-        process.env.UNISWAP_V3_ROUTER as string,
+        process.env.DODO as string,
+        process.env.USDT as string,
+        dodoPairAddress,
+        process.env.DODO_PROXY as string,
+        process.env.DODO_MINE as string,
+        process.env.DODO_APPROVE as string,
+        process.env.DODO_V1_DODO_USDT as string,
+        process.env.UNISWAP_V2_ROUTER as string,
         deployerSigner.address
       );
     await strategy.deployed();
@@ -49,21 +51,21 @@ async function deployStrategyUniswapV3Gelato(
   return { strategy, supplyToken, deployerSigner };
 }
 
-export async function testStrategyUniswapV3Gelato(
+export async function testStrategyDODOV1(
   context: Mocha.Context,
   deployedAddress: string | undefined,
   supplyTokenSymbol: string,
   supplyTokenDecimals: number,
   supplyTokenAddress: string,
-  gUniPoolAddress: string,
+  dodoPairAddress: string,
   supplyTokenFunder: string
 ): Promise<void> {
   context.timeout(300000);
 
-  const { strategy, supplyToken, deployerSigner } = await deployStrategyUniswapV3Gelato(
+  const { strategy, supplyToken, deployerSigner } = await deployStrategyDODOV1(
     deployedAddress,
     supplyTokenAddress,
-    gUniPoolAddress
+    dodoPairAddress
   );
 
   expect(getAddress(await strategy.getAssetAddress())).to.equal(getAddress(supplyToken.address));
@@ -121,5 +123,23 @@ export async function testStrategyUniswapV3Gelato(
     .to.emit(strategy, 'Sell');
   const price3 = await strategy.callStatic.syncPrice();
   console.log('price3:', price3.toString());
+  // TODO: Add price check
+
+  console.log('===== harvest =====');
+  await strategy.setHarvestThreshold(parseEther('0.01'));
+  // Send some DODO to the strategy
+  const dodo = ERC20__factory.connect(process.env.DODO as string, deployerSigner);
+  await network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [process.env.DODO_FUNDER]
+  });
+  await (
+    await dodo
+      .connect(await ethers.getSigner(process.env.DODO_FUNDER as string))
+      .transfer(strategy.address, parseEther('0.05'))
+  ).wait();
+  await strategy.harvest();
+  const price4 = await strategy.callStatic.syncPrice();
+  console.log('price4:', price4.toString());
   // TODO: Add price check
 }
