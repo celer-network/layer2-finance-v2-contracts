@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../base/AbstractStrategy.sol";
 import "../curve/interfaces/ICurveFi.sol";
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
 import "./interfaces/IConvex.sol";
 import "./interfaces/IConvexRewards.sol";
 
@@ -25,6 +26,9 @@ contract StrategyConvex3Pool is AbstractStrategy {
     uint256 public slippage = 500;
     uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
 
+    address public constant crv = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
+    address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address public constant uniswap = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     address public pool; // curve 3pool
     address public lpToken; // 3crv
     address public convex;
@@ -102,6 +106,35 @@ contract StrategyConvex3Pool is AbstractStrategy {
         return obtainedLpToken;
     }
     function harvest() external override onlyOwnerOrController {
+        IConvexRewards(convexRewards).getReward();
+        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+
+        if (crvBalance > 0) {
+            uint256 originalBalance = IERC20(supplyToken).balanceOf(address(this));
+
+            // Sell CRV for more supply token
+            IERC20(crv).safeIncreaseAllowance(uniswap, crvBalance);
+            address[] memory path = new address[](3);
+            path[0] = crv;
+            path[1] = weth;
+            path[2] = supplyToken;
+
+            IUniswapV2Router02(uniswap).swapExactTokensForTokens(
+                crvBalance,
+                uint256(0),
+                path,
+                address(this),
+                block.timestamp + 1800
+            );
+
+            // Re-invest supply token to obtain more lpToken
+            uint256 obtainedAssetAmount = IERC20(supplyToken).balanceOf(address(this)) - originalBalance;
+            uint256 obtainedLpToken = _addLiquidity(obtainedAssetAmount);
+
+            // deposit LP tokens to convex booster
+            IERC20(lpToken).safeIncreaseAllowance(convex, obtainedLpToken);
+            IConvex(convex).deposit(convexPoolId, obtainedLpToken, true);
+        }
     }
     function setSlippage(uint256 _slippage) external onlyOwner {
         slippage = _slippage;
