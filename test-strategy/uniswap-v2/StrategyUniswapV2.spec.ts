@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, network } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
-import { parseUnits } from '@ethersproject/units';
+import { parseUnits, parseEther } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../../typechain/ERC20';
@@ -149,4 +149,9 @@ export async function testStrategyUniswapV2(
   const price5 = await strategy.callStatic.syncPrice();
   console.log('price5:', price5.toString());
   expect(price5).to.lt(price4);
+
+  console.log('===== harvest =====');
+  await strategy.harvest();
+  const price6 = await strategy.callStatic.syncPrice();
+  console.log('price6:', price6.toString());
 }

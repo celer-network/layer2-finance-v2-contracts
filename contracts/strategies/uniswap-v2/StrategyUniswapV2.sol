@@ -182,8 +182,25 @@ contract StrategyUniswapV2 is AbstractStrategy {
     }
 
     function harvest() external override {
-        // Not supported
-        // TODO: consider to swap the left pair token in my address back to supply token
+        address _supplyToken = supplyToken;
+        address _pairToken = pairToken;
+        address _uniswap = uniswap;
+        // swap the left pair token in my address back to supply token
+        uint256 balance = IERC20(_pairToken).balanceOf(address(this));
+        if (balance > 0) {
+            IERC20(_pairToken).safeIncreaseAllowance(_uniswap, balance);
+            address[] memory paths = new address[](2);
+            paths[0] = _pairToken;
+            paths[1] = _supplyToken;
+
+            IUniswapV2Router02(_uniswap).swapExactTokensForTokens(
+                balance,
+                uint256(0),
+                paths,
+                address(this),
+                block.timestamp + 1800
+            );
+        }
     }
 
     function setMaxOneDeposit(uint256 _maxOneDeposit) external onlyController {
