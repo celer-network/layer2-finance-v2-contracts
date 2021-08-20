@@ -5,12 +5,12 @@ import { getAddress } from '@ethersproject/address';
 import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
+import { ICErc20__factory } from '../../typechain';
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
 import { StrategyCompoundCreamLendingPool__factory } from '../../typechain/factories/StrategyCompoundCreamLendingPool__factory';
 import { StrategyCompoundCreamLendingPool } from '../../typechain/StrategyCompoundCreamLendingPool';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
-import { ICErc20__factory } from '../../typechain';
 
 interface DeployStrategyCompoundCreamLendingPoolInfo {
   strategy: StrategyCompoundCreamLendingPool;
@@ -43,7 +43,7 @@ async function deployStrategyCompoundCreamLendingPool(
         process.env.CREAM_COMPTROLLER as string,
         process.env.COMPOUND_COMP as string,
         process.env.CREAM_CREAM as string,
-        process.env.UNISWAP_ROUTER as string,
+        process.env.UNISWAP_V2_ROUTER as string,
         process.env.WETH as string,
         deployerSigner.address
       );
@@ -88,22 +88,41 @@ export async function testStrategyCompoundCreamLendingPool(
   );
 
   console.log('===== Buy 5 =====');
-  await expect(strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('4', supplyTokenDecimals), parseUnits('0')))
-    .to.emit(strategy, 'Buy')
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('5', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('4', supplyTokenDecimals),
+      parseUnits('0')
+    )
+  ).to.emit(strategy, 'Buy');
 
   const price1 = await strategy.callStatic.syncPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
   console.log('===== Sell 2 =====');
-  await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('2', supplyTokenDecimals)))
-    .to.emit(strategy, 'Sell');
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('0'),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('2', supplyTokenDecimals)
+    )
+  ).to.emit(strategy, 'Sell');
   const price2 = await strategy.callStatic.syncPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.gte(price1);
 
   console.log('===== Buy 1, Sell 2 =====');
-  await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals)))
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals)
+    )
+  )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   expect(await strategy.shares()).to.lte(parseUnits('2', supplyTokenDecimals));
@@ -115,13 +134,9 @@ export async function testStrategyCompoundCreamLendingPool(
   const cErc20 = ICErc20__factory.connect(compoundSupplyTokenAddress, deployerSigner);
   const crErc20 = ICErc20__factory.connect(creamSupplytokenAddress, deployerSigner);
   const cErc20Rate = await cErc20.callStatic.supplyRatePerBlock();
-  console.log(
-    `cErc20Rate:`, cErc20Rate.toString()
-  );
+  console.log(`cErc20Rate:`, cErc20Rate.toString());
   const crErc20Rate = await crErc20.callStatic.supplyRatePerBlock();
-  console.log(
-    `crErc20Rate:`, crErc20Rate.toString()
-  );
+  console.log(`crErc20Rate:`, crErc20Rate.toString());
 
   await network.provider.request({
     method: 'hardhat_impersonateAccount',
@@ -134,33 +149,31 @@ export async function testStrategyCompoundCreamLendingPool(
     })
   ).wait();
   const toMint = parseUnits('1', supplyTokenDecimals);
-  await (
-    await supplyToken.transfer(strategy.address, toMint)
-  ).wait();
-  if(cErc20Rate > crErc20Rate) {
-    await (await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(creamSupplytokenAddress, toMint)).wait();
+  await (await supplyToken.transfer(strategy.address, toMint)).wait();
+  if (cErc20Rate > crErc20Rate) {
     await (
-      await crErc20
-        .connect(await ethers.getSigner(strategy.address))
-        .mint(toMint)
+      await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(creamSupplytokenAddress, toMint)
     ).wait();
+    await (await crErc20.connect(await ethers.getSigner(strategy.address)).mint(toMint)).wait();
   } else if (cErc20Rate < crErc20Rate) {
-    await (await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(compoundSupplyTokenAddress, toMint)).wait();
     await (
-      await cErc20
-        .connect(await ethers.getSigner(strategy.address))
-        .mint(toMint)
+      await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(compoundSupplyTokenAddress, toMint)
     ).wait();
+    await (await cErc20.connect(await ethers.getSigner(strategy.address)).mint(toMint)).wait();
   }
 
   console.log('===== Sell 0.5 =====');
   let cErc20Balance = await cErc20.callStatic.balanceOfUnderlying(strategy.address);
   let crErc20Balance = await crErc20.callStatic.balanceOfUnderlying(strategy.address);
-  console.log(
-    `before sell: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}` 
-  );
-  await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('0.5', supplyTokenDecimals), parseUnits('0'), parseUnits('0.5', supplyTokenDecimals)))
-    .to.emit(strategy, 'Sell');
+  console.log(`before sell: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}`);
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('0'),
+      parseUnits('0.5', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('0.5', supplyTokenDecimals)
+    )
+  ).to.emit(strategy, 'Sell');
   const price4 = await strategy.callStatic.syncPrice();
   console.log('price4:', price4.toString());
   expect(price4).to.gte(price3);
@@ -168,21 +181,17 @@ export async function testStrategyCompoundCreamLendingPool(
   console.log('===== adjust =====');
   cErc20Balance = await cErc20.callStatic.balanceOfUnderlying(strategy.address);
   crErc20Balance = await crErc20.callStatic.balanceOfUnderlying(strategy.address);
-  console.log(
-    `before adjust: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}` 
-  );
+  console.log(`before adjust: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}`);
   await strategy.adjust();
   cErc20Balance = await cErc20.callStatic.balanceOfUnderlying(strategy.address);
   crErc20Balance = await crErc20.callStatic.balanceOfUnderlying(strategy.address);
-  console.log(
-    `after adjust: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}` 
-  );  
+  console.log(`after adjust: cErc20Balance ${cErc20Balance.toString()}, crErc20Balance ${crErc20Balance.toString()}`);
   if (cErc20Rate < crErc20Rate) {
     expect(cErc20Balance).equals(0);
   } else if (cErc20Rate > crErc20Rate) {
     expect(crErc20Balance).equals(0);
   }
-  
+
   console.log('===== harvest, and price should be updated =====');
   try {
     // Send some COMP to the strategy
@@ -200,10 +209,8 @@ export async function testStrategyCompoundCreamLendingPool(
     const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
     const receipt = await harvestTx.wait();
     console.log('Harvest gas used:', receipt.gasUsed.toString());
-    const price5 =  await strategy.callStatic.syncPrice();
-    console.log(
-      `price5:`, price5.toString()
-    );
+    const price5 = await strategy.callStatic.syncPrice();
+    console.log(`price5:`, price5.toString());
     expect(price5).to.gte(price4);
   } catch (e) {
     console.log('Cannot harvest:', e);

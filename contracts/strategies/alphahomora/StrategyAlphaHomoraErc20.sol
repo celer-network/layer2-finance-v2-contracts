@@ -19,6 +19,7 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
 
     // The address of Alpha Homora v2 interest-bearing token, eg. ibUSDTv2
     address public ibToken;
+
     // _supplyToken must be the same as _ibToken.uToken
     constructor(
         address _ibToken,
@@ -39,7 +40,7 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
     function getAssetAmount() internal override returns (uint256) {
         // ib token equals cyToken
         uint256 tokenBal = ISafeBox(ibToken).balanceOf(address(this));
-        return tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateCurrent() / 1e18;
+        return (tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateCurrent()) / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -61,20 +62,19 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
         // Withdraw from homora v2
         // as withdraw expects ibToken, need to convert by divide price
         uint256 yrate = IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateCurrent();
-        ISafeBox(ibToken).withdraw(_sellAmount * 1e18 / yrate);
+        ISafeBox(ibToken).withdraw((_sellAmount * 1e18) / yrate);
         // Transfer supplying token(e.g. DAI, USDT) to Controller
         uint256 balanceAfterSell = IERC20(supplyToken).balanceOf(address(this));
         IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
         return balanceAfterSell - balanceBeforeSell;
-    }    
+    }
 
     // no-op just to satisfy IStrategy
-    function harvest() external override onlyEOA {
-    }
+    function harvest() external override onlyEOA {}
 
     // SafeBox requires bytes32[] proof to claim. see alpha-homora-v2-contract/blob/master/contracts/SafeBox.sol#L67
     // for more details
-    function harvest(uint totalAmount, bytes32[] memory proof) external onlyEOA {
+    function harvest(uint256 totalAmount, bytes32[] memory proof) external onlyEOA {
         uint256 balanceBeforeClaim = IERC20(supplyToken).balanceOf(address(this));
 
         // Claim from homora v2. after verify merkle root, we get totalAmount - claimed[msg.sender]

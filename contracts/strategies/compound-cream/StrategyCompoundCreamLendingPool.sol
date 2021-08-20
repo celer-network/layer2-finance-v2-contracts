@@ -73,7 +73,7 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
-         uint256 originalAssetAmount = getAssetAmount();
+        uint256 originalAssetAmount = getAssetAmount();
 
         // Pull supplying token(e.g. DAI, USDT) from Controller
         IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
@@ -89,7 +89,7 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
             mintResult = ICErc20(crErc20).mint(_buyAmount);
         }
         uint256 newAssetAmount = getAssetAmount();
-        
+
         return newAssetAmount - originalAssetAmount;
     }
 
@@ -114,7 +114,9 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
 
         if (lowRateBalance > 0) {
             uint256 lowRateTokenBalance = lowRateProtocol.balanceOf(address(this));
-            if (lowRateTokenBalance > 0 /* to avoid redeemTokens zero error */) {
+            if (
+                lowRateTokenBalance > 0 /* to avoid redeemTokens zero error */
+            ) {
                 redeemResult = lowRateProtocol.redeemUnderlying(lowRateBalance);
                 require(redeemResult == 0, "Couldn't redeem cToken/crToken");
             }

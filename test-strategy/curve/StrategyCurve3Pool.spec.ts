@@ -1,10 +1,12 @@
-import { getAddress } from '@ethersproject/address';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+
+import { getAddress } from '@ethersproject/address';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
+
 import { StrategyCurve3Pool__factory } from '../../typechain';
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
@@ -48,7 +50,7 @@ async function deploy(
       (process.env.CURVE_MINTR as string) + '\n',
       (process.env.CURVE_CRV as string) + '\n',
       (process.env.WETH as string) + '\n',
-      (process.env.UNISWAP_ROUTER as string) + '\n'
+      (process.env.UNISWAP_V2_ROUTER as string) + '\n'
     );
     strategy = await factory
       .connect(deployerSigner)
@@ -62,7 +64,7 @@ async function deploy(
         process.env.CURVE_MINTR as string,
         process.env.CURVE_CRV as string,
         process.env.WETH as string,
-        process.env.UNISWAP_ROUTER as string,
+        process.env.UNISWAP_V2_ROUTER as string,
         supplyTokenDecimal
       );
     await strategy.deployed();
