@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+import "../base/AbstractStrategy.sol";
 import "../curve/interfaces/ICurveFi.sol";
 import "./interfaces/IConvex.sol";
 import "./interfaces/IConvexRewards.sol";
@@ -49,7 +50,7 @@ contract StrategyConvex3Pool is AbstractStrategy {
         convex = _convex;
         convexRewards = _convexRewards;
         convexPoolId = _convexPoolId;
-        supplyTokenIndexInPool = _supplyTokenIndexInPool;
+        supplyTokenIndexInPool = _supplyTokenIndexIn3Pool;
         decimalDiff = PRICE_DECIMALS / 10**_supplyTokenDecimal; // curve treats supply tokens as they have 18 decimals but tokens like USDC and USDT actually have 6 decimals
     }
 
@@ -76,7 +77,7 @@ contract StrategyConvex3Pool is AbstractStrategy {
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         uint256 sellLpTokens = (_sellAmount * PRICE_DECIMALS * decimalDiff) / ICurveFi(pool).get_virtual_price();
         // get lpToken back, leave claim to harvest
-        IConvexRewards(convexRewards).withdrawAndUnwrap(sellLpTokens, false)
+        IConvexRewards(convexRewards).withdrawAndUnwrap(sellLpTokens, false);
 
         // remove liquidity from pool to get supplyToken back
         uint256 minAmountFromSell = (_sellAmount * (SLIPPAGE_DENOMINATOR - slippage)) / SLIPPAGE_DENOMINATOR;
@@ -100,7 +101,8 @@ contract StrategyConvex3Pool is AbstractStrategy {
         uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this)) - originalLpTokenBalance;
         return obtainedLpToken;
     }
-
+    function harvest() external override onlyOwnerOrController {
+    }
     function setSlippage(uint256 _slippage) external onlyOwner {
         slippage = _slippage;
     }
