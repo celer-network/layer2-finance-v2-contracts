@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "../interfaces/uniswap/IUniswapV2.sol";
-import "../interfaces/idle/IIdleToken.sol";
-import "../interfaces/aave/IStakedAave.sol";
+
+import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
+import "../aave/interfaces/IStakedAave.sol";
+import "./interfaces/IIdleToken.sol";
 import "./GovTokenRegistry.sol";
-import "../AbstractStrategy.sol";
+import "../base/AbstractStrategy.sol";
 
 contract StrategyIdleLendingPool is AbstractStrategy {
     using SafeERC20 for IERC20;
@@ -148,7 +149,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
                     paths[1] = weth;
                     paths[2] = supplyToken;
 
-                    IUniswapV2(sushiswap).swapExactTokensForTokens(
+                    IUniswapV2Router02(sushiswap).swapExactTokensForTokens(
                         govTokenBalance,
                         uint(0),
                         paths,
@@ -160,7 +161,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
                     paths[0] = govTokens[i];
                     paths[1] = weth;
 
-                    IUniswapV2(sushiswap).swapExactTokensForTokens(
+                    IUniswapV2Router02(sushiswap).swapExactTokensForTokens(
                         govTokenBalance,
                         uint(0),
                         paths,
