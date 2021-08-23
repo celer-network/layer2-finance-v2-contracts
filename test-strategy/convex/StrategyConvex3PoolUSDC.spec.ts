@@ -10,7 +10,7 @@ describe('StrategyCurve3PoolUSDC', async function () {
       process.env.STRATEGY_CONVEX_3POOL_USDC,
       process.env.USDC as string,
       6,
-      2,
+      1,
       process.env.USDC_FUNDER as string
     );
   });
