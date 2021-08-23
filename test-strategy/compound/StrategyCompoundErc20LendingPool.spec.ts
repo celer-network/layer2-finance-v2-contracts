@@ -39,7 +39,7 @@ async function deployStrategyCompoundErc20LendingPool(
         compoundSupplyTokenAddress,
         process.env.COMPOUND_COMPTROLLER as string,
         process.env.COMPOUND_COMP as string,
-        process.env.UNISWAP_ROUTER as string,
+        process.env.UNISWAP_V2_ROUTER as string,
         process.env.WETH as string,
         deployerSigner.address
       );
@@ -83,29 +83,48 @@ export async function testStrategyCompoundErc20LendingPool(
   );
 
   console.log('===== Buy 5 =====');
-  await expect(strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('4', supplyTokenDecimals), parseUnits('0')))
-    .to.emit(strategy, 'Buy')
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('5', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('4', supplyTokenDecimals),
+      parseUnits('0')
+    )
+  ).to.emit(strategy, 'Buy');
 
   const price1 = await strategy.callStatic.syncPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
   console.log('===== Sell 2 =====');
-  await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('2', supplyTokenDecimals)))
-    .to.emit(strategy, 'Sell');
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('0'),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('2', supplyTokenDecimals)
+    )
+  ).to.emit(strategy, 'Sell');
   const price2 = await strategy.callStatic.syncPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.gte(price1);
 
   console.log('===== Buy 1, Sell 2 =====');
-  await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals)))
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals)
+    )
+  )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   expect(await strategy.shares()).to.lte(parseUnits('2', supplyTokenDecimals));
   const price3 = await strategy.callStatic.syncPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.gte(price2);
-  
+
   console.log('===== harvest, and price should be updated =====');
   try {
     // Send some COMP to the strategy
@@ -125,10 +144,8 @@ export async function testStrategyCompoundErc20LendingPool(
       const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
       const receipt = await harvestTx.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price4 =  await strategy.callStatic.syncPrice();
-      console.log(
-        `price4:`, price4.toString()
-      );
+      const price4 = await strategy.callStatic.syncPrice();
+      console.log(`price4:`, price4.toString());
       expect(price4).to.gte(price3);
     }
   } catch (e) {

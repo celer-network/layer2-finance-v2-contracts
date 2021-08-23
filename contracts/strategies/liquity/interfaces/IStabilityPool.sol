@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 pragma solidity 0.8.6;
 
@@ -46,7 +46,7 @@ interface IStabilityPool {
      * - Sends the tagged front end's accumulated LQTY gains to the tagged front end
      * - Increases deposit and tagged front end's stake, and takes new snapshots for each.
      */
-    function provideToSP(uint _amount, address _frontEndTag) external;
+    function provideToSP(uint256 _amount, address _frontEndTag) external;
 
     /*
      * Initial checks:
@@ -61,7 +61,7 @@ interface IStabilityPool {
      *
      * If _amount > userDeposit, the user withdraws all of their compounded deposit.
      */
-    function withdrawFromSP(uint _amount) external;
+    function withdrawFromSP(uint256 _amount) external;
 
     /*
      * Initial checks:
@@ -86,7 +86,7 @@ interface IStabilityPool {
      * ---
      * Front end makes a one-time selection of kickback rate upon registering
      */
-    function registerFrontEnd(uint _kickbackRate) external;
+    function registerFrontEnd(uint256 _kickbackRate) external;
 
     /*
      * Initial checks:
@@ -96,23 +96,23 @@ interface IStabilityPool {
      * and transfers the Trove's ETH collateral from ActivePool to StabilityPool.
      * Only called by liquidation functions in the TroveManager.
      */
-    function offset(uint _debt, uint _coll) external;
+    function offset(uint256 _debt, uint256 _coll) external;
 
     /*
      * Returns the total amount of ETH held by the pool, accounted in an internal variable instead of `balance`,
      * to exclude edge cases like ETH received from a self-destruct.
      */
-    function getETH() external view returns (uint);
+    function getETH() external view returns (uint256);
 
     /*
      * Returns LUSD held in the pool. Changes when users deposit/withdraw, and when Trove debt is offset.
      */
-    function getTotalLUSDDeposits() external view returns (uint);
+    function getTotalLUSDDeposits() external view returns (uint256);
 
     /*
      * Calculates the ETH gain earned by the deposit since its last snapshots were taken.
      */
-    function getDepositorETHGain(address _depositor) external view returns (uint);
+    function getDepositorETHGain(address _depositor) external view returns (uint256);
 
     /*
      * Calculate the LQTY gain earned by a deposit since its last snapshots were taken.
@@ -120,24 +120,24 @@ interface IStabilityPool {
      * Otherwise, their cut of the deposit's earnings is equal to the kickbackRate, set by the front end through
      * which they made their deposit.
      */
-    function getDepositorLQTYGain(address _depositor) external view returns (uint);
+    function getDepositorLQTYGain(address _depositor) external view returns (uint256);
 
     /*
      * Return the LQTY gain earned by the front end.
      */
-    function getFrontEndLQTYGain(address _frontEnd) external view returns (uint);
+    function getFrontEndLQTYGain(address _frontEnd) external view returns (uint256);
 
     /*
      * Return the user's compounded deposit.
      */
-    function getCompoundedLUSDDeposit(address _depositor) external view returns (uint);
+    function getCompoundedLUSDDeposit(address _depositor) external view returns (uint256);
 
     /*
      * Return the front end's compounded stake.
      *
      * The front end's compounded stake is equal to the sum of its depositors' compounded deposits.
      */
-    function getCompoundedFrontEndStake(address _frontEnd) external view returns (uint);
+    function getCompoundedFrontEndStake(address _frontEnd) external view returns (uint256);
 
     /*
      * Fallback function

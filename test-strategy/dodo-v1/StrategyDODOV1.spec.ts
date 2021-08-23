@@ -1,48 +1,47 @@
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
 import { ethers, network } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
-import { parseUnits, parseEther } from '@ethersproject/units';
+import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
-import { StrategyUniswapV2__factory } from '../../typechain/factories/StrategyUniswapV2__factory';
-import { StrategyUniswapV2 } from '../../typechain/StrategyUniswapV2';
+import { StrategyDODOV1__factory } from '../../typechain/factories/StrategyDODOV1__factory';
+import { StrategyDODOV1 } from '../../typechain/StrategyDODOV1.d';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
-interface DeployStrategyUniswapV2 {
-  strategy: StrategyUniswapV2;
+interface DeployStrategyDODOV1Info {
+  strategy: StrategyDODOV1;
   supplyToken: ERC20;
   deployerSigner: SignerWithAddress;
 }
 
-async function deployStrategyUniswapV2(
+async function deployStrategyDODOV1(
   deployedAddress: string | undefined,
   supplyTokenAddress: string,
-  pairTokenAddress: string,
-  maxSlippage: BigNumber,
-  maxOneDeposit: BigNumber
-): Promise<DeployStrategyUniswapV2> {
+  dodoPairAddress: string
+): Promise<DeployStrategyDODOV1Info> {
   const deployerSigner = await getDeployerSigner();
 
-  let strategy: StrategyUniswapV2;
+  let strategy: StrategyDODOV1;
   if (deployedAddress) {
-    strategy = StrategyUniswapV2__factory.connect(deployedAddress, deployerSigner);
+    strategy = StrategyDODOV1__factory.connect(deployedAddress, deployerSigner);
   } else {
-    const strategyUniswapV2Factory = (await ethers.getContractFactory(
-      'StrategyUniswapV2'
-    )) as StrategyUniswapV2__factory;
-    strategy = await strategyUniswapV2Factory
+    const strategyDODOV1Factory = (await ethers.getContractFactory('StrategyDODOV1')) as StrategyDODOV1__factory;
+    strategy = await strategyDODOV1Factory
       .connect(deployerSigner)
       .deploy(
-        deployerSigner.address,
         supplyTokenAddress,
-        pairTokenAddress,
+        process.env.DODO as string,
+        process.env.USDT as string,
+        dodoPairAddress,
+        process.env.DODO_PROXY as string,
+        process.env.DODO_MINE as string,
+        process.env.DODO_APPROVE as string,
+        process.env.DODO_V1_DODO_USDT as string,
         process.env.UNISWAP_V2_ROUTER as string,
-        maxSlippage,
-        maxOneDeposit
+        deployerSigner.address
       );
     await strategy.deployed();
   }
@@ -52,25 +51,21 @@ async function deployStrategyUniswapV2(
   return { strategy, supplyToken, deployerSigner };
 }
 
-export async function testStrategyUniswapV2(
+export async function testStrategyDODOV1(
   context: Mocha.Context,
   deployedAddress: string | undefined,
   supplyTokenSymbol: string,
   supplyTokenDecimals: number,
   supplyTokenAddress: string,
-  pairTokenAddress: string,
-  maxSlippage: BigNumber,
-  maxOneDeposit: BigNumber,
+  dodoPairAddress: string,
   supplyTokenFunder: string
 ): Promise<void> {
   context.timeout(300000);
 
-  const { strategy, supplyToken, deployerSigner } = await deployStrategyUniswapV2(
+  const { strategy, supplyToken, deployerSigner } = await deployStrategyDODOV1(
     deployedAddress,
     supplyTokenAddress,
-    pairTokenAddress,
-    maxSlippage,
-    maxOneDeposit
+    dodoPairAddress
   );
 
   expect(getAddress(await strategy.getAssetAddress())).to.equal(getAddress(supplyToken.address));
@@ -87,11 +82,12 @@ export async function testStrategyUniswapV2(
   );
 
   console.log('===== Buy 10 =====');
+  strategy;
   await expect(
     strategy.aggregateOrders(
       parseUnits('10', supplyTokenDecimals),
       parseUnits('0'),
-      parseUnits('10', supplyTokenDecimals),
+      parseUnits('9.95', supplyTokenDecimals),
       parseUnits('0')
     )
   ).to.emit(strategy, 'Buy');
@@ -106,52 +102,44 @@ export async function testStrategyUniswapV2(
       parseUnits('0'),
       parseUnits('2', supplyTokenDecimals),
       parseUnits('0'),
-      parseUnits('2', supplyTokenDecimals)
+      parseUnits('1.95', supplyTokenDecimals)
     )
   ).to.emit(strategy, 'Sell');
 
   const price2 = await strategy.callStatic.syncPrice();
   console.log('price2:', price2.toString());
-  expect(price2).to.equal(price1);
+  // TODO: Add price check
 
   console.log('===== Buy 1, Sell 2 =====');
   await expect(
     strategy.aggregateOrders(
       parseUnits('1', supplyTokenDecimals),
       parseUnits('2', supplyTokenDecimals),
-      parseUnits('1', supplyTokenDecimals),
-      parseUnits('2', supplyTokenDecimals)
+      parseUnits('0.95', supplyTokenDecimals),
+      parseUnits('1.95', supplyTokenDecimals)
     )
   )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   const price3 = await strategy.callStatic.syncPrice();
   console.log('price3:', price3.toString());
-  expect(price3).to.equal(price2);
-
-  console.log('===== adjust =====');
-  await strategy.adjust();
-  const price4 = await strategy.callStatic.syncPrice();
-  console.log('price4:', price4.toString());
-  expect(price4).to.lt(price3);
-
-  console.log('===== Buy 1, Sell 2 after adjust =====');
-  await expect(
-    strategy.aggregateOrders(
-      parseUnits('1', supplyTokenDecimals),
-      parseUnits('2', supplyTokenDecimals),
-      parseUnits('1', supplyTokenDecimals),
-      parseUnits('1', supplyTokenDecimals)
-    )
-  )
-    .to.emit(strategy, 'Buy')
-    .to.emit(strategy, 'Sell');
-  const price5 = await strategy.callStatic.syncPrice();
-  console.log('price5:', price5.toString());
-  expect(price5).to.lt(price4);
+  // TODO: Add price check
 
   console.log('===== harvest =====');
+  await strategy.setHarvestThreshold(parseEther('0.01'));
+  // Send some DODO to the strategy
+  const dodo = ERC20__factory.connect(process.env.DODO as string, deployerSigner);
+  await network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [process.env.DODO_FUNDER]
+  });
+  await (
+    await dodo
+      .connect(await ethers.getSigner(process.env.DODO_FUNDER as string))
+      .transfer(strategy.address, parseEther('0.05'))
+  ).wait();
   await strategy.harvest();
-  const price6 = await strategy.callStatic.syncPrice();
-  console.log('price6:', price6.toString());
+  const price4 = await strategy.callStatic.syncPrice();
+  console.log('price4:', price4.toString());
+  // TODO: Add price check
 }

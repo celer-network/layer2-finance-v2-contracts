@@ -27,7 +27,7 @@ describe('StrategyCompoundETH', function () {
           process.env.COMPOUND_CETH as string,
           process.env.COMPOUND_COMPTROLLER as string,
           process.env.COMPOUND_COMP as string,
-          process.env.UNISWAP_ROUTER as string,
+          process.env.UNISWAP_V2_ROUTER as string,
           process.env.WETH as string,
           deployerSigner.address
         );
@@ -57,16 +57,20 @@ describe('StrategyCompoundETH', function () {
     );
 
     console.log('===== Buy 5 =====');
-    await expect(strategy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('4'), parseEther('0')))
-      .to.emit(strategy, 'Buy')
+    await expect(strategy.aggregateOrders(parseEther('5'), parseEther('0'), parseEther('4'), parseEther('0'))).to.emit(
+      strategy,
+      'Buy'
+    );
 
     const price1 = await strategy.callStatic.syncPrice();
     console.log('price1:', price1.toString());
     expect(price1).to.lte(parseEther('1'));
 
     console.log('===== Sell 2 =====');
-    await expect(strategy.aggregateOrders(parseEther('0'), parseEther('2'), parseEther('0'), parseEther('2')))
-      .to.emit(strategy, 'Sell');
+    await expect(strategy.aggregateOrders(parseEther('0'), parseEther('2'), parseEther('0'), parseEther('2'))).to.emit(
+      strategy,
+      'Sell'
+    );
     const price2 = await strategy.callStatic.syncPrice();
     console.log('price2:', price2.toString());
     expect(price2).to.gte(price1);
@@ -99,10 +103,8 @@ describe('StrategyCompoundETH', function () {
         const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
         const receipt = await harvestTx.wait();
         console.log('Harvest gas used:', receipt.gasUsed.toString());
-        const price4 =  await strategy.callStatic.syncPrice();
-        console.log(
-          `price4:`, price4.toString()
-        );
+        const price4 = await strategy.callStatic.syncPrice();
+        console.log(`price4:`, price4.toString());
         expect(price4).to.gte(price3);
       }
     } catch (e) {

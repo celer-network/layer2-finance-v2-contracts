@@ -10,7 +10,7 @@ import "../../interfaces/IWETH.sol";
 import "../base/AbstractStrategy.sol";
 import "../uniswap-v2/interfaces/IUniswapV2Pair.sol";
 import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
-import "../uniswap-v2/libraries/UniswapV2Library.sol";
+import "./libraries/SushiswapLibrary.sol";
 import "./interfaces/IMasterChef.sol";
 
 /**
@@ -64,7 +64,7 @@ contract StrategySushiswap is AbstractStrategy {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         IUniswapV2Pair pair = IUniswapV2Pair(
-            UniswapV2Library.pairFor(IUniswapV2Router02(sushiswap).factory(), _supplyToken, _pairToken)
+            SushiswapLibrary.pairFor(IUniswapV2Router02(sushiswap).factory(), _supplyToken, _pairToken)
         );
         uint256 myLiquidity = pair.balanceOf(address(this)) + lpAmtInPool;
         if (myLiquidity == 0) {
@@ -72,14 +72,14 @@ contract StrategySushiswap is AbstractStrategy {
         }
 
         uint256 totalSupply = pair.totalSupply();
-        (address token0, ) = UniswapV2Library.sortTokens(_supplyToken, _pairToken);
+        (address token0, ) = SushiswapLibrary.sortTokens(_supplyToken, _pairToken);
         (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
         if (_supplyToken != token0) {
             (reserve0, reserve1) = (reserve1, reserve0);
         }
         uint256 myReserve0 = (myLiquidity * reserve0) / totalSupply;
         uint256 myReserve1 = (myLiquidity * reserve1) / totalSupply;
-        uint256 myReserve1Out = UniswapV2Library.getAmountOut(myReserve1, reserve1, reserve0);
+        uint256 myReserve1Out = SushiswapLibrary.getAmountOut(myReserve1, reserve1, reserve0);
 
         return myReserve0 + myReserve1Out + IERC20(supplyToken).balanceOf(address(this)); // should include the assets not yet adjusted
     }
@@ -106,7 +106,7 @@ contract StrategySushiswap is AbstractStrategy {
             address _sushiswap = sushiswap;
 
             IUniswapV2Pair pair = IUniswapV2Pair(
-                UniswapV2Library.pairFor(IUniswapV2Router02(_sushiswap).factory(), _supplyToken, _pairToken)
+                SushiswapLibrary.pairFor(IUniswapV2Router02(_sushiswap).factory(), _supplyToken, _pairToken)
             );
             uint256 lpInMyAddress = pair.balanceOf(address(this));
             uint256 toSellLiquidity = ((lpInMyAddress + lpAmtInPool) * amtFromUniswap) /
@@ -163,7 +163,7 @@ contract StrategySushiswap is AbstractStrategy {
         uint256 toBuy = min(balance, maxOneDeposit);
         uint256 half = toBuy / 2;
         IUniswapV2Pair pair = IUniswapV2Pair(
-            UniswapV2Library.pairFor(IUniswapV2Router02(_sushiswap).factory(), _supplyToken, _pairToken)
+            SushiswapLibrary.pairFor(IUniswapV2Router02(_sushiswap).factory(), _supplyToken, _pairToken)
         );
 
         // swap half for pair token
@@ -174,7 +174,7 @@ contract StrategySushiswap is AbstractStrategy {
             paths[1] = _pairToken;
 
             (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
-            uint256 expectOut = UniswapV2Library.getAmountOut(half, reserve0, reserve1);
+            uint256 expectOut = SushiswapLibrary.getAmountOut(half, reserve0, reserve1);
 
             IUniswapV2Router02(_sushiswap).swapExactTokensForTokens(
                 half,
@@ -209,20 +209,38 @@ contract StrategySushiswap is AbstractStrategy {
     }
 
     function harvest() external override {
-        // TODO: consider to swap the left pair token in my address back to supply token
+        address _supplyToken = supplyToken;
+        address _pairToken = pairToken;
+        address _sushiswap = sushiswap;
+        // swap the left pair token in my address back to supply token
+        uint256 balance = IERC20(_pairToken).balanceOf(address(this));
+        if (balance > 0) {
+            IERC20(_pairToken).safeIncreaseAllowance(_sushiswap, balance);
+            address[] memory paths = new address[](2);
+            paths[0] = _pairToken;
+            paths[1] = _supplyToken;
+
+            IUniswapV2Router02(_sushiswap).swapExactTokensForTokens(
+                balance,
+                uint256(0),
+                paths,
+                address(this),
+                block.timestamp + 1800
+            );
+        }
 
         if (poolId != -1) {
             IMasterChef(masterChef).withdraw(uint256(poolId), 0); // to trigger sushi harvest only
             uint256 sushiBalance = IERC20(sushi).balanceOf(address(this));
             if (sushiBalance > 0) {
                 // Sell Sushi token for obtain more supplying token(e.g. USDC)
-                IERC20(sushi).safeIncreaseAllowance(sushiswap, sushiBalance);
+                IERC20(sushi).safeIncreaseAllowance(_sushiswap, sushiBalance);
 
                 address[] memory paths = new address[](2);
                 paths[0] = sushi;
                 paths[1] = supplyToken;
 
-                IUniswapV2Router02(sushiswap).swapExactTokensForTokens(
+                IUniswapV2Router02(_sushiswap).swapExactTokensForTokens(
                     sushiBalance,
                     uint256(0),
                     paths,

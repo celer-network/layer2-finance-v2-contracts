@@ -20,6 +20,7 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
 
     // The address of Alpha Homora v2 interest-bearing token, eg. ibUSDTv2
     address payable public ibToken;
+
     constructor(
         address payable _ibToken,
         address _supplyToken,
@@ -39,7 +40,7 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
     function getAssetAmount() internal override returns (uint256) {
         // ib token equals cyToken
         uint256 tokenBal = ISafeBoxEth(ibToken).balanceOf(address(this));
-        return tokenBal * IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateCurrent() / 1e18;
+        return (tokenBal * IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateCurrent()) / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -59,10 +60,10 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         uint256 balanceBeforeSell = address(this).balance;
-        
+
         // Withdraw from homora v2
         uint256 yrate = IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateCurrent();
-        ISafeBoxEth(ibToken).withdraw(_sellAmount * 1e18 / yrate);
+        ISafeBoxEth(ibToken).withdraw((_sellAmount * 1e18) / yrate);
 
         // Deposit to WETH and transfer to Controller
         uint256 balanceAfterSell = address(this).balance;
@@ -70,15 +71,14 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
         IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
 
         return balanceAfterSell - balanceBeforeSell;
-    }    
+    }
 
     // no-op just to satisfy IStrategy
-    function harvest() external override onlyEOA {
-    }
+    function harvest() external override onlyEOA {}
 
     // SafeBox requires bytes32[] proof to claim. see alpha-homora-v2-contract/blob/master/contracts/SafeBox.sol#L67
     // for more details
-    function harvest(uint totalAmount, bytes32[] memory proof) external onlyEOA {
+    function harvest(uint256 totalAmount, bytes32[] memory proof) external onlyEOA {
         uint256 balanceBeforeClaim = address(this).balance;
 
         // Claim from homora v2. after verify merkle root, we get totalAmount - claimed[msg.sender]
@@ -94,5 +94,6 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
 
     // needed for weth.withdraw
     receive() external payable {}
+
     fallback() external payable {}
 }
