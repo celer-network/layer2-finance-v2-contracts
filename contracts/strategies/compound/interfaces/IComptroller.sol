@@ -19,5 +19,10 @@ interface IComptroller {
      * @param borrowers Whether or not to claim COMP earned by borrowing
      * @param suppliers Whether or not to claim COMP earned by supplying
      */
-    function claimComp(address[] memory holders, ICErc20[] memory cTokens, bool borrowers, bool suppliers) external;
+    function claimComp(
+        address[] memory holders,
+        ICErc20[] memory cTokens,
+        bool borrowers,
+        bool suppliers
+    ) external;
 }

@@ -1,8 +1,9 @@
 import { expect } from 'chai';
+import { BigNumber } from 'ethers';
 import { ethers, network } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
-import { parseUnits, parseEther } from '@ethersproject/units';
+import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../../typechain/ERC20';
@@ -10,7 +11,6 @@ import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
 import { StrategySushiswap__factory } from '../../typechain/factories/StrategySushiswap__factory';
 import { StrategySushiswap } from '../../typechain/StrategySushiswap';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
-import { BigNumber } from 'ethers';
 
 interface DeployStrategySushiswap {
   strategy: StrategySushiswap;
@@ -65,7 +65,7 @@ export async function testStrategySushiswap(
   pairTokenAddress: string,
   maxSlippage: BigNumber,
   maxOneDeposit: BigNumber,
-  poolId: number,  
+  poolId: number,
   supplyTokenFunder: string
 ): Promise<void> {
   context.timeout(300000);
@@ -93,40 +93,66 @@ export async function testStrategySushiswap(
   );
 
   console.log('===== Buy 10 =====');
-  await expect(strategy.aggregateOrders(parseUnits('10', supplyTokenDecimals), parseUnits('0'), parseUnits('10', supplyTokenDecimals), parseUnits('0')))
-    .to.emit(strategy, 'Buy')
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('10', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('10', supplyTokenDecimals),
+      parseUnits('0')
+    )
+  ).to.emit(strategy, 'Buy');
 
-  const price1 = await strategy.callStatic.syncPrice();
+  const price1 = await strategy.getPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.equal(parseUnits('1'));
 
   console.log('===== Sell 2 =====');
-  await expect(strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('2', supplyTokenDecimals)))
-    .to.emit(strategy, 'Sell')
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('0'),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('0'),
+      parseUnits('2', supplyTokenDecimals)
+    )
+  ).to.emit(strategy, 'Sell');
 
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.equal(price1);
 
   console.log('===== Buy 1, Sell 2 =====');
-  await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals)))
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals)
+    )
+  )
     .to.emit(strategy, 'Buy')
-    .to.emit(strategy, 'Sell')
-  const price3 = await strategy.callStatic.syncPrice();
+    .to.emit(strategy, 'Sell');
+  const price3 = await strategy.getPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.equal(price2);
 
   console.log('===== adjust =====');
   await strategy.adjust();
-  const price4 = await strategy.callStatic.syncPrice();
+  const price4 = await strategy.getPrice();
   console.log('price4:', price4.toString());
   expect(price4).to.lt(price3);
 
   console.log('===== Buy 1, Sell 2 after adjust =====');
-  await expect(strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals)))
+  await expect(
+    strategy.aggregateOrders(
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('2', supplyTokenDecimals),
+      parseUnits('1', supplyTokenDecimals),
+      parseUnits('1', supplyTokenDecimals)
+    )
+  )
     .to.emit(strategy, 'Buy')
-    .to.emit(strategy, 'Sell')
-  const price5 = await strategy.callStatic.syncPrice();
+    .to.emit(strategy, 'Sell');
+  const price5 = await strategy.getPrice();
   console.log('price5:', price5.toString());
   expect(price5).to.lt(price4);
 
@@ -143,7 +169,7 @@ export async function testStrategySushiswap(
       .transfer(strategy.address, parseEther('0.01'))
   ).wait();
   await strategy.harvest();
-  const price6 = await strategy.callStatic.syncPrice();
+  const price6 = await strategy.getPrice();
   console.log('price6:', price6.toString());
   expect(price6).to.gt(price5);
 }

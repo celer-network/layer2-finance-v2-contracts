@@ -13,7 +13,8 @@ describe('StrategyAlphaHomoraUSDC', function () {
       process.env.USDC as string,
       process.env.ALPHAHOMORA_IBUSDC as string,
       process.env.USDC_FUNDER as string,
-      6, "USDC"
+      6,
+      'USDC'
     );
   });
 });

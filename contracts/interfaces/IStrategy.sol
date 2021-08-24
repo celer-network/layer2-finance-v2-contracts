@@ -21,6 +21,16 @@ interface IStrategy {
     function getAssetAddress() external view returns (address);
 
     /**
+     * @notice Returns the approximate amount of asset managed by the strategy.
+     */
+    function getAssetAmount() external view returns (uint256);
+
+    /**
+     * @notice Returns the price of each share.
+     */
+    function getPrice() external returns (uint256);
+
+    /**
      * @notice aggregate orders to strategy per instructions from L2.
      *
      * @param _buyAmount The aggregated asset amount to buy.
@@ -37,12 +47,12 @@ interface IStrategy {
     ) external returns (uint256, uint256);
 
     /**
-     * @notice Syncs and returns the price of each share
-     */
-    function syncPrice() external returns (uint256);
-
-    /**
-     * @notice Compounding of extra yields
+     * @notice Compounding of extra yields.
      */
     function harvest() external;
+
+    /**
+     * @notice Adjusts the position held by the strategy.
+     */
+    function adjust() external;
 }

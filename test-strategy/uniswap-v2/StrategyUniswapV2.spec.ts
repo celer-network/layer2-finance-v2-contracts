@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { ethers, network } from 'hardhat';
+import { ethers } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
-import { parseUnits, parseEther } from '@ethersproject/units';
+import { parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 import { ERC20 } from '../../typechain/ERC20';
@@ -96,7 +96,7 @@ export async function testStrategyUniswapV2(
     )
   ).to.emit(strategy, 'Buy');
 
-  const price1 = await strategy.callStatic.syncPrice();
+  const price1 = await strategy.getPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.equal(parseUnits('1'));
 
@@ -110,7 +110,7 @@ export async function testStrategyUniswapV2(
     )
   ).to.emit(strategy, 'Sell');
 
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.equal(price1);
 
@@ -125,13 +125,13 @@ export async function testStrategyUniswapV2(
   )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.equal(price2);
 
   console.log('===== adjust =====');
   await strategy.adjust();
-  const price4 = await strategy.callStatic.syncPrice();
+  const price4 = await strategy.getPrice();
   console.log('price4:', price4.toString());
   expect(price4).to.lt(price3);
 
@@ -146,12 +146,12 @@ export async function testStrategyUniswapV2(
   )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
-  const price5 = await strategy.callStatic.syncPrice();
+  const price5 = await strategy.getPrice();
   console.log('price5:', price5.toString());
   expect(price5).to.lt(price4);
 
   console.log('===== harvest =====');
   await strategy.harvest();
-  const price6 = await strategy.callStatic.syncPrice();
+  const price6 = await strategy.getPrice();
   console.log('price6:', price6.toString());
 }

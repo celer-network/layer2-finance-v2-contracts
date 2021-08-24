@@ -109,7 +109,7 @@ export async function testStrategyCurve3Pool(
   const assetAddress = getAddress(await strategy.getAssetAddress());
   console.log('----- asset address', assetAddress);
   expect(assetAddress).to.equal(getAddress(supplyToken));
-  const price = await strategy.callStatic.syncPrice();
+  const price = await strategy.getPrice();
   console.log('----- price after contract deployment', price.toString());
   expect(price).to.equal(parseEther('1'));
 
@@ -139,7 +139,7 @@ export async function testStrategyCurve3Pool(
     .to.emit(strategy, 'Buy')
     .to.not.emit(strategy, 'Sell');
   const shares2 = await strategy.shares();
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
   console.log('----- estimated gas =', aggregateOrder1Gas.toString());
   console.log('----- shares =', shares2.toString());
@@ -154,7 +154,7 @@ export async function testStrategyCurve3Pool(
     .to.emit(strategy, 'Sell')
     .to.not.emit(strategy, 'Buy');
   const shares3 = await strategy.shares();
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   const assetAmount3 = price3.mul(shares3).div(BigNumber.from(10).pow(18));
   console.log('----- estimated gas =', aggregateOrder2Gas.toString());
   console.log('----- shares =', shares3.toString());
@@ -169,7 +169,7 @@ export async function testStrategyCurve3Pool(
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   const shares4 = await strategy.shares();
-  const price4 = await strategy.callStatic.syncPrice();
+  const price4 = await strategy.getPrice();
   const assetAmount4 = price4.mul(shares4).div(BigNumber.from(10).pow(18));
   console.log('----- estimated gas =', aggregateOrder3Gas.toString());
   console.log('----- shares =', shares4.toString());
@@ -208,7 +208,7 @@ export async function testStrategyCurve3Pool(
   const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
   const receipt = await harvestTx.wait();
   console.log('---- gas used =', receipt.gasUsed.toString());
-  const price5 = await strategy.callStatic.syncPrice();
+  const price5 = await strategy.getPrice();
   const shares5 = await strategy.shares();
   const assetAmount5 = price5.mul(shares5).div(BigNumber.from(10).pow(18));
   console.log('---- shares =', shares5.toString());
@@ -222,7 +222,7 @@ export async function testStrategyCurve3Pool(
   const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
   const receipt2 = await harvestTx2.wait();
   console.log('---- gas used =', receipt2.gasUsed.toString());
-  const price6 = await strategy.callStatic.syncPrice();
+  const price6 = await strategy.getPrice();
   const shares6 = await strategy.shares();
   const assetAmount6 = price6.mul(shares6).div(BigNumber.from(10).pow(18));
   console.log('---- shares =', shares6.toString());

@@ -62,7 +62,7 @@ describe('StrategyCompoundETH', function () {
       'Buy'
     );
 
-    const price1 = await strategy.callStatic.syncPrice();
+    const price1 = await strategy.getPrice();
     console.log('price1:', price1.toString());
     expect(price1).to.lte(parseEther('1'));
 
@@ -71,7 +71,7 @@ describe('StrategyCompoundETH', function () {
       strategy,
       'Sell'
     );
-    const price2 = await strategy.callStatic.syncPrice();
+    const price2 = await strategy.getPrice();
     console.log('price2:', price2.toString());
     expect(price2).to.gte(price1);
 
@@ -80,7 +80,7 @@ describe('StrategyCompoundETH', function () {
       .to.emit(strategy, 'Buy')
       .to.emit(strategy, 'Sell');
     expect(await strategy.shares()).to.lte(parseEther('2'));
-    const price3 = await strategy.callStatic.syncPrice();
+    const price3 = await strategy.getPrice();
     console.log('price3:', price3.toString());
     expect(price3).to.gte(price2);
 
@@ -103,7 +103,7 @@ describe('StrategyCompoundETH', function () {
         const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
         const receipt = await harvestTx.wait();
         console.log('Harvest gas used:', receipt.gasUsed.toString());
-        const price4 = await strategy.callStatic.syncPrice();
+        const price4 = await strategy.getPrice();
         console.log(`price4:`, price4.toString());
         expect(price4).to.gte(price3);
       }

@@ -40,7 +40,7 @@ describe('StrategyDummy', function () {
 
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('5'));
     expect(await strategyDummy.shares()).to.equal(parseEther('5'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1'));
 
     await expect(strategyDummy.aggregateOrders(parseEther('0'), parseEther('2'), parseEther('0'), parseEther('2')))
       .to.emit(strategyDummy, 'Sell')
@@ -48,7 +48,7 @@ describe('StrategyDummy', function () {
 
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('3'));
     expect(await strategyDummy.shares()).to.equal(parseEther('3'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1'));
 
     await expect(strategyDummy.aggregateOrders(parseEther('1'), parseEther('2'), parseEther('1'), parseEther('2')))
       .to.emit(strategyDummy, 'Buy')
@@ -57,7 +57,7 @@ describe('StrategyDummy', function () {
       .withArgs(parseEther('2'), parseEther('2'));
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('2'));
     expect(await strategyDummy.shares()).to.equal(parseEther('2'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1'));
   });
 
   it('should fail if min share/asset amount requirement not met', async function () {
@@ -85,12 +85,12 @@ describe('StrategyDummy', function () {
     await strategyDummy.aggregateOrders(parseEther('2'), parseEther('0'), parseEther('2'), parseEther('0'));
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('2'));
     expect(await strategyDummy.shares()).to.equal(parseEther('2'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1'));
 
     await strategyDummy.harvest();
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('3'));
     expect(await strategyDummy.shares()).to.equal(parseEther('2'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.5'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1.5'));
 
     await expect(strategyDummy.aggregateOrders(parseEther('6'), parseEther('1.5'), parseEther('4'), parseEther('2')))
       .to.emit(strategyDummy, 'Buy')
@@ -100,12 +100,12 @@ describe('StrategyDummy', function () {
 
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('6.75'));
     expect(await strategyDummy.shares()).to.equal(parseEther('4.5'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.5'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1.5'));
 
     await strategyDummy.decreaseBalance(parseEther('1.35'));
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('5.4'));
     expect(await strategyDummy.shares()).to.equal(parseEther('4.5'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.2'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1.2'));
 
     await expect(strategyDummy.aggregateOrders(parseEther('2.4'), parseEther('1'), parseEther('2'), parseEther('1.2')))
       .to.emit(strategyDummy, 'Buy')
@@ -114,6 +114,6 @@ describe('StrategyDummy', function () {
       .withArgs(parseEther('1'), parseEther('1.2'));
     expect(await strategyDummy.assetAmount()).to.equal(parseEther('6.6'));
     expect(await strategyDummy.shares()).to.equal(parseEther('5.5'));
-    expect(await strategyDummy.syncPrice()).to.equal(parseEther('1.2'));
+    expect(await strategyDummy.getPrice()).to.equal(parseEther('1.2'));
   });
 });

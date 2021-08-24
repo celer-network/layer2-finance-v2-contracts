@@ -92,7 +92,7 @@ export async function testStrategyAaveLendingPool(
     )
   ).to.emit(strategy, 'Buy');
 
-  const price1 = await strategy.callStatic.syncPrice();
+  const price1 = await strategy.getPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
@@ -106,7 +106,7 @@ export async function testStrategyAaveLendingPool(
     )
   ).to.emit(strategy, 'Sell');
 
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.lte(price1);
 
@@ -121,7 +121,7 @@ export async function testStrategyAaveLendingPool(
   )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.lte(price2);
 
@@ -148,7 +148,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
       let receipt = await harvestTx.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price4 = await strategy.callStatic.syncPrice();
+      const price4 = await strategy.getPrice();
       console.log(`price4:`, price4.toString());
       expect(price4).to.gte(price3);
 
@@ -157,7 +157,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx2.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price5 = await strategy.callStatic.syncPrice();
+      const price5 = await strategy.getPrice();
       console.log(`price5:`, price5.toString());
       expect(price5).to.gte(price4);
 
@@ -166,7 +166,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx3 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx3.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price6 = await strategy.callStatic.syncPrice();
+      const price6 = await strategy.getPrice();
       console.log(`price6:`, price6.toString());
       expect(price6).to.gte(price5);
 
@@ -175,7 +175,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx4 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx4.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price7 = await strategy.callStatic.syncPrice();
+      const price7 = await strategy.getPrice();
       console.log(`price7:`, price7.toString());
       expect(price7).to.gte(price6);
 
@@ -184,7 +184,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx5 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx5.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price8 = await strategy.callStatic.syncPrice();
+      const price8 = await strategy.getPrice();
       console.log(`price8:`, price8.toString());
       expect(price8).to.gte(price7);
 
@@ -193,7 +193,7 @@ export async function testStrategyAaveLendingPool(
       const harvestTx6 = await strategy.harvest({ gasLimit: 2000000 });
       receipt = await harvestTx6.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price9 = await strategy.callStatic.syncPrice();
+      const price9 = await strategy.getPrice();
       console.log(`price9:`, price9.toString());
       expect(price9).to.gte(price8);
     }

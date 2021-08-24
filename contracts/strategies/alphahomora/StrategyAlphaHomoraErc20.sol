@@ -18,7 +18,7 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
     using Address for address;
 
     // The address of Alpha Homora v2 interest-bearing token, eg. ibUSDTv2
-    address public ibToken;
+    address public immutable ibToken;
 
     // _supplyToken must be the same as _ibToken.uToken
     constructor(
@@ -29,18 +29,10 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
         ibToken = _ibToken;
     }
 
-    /**
-     * @dev Require that the caller must be an EOA account to avoid flash loans.
-     */
-    modifier onlyEOA() {
-        require(msg.sender == tx.origin, "Not EOA");
-        _;
-    }
-
-    function getAssetAmount() internal override returns (uint256) {
+    function getAssetAmount() public view override returns (uint256) {
         // ib token equals cyToken
         uint256 tokenBal = ISafeBox(ibToken).balanceOf(address(this));
-        return (tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateCurrent()) / 1e18;
+        return (tokenBal * IYearnToken(ISafeBox(ibToken).cToken()).exchangeRateStored()) / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -69,12 +61,9 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
         return balanceAfterSell - balanceBeforeSell;
     }
 
-    // no-op just to satisfy IStrategy
-    function harvest() external override onlyEOA {}
-
     // SafeBox requires bytes32[] proof to claim. see alpha-homora-v2-contract/blob/master/contracts/SafeBox.sol#L67
     // for more details
-    function harvest(uint256 totalAmount, bytes32[] memory proof) external onlyEOA {
+    function harvest(uint256 totalAmount, bytes32[] memory proof) external {
         uint256 balanceBeforeClaim = IERC20(supplyToken).balanceOf(address(this));
 
         // Claim from homora v2. after verify merkle root, we get totalAmount - claimed[msg.sender]
@@ -87,5 +76,11 @@ contract StrategyAlphaHomoraErc20 is AbstractStrategy {
         uint256 _buyAmount = balanceAfterClaim - balanceBeforeClaim;
         IERC20(supplyToken).safeIncreaseAllowance(ibToken, _buyAmount);
         ISafeBox(ibToken).deposit(_buyAmount);
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](1);
+        protected[0] = ibToken;
+        return protected;
     }
 }

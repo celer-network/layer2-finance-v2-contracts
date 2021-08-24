@@ -22,7 +22,7 @@ async function deployStrategyCompoundCreamLendingPool(
   deployedAddress: string | undefined,
   supplyTokenAddress: string,
   compoundSupplyTokenAddress: string,
-  creamSupplytokenAddress: string
+  creamSupplyTokenAddress: string
 ): Promise<DeployStrategyCompoundCreamLendingPoolInfo> {
   const deployerSigner = await getDeployerSigner();
 
@@ -38,7 +38,7 @@ async function deployStrategyCompoundCreamLendingPool(
       .deploy(
         supplyTokenAddress,
         compoundSupplyTokenAddress,
-        creamSupplytokenAddress,
+        creamSupplyTokenAddress,
         process.env.COMPOUND_COMPTROLLER as string,
         process.env.CREAM_COMPTROLLER as string,
         process.env.COMPOUND_COMP as string,
@@ -62,7 +62,7 @@ export async function testStrategyCompoundCreamLendingPool(
   supplyTokenDecimals: number,
   supplyTokenAddress: string,
   compoundSupplyTokenAddress: string,
-  creamSupplytokenAddress: string,
+  creamSupplyTokenAddress: string,
   supplyTokenFunder: string
 ): Promise<void> {
   context.timeout(300000);
@@ -71,7 +71,7 @@ export async function testStrategyCompoundCreamLendingPool(
     deployedAddress,
     supplyTokenAddress,
     compoundSupplyTokenAddress,
-    creamSupplytokenAddress
+    creamSupplyTokenAddress
   );
 
   expect(getAddress(await strategy.getAssetAddress())).to.equal(getAddress(supplyToken.address));
@@ -97,7 +97,7 @@ export async function testStrategyCompoundCreamLendingPool(
     )
   ).to.emit(strategy, 'Buy');
 
-  const price1 = await strategy.callStatic.syncPrice();
+  const price1 = await strategy.getPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
@@ -110,7 +110,7 @@ export async function testStrategyCompoundCreamLendingPool(
       parseUnits('2', supplyTokenDecimals)
     )
   ).to.emit(strategy, 'Sell');
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.gte(price1);
 
@@ -126,13 +126,13 @@ export async function testStrategyCompoundCreamLendingPool(
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   expect(await strategy.shares()).to.lte(parseUnits('2', supplyTokenDecimals));
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.gte(price2);
 
-  console.log('===== Add 1 for low rate protocal  =====');
+  console.log('===== Add 1 for low rate protocol  =====');
   const cErc20 = ICErc20__factory.connect(compoundSupplyTokenAddress, deployerSigner);
-  const crErc20 = ICErc20__factory.connect(creamSupplytokenAddress, deployerSigner);
+  const crErc20 = ICErc20__factory.connect(creamSupplyTokenAddress, deployerSigner);
   const cErc20Rate = await cErc20.callStatic.supplyRatePerBlock();
   console.log(`cErc20Rate:`, cErc20Rate.toString());
   const crErc20Rate = await crErc20.callStatic.supplyRatePerBlock();
@@ -152,7 +152,7 @@ export async function testStrategyCompoundCreamLendingPool(
   await (await supplyToken.transfer(strategy.address, toMint)).wait();
   if (cErc20Rate > crErc20Rate) {
     await (
-      await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(creamSupplytokenAddress, toMint)
+      await supplyToken.connect(await ethers.getSigner(strategy.address)).approve(creamSupplyTokenAddress, toMint)
     ).wait();
     await (await crErc20.connect(await ethers.getSigner(strategy.address)).mint(toMint)).wait();
   } else if (cErc20Rate < crErc20Rate) {
@@ -174,7 +174,7 @@ export async function testStrategyCompoundCreamLendingPool(
       parseUnits('0.5', supplyTokenDecimals)
     )
   ).to.emit(strategy, 'Sell');
-  const price4 = await strategy.callStatic.syncPrice();
+  const price4 = await strategy.getPrice();
   console.log('price4:', price4.toString());
   expect(price4).to.gte(price3);
 
@@ -209,7 +209,7 @@ export async function testStrategyCompoundCreamLendingPool(
     const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
     const receipt = await harvestTx.wait();
     console.log('Harvest gas used:', receipt.gasUsed.toString());
-    const price5 = await strategy.callStatic.syncPrice();
+    const price5 = await strategy.getPrice();
     console.log(`price5:`, price5.toString());
     expect(price5).to.gte(price4);
   } catch (e) {

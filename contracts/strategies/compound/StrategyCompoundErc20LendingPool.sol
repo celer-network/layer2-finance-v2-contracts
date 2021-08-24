@@ -19,16 +19,15 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
     using Address for address;
 
     // The address of Compound interest-bearing token (e.g. cDAI, cUSDT)
-    address public cErc20;
-
+    address public immutable cErc20;
     // The address is used for claim COMP token
-    address public comptroller;
+    address public immutable comptroller;
     // The address of COMP token
-    address public comp;
-
-    address public uniswap;
+    address public immutable comp;
+    // The address of the Uniswap V2 router
+    address public immutable uniswap;
     // The address of WETH token
-    address public weth;
+    address public immutable weth;
 
     constructor(
         address _supplyToken,
@@ -54,8 +53,8 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal override returns (uint256) {
-        return ICErc20(cErc20).balanceOfUnderlying(address(this));
+    function getAssetAmount() public view override returns (uint256) {
+        return (ICErc20(cErc20).exchangeRateStored() * ICErc20(cErc20).balanceOf(address(this))) / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -105,6 +104,7 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 compBalance,
                 uint256(0),
@@ -119,5 +119,12 @@ contract StrategyCompoundErc20LendingPool is AbstractStrategy {
             uint256 mintResult = ICErc20(cErc20).mint(obtainedSupplyTokenAmount);
             require(mintResult == 0, "Couldn't mint cToken");
         }
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = cErc20;
+        protected[1] = comp;
+        return protected;
     }
 }

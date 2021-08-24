@@ -1,13 +1,15 @@
-import { getAddress } from '@ethersproject/address';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { StrategyConvex3Pool__factory } from '../../typechain/factories/StrategyConvex3Pool__factory';
+
+import { getAddress } from '@ethersproject/address';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
+
 import { ERC20 } from '../../typechain/ERC20';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
+import { StrategyConvex3Pool__factory } from '../../typechain/factories/StrategyConvex3Pool__factory';
 import { StrategyConvex3Pool } from '../../typechain/StrategyConvex3Pool';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
 
@@ -104,7 +106,7 @@ export async function testStrategyConvex3Pool(
   const assetAddress = getAddress(await strategy.getAssetAddress());
   console.log('----- asset address', assetAddress);
   expect(assetAddress).to.equal(getAddress(supplyToken));
-  const price = await strategy.callStatic.syncPrice();
+  const price = await strategy.getPrice();
   console.log('----- price after contract deployment', price.toString());
   expect(price).to.equal(parseEther('1'));
 
@@ -134,7 +136,7 @@ export async function testStrategyConvex3Pool(
     .to.emit(strategy, 'Buy')
     .to.not.emit(strategy, 'Sell');
   const shares2 = await strategy.shares();
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
   console.log('----- estimated gas =', aggregateOrder1Gas.toString());
   console.log('----- shares =', shares2.toString());
@@ -149,7 +151,7 @@ export async function testStrategyConvex3Pool(
     .to.emit(strategy, 'Sell')
     .to.not.emit(strategy, 'Buy');
   const shares3 = await strategy.shares();
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   const assetAmount3 = price3.mul(shares3).div(BigNumber.from(10).pow(18));
   console.log('----- estimated gas =', aggregateOrder2Gas.toString());
   console.log('----- shares =', shares3.toString());
@@ -164,7 +166,7 @@ export async function testStrategyConvex3Pool(
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   const shares4 = await strategy.shares();
-  const price4 = await strategy.callStatic.syncPrice();
+  const price4 = await strategy.getPrice();
   const assetAmount4 = price4.mul(shares4).div(BigNumber.from(10).pow(18));
   console.log('----- estimated gas =', aggregateOrder3Gas.toString());
   console.log('----- shares =', shares4.toString());
@@ -203,7 +205,7 @@ export async function testStrategyConvex3Pool(
   const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
   const receipt = await harvestTx.wait();
   console.log('---- gas used =', receipt.gasUsed.toString());
-  const price5 = await strategy.callStatic.syncPrice();
+  const price5 = await strategy.getPrice();
   const shares5 = await strategy.shares();
   const assetAmount5 = price5.mul(shares5).div(BigNumber.from(10).pow(18));
   console.log('---- shares =', shares5.toString());
@@ -217,7 +219,7 @@ export async function testStrategyConvex3Pool(
   const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
   const receipt2 = await harvestTx2.wait();
   console.log('---- gas used =', receipt2.gasUsed.toString());
-  const price6 = await strategy.callStatic.syncPrice();
+  const price6 = await strategy.getPrice();
   const shares6 = await strategy.shares();
   const assetAmount6 = price6.mul(shares6).div(BigNumber.from(10).pow(18));
   console.log('---- shares =', shares6.toString());

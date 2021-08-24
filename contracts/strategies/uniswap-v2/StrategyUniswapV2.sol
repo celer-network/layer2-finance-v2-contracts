@@ -21,8 +21,9 @@ contract StrategyUniswapV2 is AbstractStrategy {
     using Address for address;
 
     // The address of token to be paired
-    address public pairToken;
-    address public uniswap;
+    address public immutable pairToken;
+    address public immutable uniswap;
+
     uint256 public maxSlippage;
     uint256 public maxOneDeposit;
 
@@ -48,7 +49,7 @@ contract StrategyUniswapV2 is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    function getAssetAmount() public view override returns (uint256) {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         IUniswapV2Pair pair = IUniswapV2Pair(
@@ -132,7 +133,7 @@ contract StrategyUniswapV2 is AbstractStrategy {
         return x <= y ? x : y;
     }
 
-    function adjust() external onlyController {
+    function adjust() external override {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         address _uniswap = uniswap;
@@ -169,6 +170,7 @@ contract StrategyUniswapV2 is AbstractStrategy {
         uint256 swappedPairTokenAmt = IERC20(_pairToken).balanceOf(address(this));
         IERC20(_supplyToken).safeIncreaseAllowance(_uniswap, half);
         IERC20(_pairToken).safeIncreaseAllowance(_uniswap, swappedPairTokenAmt);
+        // TODO: Check price
         IUniswapV2Router02(_uniswap).addLiquidity(
             _supplyToken,
             _pairToken,
@@ -181,7 +183,7 @@ contract StrategyUniswapV2 is AbstractStrategy {
         );
     }
 
-    function harvest() external override {
+    function harvest() external override onlyEOA {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         address _uniswap = uniswap;
@@ -193,6 +195,7 @@ contract StrategyUniswapV2 is AbstractStrategy {
             paths[0] = _pairToken;
             paths[1] = _supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(_uniswap).swapExactTokensForTokens(
                 balance,
                 uint256(0),
@@ -203,11 +206,17 @@ contract StrategyUniswapV2 is AbstractStrategy {
         }
     }
 
-    function setMaxOneDeposit(uint256 _maxOneDeposit) external onlyController {
+    function setMaxOneDeposit(uint256 _maxOneDeposit) external onlyOwner {
         maxOneDeposit = _maxOneDeposit;
     }
 
-    function setMaxSlippage(uint256 _maxSlippage) external onlyController {
+    function setMaxSlippage(uint256 _maxSlippage) external onlyOwner {
         maxSlippage = _maxSlippage;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](1);
+        protected[0] = pairToken;
+        return protected;
     }
 }

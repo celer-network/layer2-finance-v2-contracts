@@ -20,14 +20,13 @@ contract StrategyCompoundEthLendingPool is AbstractStrategy {
     using Address for address;
 
     // The address of Compound interest-bearing ETH
-    address payable public cEth;
-
+    address payable public immutable cEth;
     // The address is used for claim COMP token
-    address public comptroller;
+    address public immutable comptroller;
     // The address of COMP token
-    address public comp;
-
-    address public uniswap;
+    address public immutable comp;
+    // The address of the Uniswap V2 router
+    address public immutable uniswap;
 
     constructor(
         address payable _cEth,
@@ -51,8 +50,8 @@ contract StrategyCompoundEthLendingPool is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal override returns (uint256) {
-        return ICEth(cEth).balanceOfUnderlying(address(this));
+    function getAssetAmount() public view override returns (uint256) {
+        return (ICEth(cEth).exchangeRateStored() * ICEth(cEth).balanceOf(address(this))) / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -109,6 +108,13 @@ contract StrategyCompoundEthLendingPool is AbstractStrategy {
             uint256 obtainedEthAmount = address(this).balance;
             ICEth(cEth).mint{value: obtainedEthAmount}();
         }
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = cEth;
+        protected[1] = comp;
+        return protected;
     }
 
     // This is needed to receive ETH when calling `ICEth.redeemUnderlying` and `IWETH.withdraw`

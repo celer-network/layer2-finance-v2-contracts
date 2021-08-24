@@ -22,28 +22,29 @@ contract StrategyDODOV1 is AbstractStrategy {
     using Address for address;
 
     // The address of the DODO token
-    address public dodo;
+    address public immutable dodo;
     // The address of the USDT token
-    address public usdt;
+    address public immutable usdt;
     // The address of the DODO V1 pair / pool
-    address public dodoPairAddress;
+    address public immutable dodoPairAddress;
     // The address of the DODO proxy
-    address public dodoProxy;
+    address public immutable dodoProxy;
     // The address of the DODO mining pool
-    address public dodoMine;
+    address public immutable dodoMine;
     // The address of the DODO Approve contract
-    address public dodoApprove;
+    address public immutable dodoApprove;
     // The address of the DODO V1 DODO-USDT pair
-    address public dodoV1_DODO_USDT_Pair;
+    address public immutable dodoV1_DODO_USDT_Pair;
     // The address of the Uniswap V2 router
-    address public uniV2Router;
+    address public immutable uniV2Router;
+    // Whether the supply token is the base token
+    bool public immutable supplyBase;
+    // The address of the DODO LP token for the pool
+    address public immutable lpToken;
 
     uint256 public slippage = 2000;
     uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
-
     uint256 public harvestThreshold = 50e18;
-    bool supplyBase;
-    address lpToken;
 
     constructor(
         address _supplyToken,
@@ -66,17 +67,21 @@ contract StrategyDODOV1 is AbstractStrategy {
         dodoV1_DODO_USDT_Pair = _dodoV1_DODO_USDT_Pair;
         uniV2Router = _uniV2Router;
 
-        IDODOV1 dodoPair = IDODOV1(dodoPairAddress);
-        if (supplyToken == IDODOV1(dodoPair)._BASE_TOKEN_()) {
-            supplyBase = true;
-            lpToken = dodoPair._BASE_CAPITAL_TOKEN_();
-        } else {
-            supplyBase = false;
-            lpToken = dodoPair._QUOTE_CAPITAL_TOKEN_();
-        }
+        IDODOV1 dodoPair = IDODOV1(_dodoPair);
+        bool _supplyBase = _supplyToken == IDODOV1(dodoPair)._BASE_TOKEN_();
+        supplyBase = _supplyBase;
+        lpToken = _supplyBase ? dodoPair._BASE_CAPITAL_TOKEN_() : IDODOV1(dodoPair)._QUOTE_CAPITAL_TOKEN_();
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    /**
+     * @dev Require that the caller must be an EOA account to avoid flash loans.
+     */
+    modifier onlyEOA() {
+        require(msg.sender == tx.origin, "Not EOA");
+        _;
+    }
+
+    function getAssetAmount() public view override returns (uint256) {
         if (supplyToken == IDODOV1(dodoPairAddress)._BASE_TOKEN_()) {
             return getBaseAmount();
         }
@@ -140,7 +145,7 @@ contract StrategyDODOV1 is AbstractStrategy {
         return balanceAfterSell - balanceBeforeSell;
     }
 
-    function harvest() external override {
+    function harvest() external override onlyEOA {
         // Sell DODO rewards to USDT on DODO's DODO-USDT pool, then sell the USDT on Uniswap V2 if necessary.
         IDODOMine(dodoMine).claim(lpToken);
         uint256 dodoBalance = IERC20(dodo).balanceOf(address(this));
@@ -151,6 +156,7 @@ contract StrategyDODOV1 is AbstractStrategy {
         IERC20(dodo).safeIncreaseAllowance(dodoApprove, dodoBalance);
         address[] memory dodoV1Pairs = new address[](1);
         dodoV1Pairs[0] = dodoV1_DODO_USDT_Pair;
+        // TODO: Check price
         IDODOV2Proxy01(dodoProxy).dodoSwapV1(dodo, usdt, dodoBalance, 1, dodoV1Pairs, 0, false, block.timestamp + 1800);
 
         uint256 usdtBalance = IERC20(usdt).balanceOf(address(this));
@@ -159,6 +165,7 @@ contract StrategyDODOV1 is AbstractStrategy {
             paths[0] = usdt;
             paths[1] = supplyToken;
             IERC20(usdt).safeIncreaseAllowance(uniV2Router, usdtBalance);
+            // TODO: Check price
             IUniswapV2Router02(uniV2Router).swapExactTokensForTokens(
                 usdtBalance,
                 0,
@@ -187,14 +194,6 @@ contract StrategyDODOV1 is AbstractStrategy {
         }
     }
 
-    function setSlippage(uint256 _slippage) external onlyOwner {
-        slippage = _slippage;
-    }
-
-    function setHarvestThreshold(uint256 _harvestThreshold) external onlyOwner {
-        harvestThreshold = _harvestThreshold;
-    }
-
     function getBaseAmount() public view returns (uint256) {
         IDODOV1 dodoPair = IDODOV1(dodoPairAddress);
         uint256 totalBaseCapital = dodoPair.getTotalBaseCapital();
@@ -215,5 +214,20 @@ contract StrategyDODOV1 is AbstractStrategy {
         (, uint256 quoteTarget) = dodoPair.getExpectedTarget();
         (uint256 stakedLpAmount, ) = IDODOMine(dodoMine).userInfo(IDODOMine(dodoMine).getPid(lpToken), address(this));
         return ((stakedLpAmount + dodoPair.getQuoteCapitalBalanceOf(address(this))) * quoteTarget) / totalQuoteCapital;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = lpToken;
+        protected[1] = dodo;
+        return protected;
+    }
+
+    function setSlippage(uint256 _slippage) external onlyOwner {
+        slippage = _slippage;
+    }
+
+    function setHarvestThreshold(uint256 _harvestThreshold) external onlyOwner {
+        harvestThreshold = _harvestThreshold;
     }
 }

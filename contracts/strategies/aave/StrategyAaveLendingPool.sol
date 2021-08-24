@@ -21,23 +21,19 @@ contract StrategyAaveLendingPool is AbstractStrategy {
     using Address for address;
 
     // The address of Aave Lending Pool
-    address public lendingPool;
-
+    address public immutable lendingPool;
     // The address of Aave interest-bearing token (e.g. aDAI, aUSDT)
-    address public aToken;
-
+    address public immutable aToken;
     // The address of Aave Incentives Controller
-    address public incentivesController;
-
+    address public immutable incentivesController;
     // The address of Aave StakedAave contract
-    address public stakedAave;
-
+    address public immutable stakedAave;
     // The address of AAVE token
-    address public aave;
-
-    address public uniswap;
+    address public immutable aave;
+    // The address of the Uniswap V2 router
+    address public immutable uniswap;
     // The address of WETH token
-    address public weth;
+    address public immutable weth;
 
     constructor(
         address _lendingPool,
@@ -67,7 +63,7 @@ contract StrategyAaveLendingPool is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    function getAssetAmount() public view override returns (uint256) {
         return IAToken(aToken).balanceOf(address(this));
     }
 
@@ -144,6 +140,7 @@ contract StrategyAaveLendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 aaveBalance,
                 uint256(0),
@@ -157,5 +154,12 @@ contract StrategyAaveLendingPool is AbstractStrategy {
             IERC20(supplyToken).safeIncreaseAllowance(lendingPool, obtainedSupplyTokenAmount);
             ILendingPool(lendingPool).deposit(supplyToken, obtainedSupplyTokenAmount, address(this), 0);
         }
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = aToken;
+        protected[1] = aave;
+        return protected;
     }
 }

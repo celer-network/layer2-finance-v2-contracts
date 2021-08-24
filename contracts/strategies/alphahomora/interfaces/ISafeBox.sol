@@ -7,13 +7,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface ISafeBox is IERC20 {
     function cToken() external view returns (address);
 
-    function deposit(uint amount) external;
-    function withdraw(uint amount) external;
+    function deposit(uint256 amount) external;
 
-    function claim(uint totalAmount, bytes32[] memory proof) external;
+    function withdraw(uint256 amount) external;
+
+    function claim(uint256 totalAmount, bytes32[] memory proof) external;
+
     function claimAndWithdraw(
-        uint totalAmount,
+        uint256 totalAmount,
         bytes32[] memory proof,
-        uint withdrawAmount
-  ) external;
+        uint256 withdrawAmount
+    ) external;
 }
