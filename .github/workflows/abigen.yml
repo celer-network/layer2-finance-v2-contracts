@@ -5,8 +5,9 @@ on:
   pull_request:
     paths:
       - '.github/workflows/abigen.yml'
-      #- 'contracts/**'
-      #- 'scripts/**'
+      - 'contracts/**'
+      - '!contracts/strategies/**'
+      - 'scripts/**'
 jobs:
   build:
     runs-on: ubuntu-20.04
