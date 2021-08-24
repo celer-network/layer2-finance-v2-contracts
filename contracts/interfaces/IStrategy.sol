@@ -28,7 +28,7 @@ interface IStrategy {
     /**
      * @notice Returns the price of each share.
      */
-    function getPrice() external returns (uint256);
+    function getPrice() external view returns (uint256);
 
     /**
      * @notice aggregate orders to strategy per instructions from L2.
