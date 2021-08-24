@@ -8,12 +8,14 @@ interface ISafeBoxEth is IERC20 {
     function cToken() external view returns (address);
 
     function deposit() external payable;
-    function withdraw(uint amount) external;
 
-    function claim(uint totalAmount, bytes32[] memory proof) external;
+    function withdraw(uint256 amount) external;
+
+    function claim(uint256 totalAmount, bytes32[] memory proof) external;
+
     function claimAndWithdraw(
-        uint totalAmount,
+        uint256 totalAmount,
         bytes32[] memory proof,
-        uint withdrawAmount
-  ) external;
+        uint256 withdrawAmount
+    ) external;
 }

@@ -17,26 +17,21 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
     using Address for address;
 
     // The address of Compound interest-bearing token (e.g. cDAI, cUSDT)
-    address public cErc20;
-
+    address public immutable cErc20;
     // The address of Cream interest-bearing token (e.g. crDAI, crUSDT)
-    address public crErc20;
-
+    address public immutable crErc20;
     // The address is used for claim COMP token
-    address public comptroller;
-
+    address public immutable comptroller;
     // The address is used for claim CREAM token
-    address public creamtroller;
-
+    address public immutable creamtroller;
     // The address of COMP token
-    address public comp;
-
+    address public immutable comp;
     // The address of CREAM token
-    address public cream;
-
-    address public uniswap;
+    address public immutable cream;
+    // The address of the Uniswap V2 router
+    address public immutable uniswap;
     // The address of WETH token
-    address public weth;
+    address public immutable weth;
 
     constructor(
         address _supplyToken,
@@ -68,8 +63,10 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal override returns (uint256) {
-        return ICErc20(cErc20).balanceOfUnderlying(address(this)) + ICErc20(crErc20).balanceOfUnderlying(address(this));
+    function getAssetAmount() public view override returns (uint256) {
+        uint256 cAmount = (ICErc20(cErc20).exchangeRateStored() * ICErc20(cErc20).balanceOf(address(this))) / 1e18;
+        uint256 crAmount = (ICErc20(crErc20).exchangeRateStored() * ICErc20(crErc20).balanceOf(address(this))) / 1e18;
+        return cAmount + crAmount;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -146,6 +143,7 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
             paths[1] = weth;
             paths[2] = supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 compBalance,
                 uint256(0),
@@ -180,7 +178,7 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
         _adjust();
     }
 
-    function adjust() external onlyController {
+    function adjust() external override {
         _adjust();
     }
 
@@ -204,6 +202,15 @@ contract StrategyCompoundCreamLendingPool is AbstractStrategy {
             uint256 mintResult = highRateProtocol.mint(supplyTokenBalance);
             require(mintResult == 0, "Couldn't mint cToken/crToken");
         }
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](4);
+        protected[0] = cErc20;
+        protected[1] = crErc20;
+        protected[2] = comp;
+        protected[3] = cream;
+        return protected;
     }
 
     receive() external payable {}

@@ -29,18 +29,10 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
         ibToken = _ibToken;
     }
 
-    /**
-     * @dev Require that the caller must be an EOA account to avoid flash loans.
-     */
-    modifier onlyEOA() {
-        require(msg.sender == tx.origin, "Not EOA");
-        _;
-    }
-
-    function getAssetAmount() internal override returns (uint256) {
+    function getAssetAmount() public view override returns (uint256) {
         // ib token equals cyToken
         uint256 tokenBal = ISafeBoxEth(ibToken).balanceOf(address(this));
-        return (tokenBal * IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateCurrent()) / 1e18;
+        return (tokenBal * IYearnToken(ISafeBoxEth(ibToken).cToken()).exchangeRateStored()) / 1e18;
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
@@ -73,12 +65,9 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
         return balanceAfterSell - balanceBeforeSell;
     }
 
-    // no-op just to satisfy IStrategy
-    function harvest() external override onlyEOA {}
-
     // SafeBox requires bytes32[] proof to claim. see alpha-homora-v2-contract/blob/master/contracts/SafeBox.sol#L67
     // for more details
-    function harvest(uint256 totalAmount, bytes32[] memory proof) external onlyEOA {
+    function harvest(uint256 totalAmount, bytes32[] memory proof) external {
         uint256 balanceBeforeClaim = address(this).balance;
 
         // Claim from homora v2. after verify merkle root, we get totalAmount - claimed[msg.sender]
@@ -90,6 +79,12 @@ contract StrategyAlphaHomoraEth is AbstractStrategy {
         // deposit new eth into ibToken
         uint256 _buyAmount = balanceAfterClaim - balanceBeforeClaim;
         ISafeBoxEth(ibToken).deposit{value: _buyAmount}();
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](1);
+        protected[0] = ibToken;
+        return protected;
     }
 
     // needed for weth.withdraw

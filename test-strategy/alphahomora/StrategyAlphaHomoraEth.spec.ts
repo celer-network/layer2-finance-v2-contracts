@@ -1,17 +1,14 @@
 import { expect } from 'chai';
-import { ethers, network } from 'hardhat';
+import * as dotenv from 'dotenv';
+import { ethers } from 'hardhat';
 
 import { getAddress } from '@ethersproject/address';
 import { parseEther, parseUnits } from '@ethersproject/units';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
-import { ERC20 } from '../../typechain/ERC20.d';
 import { ERC20__factory } from '../../typechain/factories/ERC20__factory';
 import { StrategyAlphaHomoraEth__factory } from '../../typechain/factories/StrategyAlphaHomoraEth__factory';
 import { StrategyAlphaHomoraEth } from '../../typechain/StrategyAlphaHomoraEth';
 import { ensureBalanceAndApproval, getDeployerSigner } from '../common';
-
-import * as dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -27,13 +24,11 @@ describe('StrategyAlphaHomoraEth', function () {
       const StrategyAlphaHomoraEthFactory = (await ethers.getContractFactory(
         'StrategyAlphaHomoraEth'
       )) as StrategyAlphaHomoraEth__factory;
-      strategy = await StrategyAlphaHomoraEthFactory
-        .connect(deployerSigner)
-        .deploy(
-          process.env.ALPHAHOMORA_IBETH as string,
-          process.env.WETH as string,
-          deployerSigner.address
-        );
+      strategy = await StrategyAlphaHomoraEthFactory.connect(deployerSigner).deploy(
+        process.env.ALPHAHOMORA_IBETH as string,
+        process.env.WETH as string,
+        deployerSigner.address
+      );
       await strategy.deployed();
     }
 
@@ -60,33 +55,54 @@ describe('StrategyAlphaHomoraEth', function () {
     );
     const supplyTokenDecimals = 18;
     console.log('===== Buy 5 =====');
-    let receipt = await (await strategy.aggregateOrders(parseUnits('5', supplyTokenDecimals), parseUnits('0'), parseUnits('4.99', supplyTokenDecimals), parseUnits('0'))).wait();
-    receipt.events?.forEach((evt)=>{
-    if (evt.event=='Buy') {
-        console.log("buy  amount:", evt.args![0].toString(), "sharesFromBuy:", evt.args![1].toString());
+    let receipt = await (
+      await strategy.aggregateOrders(
+        parseUnits('5', supplyTokenDecimals),
+        parseUnits('0'),
+        parseUnits('4.99', supplyTokenDecimals),
+        parseUnits('0')
+      )
+    ).wait();
+    receipt.events?.forEach((evt) => {
+      if (evt.event == 'Buy') {
+        console.log('buy  amount:', evt.args![0].toString(), 'sharesFromBuy:', evt.args![1].toString());
       }
     });
-    console.log("price:", (await strategy.callStatic.syncPrice()).toString());
+    console.log('price:', (await strategy.getPrice()).toString());
 
     console.log('===== Sell 2 =====');
-    receipt = await (await strategy.aggregateOrders(parseUnits('0'), parseUnits('2', supplyTokenDecimals), parseUnits('0'), parseUnits('1.99', supplyTokenDecimals))).wait();
-    receipt.events?.forEach((evt)=>{
-    if (evt.event=='Sell') {
-        console.log("sell shares:", evt.args![0].toString(), "amountFromSell:", evt.args![1].toString());
+    receipt = await (
+      await strategy.aggregateOrders(
+        parseUnits('0'),
+        parseUnits('2', supplyTokenDecimals),
+        parseUnits('0'),
+        parseUnits('1.99', supplyTokenDecimals)
+      )
+    ).wait();
+    receipt.events?.forEach((evt) => {
+      if (evt.event == 'Sell') {
+        console.log('sell shares:', evt.args![0].toString(), 'amountFromSell:', evt.args![1].toString());
       }
     });
-    console.log("price:", (await strategy.callStatic.syncPrice()).toString());
+    console.log('price:', (await strategy.getPrice()).toString());
 
     console.log('===== Buy 1, Sell 2 =====');
-    receipt = await (await strategy.aggregateOrders(parseUnits('1', supplyTokenDecimals), parseUnits('2', supplyTokenDecimals), parseUnits('1', supplyTokenDecimals), parseUnits('1.99', supplyTokenDecimals))).wait();
-    receipt.events?.forEach((evt)=>{
-      if (evt.event=='Buy') {
-        console.log("buy  amount:", evt.args![0].toString(), "sharesFromBuy:", evt.args![1].toString());
+    receipt = await (
+      await strategy.aggregateOrders(
+        parseUnits('1', supplyTokenDecimals),
+        parseUnits('2', supplyTokenDecimals),
+        parseUnits('1', supplyTokenDecimals),
+        parseUnits('1.99', supplyTokenDecimals)
+      )
+    ).wait();
+    receipt.events?.forEach((evt) => {
+      if (evt.event == 'Buy') {
+        console.log('buy  amount:', evt.args![0].toString(), 'sharesFromBuy:', evt.args![1].toString());
       }
-      if (evt.event=='Sell') {
-          console.log("sell shares:", evt.args![0].toString(), "amountFromSell:", evt.args![1].toString());
-        }
-      });
-      console.log("price:", (await strategy.callStatic.syncPrice()).toString());
+      if (evt.event == 'Sell') {
+        console.log('sell shares:', evt.args![0].toString(), 'amountFromSell:', evt.args![1].toString());
+      }
+    });
+    console.log('price:', (await strategy.getPrice()).toString());
   });
 });

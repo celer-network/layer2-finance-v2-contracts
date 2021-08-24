@@ -18,18 +18,18 @@ contract StrategyCurve3Pool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
+    address public immutable pool;
+    address public immutable gauge;
+    address public immutable mintr;
+    address public immutable uniswap;
+    address public immutable crv;
+    address public immutable weth;
+    address public immutable lpToken;
+    uint8 public immutable supplyTokenIndexInPool;
+    uint256 public immutable decimalDiff;
+
     uint256 public slippage = 500;
     uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
-
-    address public pool;
-    address public gauge;
-    address public mintr;
-    address public uniswap;
-    address public crv;
-    address public weth;
-    address public lpToken;
-    uint8 public supplyTokenIndexInPool;
-    uint256 public decimalDiff;
 
     constructor(
         address _controller,
@@ -55,7 +55,15 @@ contract StrategyCurve3Pool is AbstractStrategy {
         decimalDiff = PRICE_DECIMALS / 10**_supplyTokenDecimal; // curve treats supply tokens as they have 18 decimals but tokens like USDC and USDT actually have 6 decimals
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    /**
+     * @dev Require that the caller must be an EOA account to avoid flash loans.
+     */
+    modifier onlyEOA() {
+        require(msg.sender == tx.origin, "Not EOA");
+        _;
+    }
+
+    function getAssetAmount() public view override returns (uint256) {
         uint256 lpTokenBalance = IGauge(gauge).balanceOf(address(this));
         return ((lpTokenBalance * ICurveFi(pool).get_virtual_price()) / decimalDiff) / PRICE_DECIMALS;
     }
@@ -90,7 +98,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
         return obtainedSupplyToken;
     }
 
-    function harvest() external override onlyOwnerOrController {
+    function harvest() external override onlyEOA {
         IMintr(mintr).mint(gauge);
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
 
@@ -104,6 +112,7 @@ contract StrategyCurve3Pool is AbstractStrategy {
             path[1] = weth;
             path[2] = supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 crvBalance,
                 uint256(0),
@@ -137,5 +146,12 @@ contract StrategyCurve3Pool is AbstractStrategy {
 
     function setSlippage(uint256 _slippage) external onlyOwner {
         slippage = _slippage;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = lpToken;
+        protected[1] = crv;
+        return protected;
     }
 }

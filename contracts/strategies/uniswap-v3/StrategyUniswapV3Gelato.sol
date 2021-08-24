@@ -25,17 +25,18 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
     using Address for address;
 
     // The address of the G-UNI pool
-    address public gUniPoolAddress;
+    address public immutable gUniPoolAddress;
     // The address of the G-UNI resolver
-    address public gUniResolver;
+    address public immutable gUniResolver;
     // The address of the G-UNI router
-    address public gUniRouter;
+    address public immutable gUniRouter;
     // The address of the Uniswap V3 router
-    address public swapRouter;
+    address public immutable swapRouter;
+    // Whether the supply token is token0
+    bool public immutable supply0;
 
     uint256 public slippage = 2000;
     uint256 public constant SLIPPAGE_DENOMINATOR = 10000;
-    bool supply0;
 
     constructor(
         address _supplyToken,
@@ -50,10 +51,10 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
         gUniRouter = _gUniRouter;
         swapRouter = _swapRouter;
 
-        supply0 = (supplyToken == IGUniPool(gUniPoolAddress).token0());
+        supply0 = (_supplyToken == IGUniPool(_gUniPool).token0());
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    function getAssetAmount() public view override returns (uint256) {
         IGUniPool gUniPool = IGUniPool(gUniPoolAddress);
         (uint256 amount0, uint256 amount1) = IGUniRouter(gUniRouter).getUnderlyingBalances(
             gUniPool,
@@ -157,11 +158,13 @@ contract StrategyUniswapV3Gelato is AbstractStrategy {
         return balanceAfterSell - balanceBeforeSell;
     }
 
-    function harvest() external override {
-        // Nothing to harvest for now
-    }
-
     function setSlippage(uint256 _slippage) external onlyOwner {
         slippage = _slippage;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](1);
+        protected[0] = gUniPoolAddress;
+        return protected;
     }
 }

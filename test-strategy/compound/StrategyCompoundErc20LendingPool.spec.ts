@@ -92,7 +92,7 @@ export async function testStrategyCompoundErc20LendingPool(
     )
   ).to.emit(strategy, 'Buy');
 
-  const price1 = await strategy.callStatic.syncPrice();
+  const price1 = await strategy.getPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.lte(parseUnits('1'));
 
@@ -105,7 +105,7 @@ export async function testStrategyCompoundErc20LendingPool(
       parseUnits('2', supplyTokenDecimals)
     )
   ).to.emit(strategy, 'Sell');
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   console.log('price2:', price2.toString());
   expect(price2).to.gte(price1);
 
@@ -121,7 +121,7 @@ export async function testStrategyCompoundErc20LendingPool(
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
   expect(await strategy.shares()).to.lte(parseUnits('2', supplyTokenDecimals));
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   console.log('price3:', price3.toString());
   expect(price3).to.gte(price2);
 
@@ -144,7 +144,7 @@ export async function testStrategyCompoundErc20LendingPool(
       const harvestTx = await strategy.harvest({ gasLimit: 2000000 });
       const receipt = await harvestTx.wait();
       console.log('Harvest gas used:', receipt.gasUsed.toString());
-      const price4 = await strategy.callStatic.syncPrice();
+      const price4 = await strategy.getPrice();
       console.log(`price4:`, price4.toString());
       expect(price4).to.gte(price3);
     }

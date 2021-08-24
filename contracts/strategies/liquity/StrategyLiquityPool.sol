@@ -24,23 +24,23 @@ contract StrategyLiquityPool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public uniswap;
+    address public immutable uniswap;
     address public lqty;
 
     // Liquity contracts
-    address public borrowerOperations;
-    address public stabilityPool;
-    address public hintHelpers;
-    address public sortedTroves;
-    address public troveManager;
-    address public priceFeed;
+    address public immutable borrowerOperations;
+    address public immutable stabilityPool;
+    address public immutable hintHelpers;
+    address public immutable sortedTroves;
+    address public immutable troveManager;
+    address public immutable priceFeed;
 
     uint256 public icrInitial; // e.g. 3 * 1e18
     uint256 public icrUpperLimit; // e.g. 3.2 * 1e18
     uint256 public icrLowerLimit; // e.g. 2.5 * 1e18
-
     // in the Liquity operations, the max fee percentage we are willing to accept in case of a fee slippage
     uint256 public maxFeePercentage;
+
     uint256 internal constant NICR_PRECISION = 1e20;
     // Minimum amount of net LUSD debt a trove must have
     uint256 internal constant MIN_NET_DEBT = 1950e18;
@@ -55,11 +55,7 @@ contract StrategyLiquityPool is AbstractStrategy {
         uint256 _icrUpperLimit,
         uint256 _icrLowerLimit,
         uint256 _maxFeePercentage
-    ) AbstractStrategy(_controller, _weth) {
-        require(
-            _icrInitial < _icrUpperLimit && _icrInitial > _icrLowerLimit,
-            "icrInitial should be between icrLowerLimit and icrUpperLimit!"
-        );
+    ) AbstractStrategy(_controller, _weth) onlyValidICR(_icrInitial, _icrUpperLimit, _icrLowerLimit) {
         uniswap = _uniswap;
         lqty = _lqty;
         borrowerOperations = _liquityContracts[0];
@@ -82,7 +78,19 @@ contract StrategyLiquityPool is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    modifier onlyValidICR(
+        uint256 _icrInitial,
+        uint256 _icrUpperLimit,
+        uint256 _icrLowerLimit
+    ) {
+        require(
+            _icrInitial < _icrUpperLimit && _icrInitial > _icrLowerLimit,
+            "icrInitial should be between icrLowerLimit and icrUpperLimit!"
+        );
+        _;
+    }
+
+    function getAssetAmount() public view override returns (uint256) {
         uint256 assetAmount;
         (, assetAmount, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
         return assetAmount;
@@ -199,6 +207,7 @@ contract StrategyLiquityPool is AbstractStrategy {
             paths[0] = lqty;
             paths[1] = supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(uniswap).swapExactTokensForETH(
                 lqtyBalance,
                 uint256(0),
@@ -213,6 +222,26 @@ contract StrategyLiquityPool is AbstractStrategy {
         }
 
         _monitorAndAdjustCR();
+    }
+
+    function setICR(
+        uint256 _icrInitial,
+        uint256 _icrUpperLimit,
+        uint256 _icrLowerLimit
+    ) external onlyOwner onlyValidICR(_icrInitial, _icrUpperLimit, _icrLowerLimit) {
+        icrInitial = _icrInitial;
+        icrUpperLimit = _icrUpperLimit;
+        icrLowerLimit = _icrLowerLimit;
+    }
+
+    function setMaxFeePercentage(uint256 _maxFeePercentage) external onlyOwner {
+        maxFeePercentage = _maxFeePercentage;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](1);
+        protected[0] = lqty;
+        return protected;
     }
 
     // This is needed to receive ETH

@@ -22,15 +22,17 @@ contract StrategySushiswap is AbstractStrategy {
     using Address for address;
 
     // The address of token to be paired
-    address public pairToken;
-    address public sushiswap;
-    address public masterChef;
-    address public sushi;
+    address public immutable pairToken;
+    address public immutable sushiswap;
+    address public immutable masterChef;
+    address public immutable sushi;
+    // The id of the pool to farm Sushi
+    int256 public immutable poolId;
+
+    uint256 public lpAmtInPool;
+
     uint256 public maxSlippage;
     uint256 public maxOneDeposit;
-    // The id of the pool to farm Sushi
-    int256 public poolId;
-    uint256 public lpAmtInPool;
 
     constructor(
         address _controller,
@@ -60,7 +62,7 @@ contract StrategySushiswap is AbstractStrategy {
         _;
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    function getAssetAmount() public view override returns (uint256) {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         IUniswapV2Pair pair = IUniswapV2Pair(
@@ -152,7 +154,7 @@ contract StrategySushiswap is AbstractStrategy {
         return x <= y ? x : y;
     }
 
-    function adjust() external onlyController {
+    function adjust() external override {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         address _sushiswap = sushiswap;
@@ -208,7 +210,7 @@ contract StrategySushiswap is AbstractStrategy {
         }
     }
 
-    function harvest() external override {
+    function harvest() external override onlyEOA {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         address _sushiswap = sushiswap;
@@ -220,6 +222,7 @@ contract StrategySushiswap is AbstractStrategy {
             paths[0] = _pairToken;
             paths[1] = _supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(_sushiswap).swapExactTokensForTokens(
                 balance,
                 uint256(0),
@@ -240,6 +243,7 @@ contract StrategySushiswap is AbstractStrategy {
                 paths[0] = sushi;
                 paths[1] = supplyToken;
 
+                // TODO: Check price
                 IUniswapV2Router02(_sushiswap).swapExactTokensForTokens(
                     sushiBalance,
                     uint256(0),
@@ -251,11 +255,18 @@ contract StrategySushiswap is AbstractStrategy {
         }
     }
 
-    function setMaxOneDeposit(uint256 _maxOneDeposit) external onlyController {
+    function setMaxOneDeposit(uint256 _maxOneDeposit) external onlyOwner {
         maxOneDeposit = _maxOneDeposit;
     }
 
-    function setMaxSlippage(uint256 _maxSlippage) external onlyController {
+    function setMaxSlippage(uint256 _maxSlippage) external onlyOwner {
         maxSlippage = _maxSlippage;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = pairToken;
+        protected[1] = sushi;
+        return protected;
     }
 }

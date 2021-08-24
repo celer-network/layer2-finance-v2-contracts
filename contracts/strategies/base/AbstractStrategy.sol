@@ -18,7 +18,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
     uint256 constant PRICE_DECIMALS = 1e18;
 
     address public controller;
-    address public supplyToken;
+    address public immutable supplyToken;
 
     uint256 public shares;
 
@@ -37,27 +37,24 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         _;
     }
 
+    function getAssetAddress() external view override returns (address) {
+        return supplyToken;
+    }
+
     /**
      * @return The underlying asset amount of the supply token with 18 decimals
      */
-    function getAssetAmount() internal virtual returns (uint256);
+    function getAssetAmount() public view virtual override returns (uint256);
 
-    /**
-     * @notice Buys lp token from defi contract
-     * @param _buyAmount the amount of underlying asset to be deposited
-     * @return The obtained amount of underlying asset after execution
-     */
-    function buy(uint256 _buyAmount) internal virtual returns (uint256);
-
-    /**
-     * @notice Sells lp token to defi contract for supply token
-     * @param _sellAmount the amount of supply token intended to be redeemed from defi
-     * @return The amount of supply tokens redeemed
-     */
-    function sell(uint256 _sellAmount) internal virtual returns (uint256);
-
-    function getAssetAddress() external view override returns (address) {
-        return supplyToken;
+    function getPrice() public view override returns (uint256) {
+        uint256 assetAmount = getAssetAmount();
+        if (shares == 0) {
+            if (assetAmount == 0) {
+                return PRICE_DECIMALS;
+            }
+            return MAX_INT;
+        }
+        return (assetAmount * PRICE_DECIMALS) / shares;
     }
 
     function aggregateOrders(
@@ -71,7 +68,7 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
         uint256 amountFromSell;
         uint256 sharesFromBuy;
-        uint256 sharePrice = this.syncPrice();
+        uint256 sharePrice = getPrice();
 
         if (shares == 0) {
             sharesFromBuy = _buyAmount;
@@ -104,6 +101,20 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
         return (totalSharesFromBuy, totalAmountFromSell);
     }
 
+    /**
+     * @notice Buys lp token from defi contract
+     * @param _buyAmount the amount of underlying asset to be deposited
+     * @return The obtained amount of underlying asset after execution
+     */
+    function buy(uint256 _buyAmount) internal virtual returns (uint256);
+
+    /**
+     * @notice Sells lp token to defi contract for supply token
+     * @param _sellAmount the amount of supply token intended to be redeemed from defi
+     * @return The amount of supply tokens redeemed
+     */
+    function sell(uint256 _sellAmount) internal virtual returns (uint256);
+
     function _doBuy(uint256 _buyAmount) private returns (uint256) {
         uint256 assetAmountBeforeBuy = getAssetAmount();
         uint256 obtainedUnderlyingAsset = buy(_buyAmount);
@@ -119,26 +130,65 @@ abstract contract AbstractStrategy is IStrategy, Ownable {
 
     function _doSell(uint256 _sellShares) private returns (uint256) {
         uint256 assetAmountBeforeSell = getAssetAmount();
-        uint256 sellAmount = (_sellShares * this.syncPrice()) / PRICE_DECIMALS;
+        uint256 sellAmount = (_sellShares * getPrice()) / PRICE_DECIMALS;
         uint256 redeemedUnderlyingAsset = sell(sellAmount);
         uint256 actualSharesFromSell = (redeemedUnderlyingAsset * shares) / assetAmountBeforeSell;
         shares -= actualSharesFromSell;
         return redeemedUnderlyingAsset;
     }
 
-    function syncPrice() external override returns (uint256) {
-        uint256 assetAmount = getAssetAmount();
-        if (shares == 0) {
-            if (assetAmount == 0) {
-                return PRICE_DECIMALS;
-            }
-            return MAX_INT;
-        }
-        return (assetAmount * PRICE_DECIMALS) / shares;
-    }
-
     function setController(address _controller) external onlyOwner {
         emit ControllerChanged(controller, _controller);
         controller = _controller;
+    }
+
+    function harvest() external virtual override {}
+
+    function adjust() external virtual override {}
+
+    /**
+     * Override this to add all tokens/tokenized positions this contract
+     * manages on a *persistent* basis (e.g. not just for swapping back to
+     * supplyToken ephemerally).
+     *
+     * NOTE: Do *not* include `supplyToken`, already included in `sweep` below.
+     *
+     * Example:
+     * ```
+     *    function protectedTokens() internal override view returns (address[] memory) {
+     *      address[] memory protected = new address[](3);
+     *      protected[0] = tokenA;
+     *      protected[1] = tokenB;
+     *      protected[2] = tokenC;
+     *      return protected;
+     *    }
+     * ```
+     */
+    function protectedTokens() internal view virtual returns (address[] memory) {}
+
+    /**
+     * @notice
+     *  Removes tokens from this strategy that are not the type of tokens
+     *  managed by this strategy. This may be used in case of accidentally
+     *  sending the wrong kind of token to this strategy.
+     *
+     *  This will fail if an attempt is made to sweep `supplyToken`, or any tokens
+     *  that are protected by this strategy.
+     *
+     *  This may only be called by the owner.
+     * @dev
+     *  Implement `protectedTokens()` to specify any additional tokens that
+     *  should be protected from sweeping in addition to `supplyToken`.
+     * @param _token The token to transfer out of this strategy.
+     */
+    function sweep(address _token) external onlyOwner {
+        require(_token != address(supplyToken), "Cannot sweep supply token");
+
+        address[] memory _protectedTokens = protectedTokens();
+        for (uint256 i = 0; i < _protectedTokens.length; i++) {
+            require(_token != _protectedTokens[i], "Cannot sweep protected token");
+        }
+
+        IERC20(_token).safeTransfer(msg.sender, IERC20(_token).balanceOf(address(this)));
     }
 }

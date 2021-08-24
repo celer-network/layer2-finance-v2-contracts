@@ -18,11 +18,12 @@ Currently, each strategy accepts a single type of `ERC-20` asset like `DAI`.
 
    `getAssetAddress` simply returns the address of the asset token.
 
+   `getAssetAmount` returns the approximate asset amount managed by the strategy.
+
    `aggregateOrders` is a controller-only method that moves the specified amount of assets between the controller and
    the underlying DeFi protocol.
 
-   `syncPrice` returns the price of the strategy share. It may synchronize the price with the protocol before returning
-   it.
+   `getPrice` returns the price of the strategy share.
 
    `harvest` is implemented when the protocol provides additional yields in the form of governance tokens. The method
    usually sells the harvested tokens into the asset token and re-invests the gains back into the protocol. Beware of

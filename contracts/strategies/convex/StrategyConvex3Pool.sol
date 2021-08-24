@@ -30,14 +30,14 @@ contract StrategyConvex3Pool is AbstractStrategy {
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address public constant uniswap = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     address public constant cvx = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B); // convex CVX erc20 token
-    address public pool; // curve 3pool
-    address public lpToken; // 3crv
-    address public convex;
-    address public convexRewards;
-    uint256 public convexPoolId; // poolid in convex booster
+    address public immutable pool; // curve 3pool
+    address public immutable lpToken; // 3crv
+    address public immutable convex;
+    address public immutable convexRewards;
+    uint256 public immutable convexPoolId; // poolId in convex booster
 
-    uint8 public supplyTokenIndexInPool;
-    uint256 public decimalDiff;
+    uint8 public immutable supplyTokenIndexInPool;
+    uint256 public immutable decimalDiff;
 
     constructor(
         address _controller,
@@ -59,7 +59,15 @@ contract StrategyConvex3Pool is AbstractStrategy {
         decimalDiff = PRICE_DECIMALS / 10**_supplyTokenDecimal; // curve treats supply tokens as they have 18 decimals but tokens like USDC and USDT actually have 6 decimals
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    /**
+     * @dev Require that the caller must be an EOA account to avoid flash loans.
+     */
+    modifier onlyEOA() {
+        require(msg.sender == tx.origin, "Not EOA");
+        _;
+    }
+
+    function getAssetAmount() public view override returns (uint256) {
         uint256 lpTokenBalance = IConvexRewards(convexRewards).balanceOf(address(this));
         return ((lpTokenBalance * ICurveFi(pool).get_virtual_price()) / decimalDiff) / PRICE_DECIMALS;
     }
@@ -106,7 +114,8 @@ contract StrategyConvex3Pool is AbstractStrategy {
         uint256 obtainedLpToken = IERC20(lpToken).balanceOf(address(this)) - originalLpTokenBalance;
         return obtainedLpToken;
     }
-    function harvest() external override onlyOwnerOrController {
+
+    function harvest() external override onlyEOA {
         IConvexRewards(convexRewards).getReward(); // receive both crv and cvx
         uint256 originalBalance = IERC20(supplyToken).balanceOf(address(this));
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
@@ -120,6 +129,7 @@ contract StrategyConvex3Pool is AbstractStrategy {
             path[1] = weth;
             path[2] = supplyToken;
 
+            // TODO: Check price
             IUniswapV2Router02(uniswap).swapExactTokensForTokens(
                 crvBalance,
                 uint256(0),
@@ -156,5 +166,13 @@ contract StrategyConvex3Pool is AbstractStrategy {
 
     function setSlippage(uint256 _slippage) external onlyOwner {
         slippage = _slippage;
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protected = new address[](3);
+        protected[0] = lpToken;
+        protected[1] = crv;
+        protected[2] = cvx;
+        return protected;
     }
 }

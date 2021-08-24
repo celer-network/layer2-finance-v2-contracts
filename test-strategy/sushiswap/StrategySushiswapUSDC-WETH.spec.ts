@@ -15,10 +15,10 @@ describe('StrategySushiswapUSDC-WETH', function () {
       6,
       process.env.USDC as string,
       process.env.WETH as string,
-      parseUnits("0.05", 18),
-      parseUnits("500000", 6),
+      parseUnits('0.05', 18),
+      parseUnits('500000', 6),
       1,
-      process.env.USDC_FUNDER as string,
+      process.env.USDC_FUNDER as string
     );
   });
 });

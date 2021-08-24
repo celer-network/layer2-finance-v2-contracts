@@ -92,7 +92,7 @@ export async function testStrategyDODOV1(
     )
   ).to.emit(strategy, 'Buy');
 
-  const price1 = await strategy.callStatic.syncPrice();
+  const price1 = await strategy.getPrice();
   console.log('price1:', price1.toString());
   expect(price1).to.equal(parseUnits('1'));
 
@@ -106,7 +106,7 @@ export async function testStrategyDODOV1(
     )
   ).to.emit(strategy, 'Sell');
 
-  const price2 = await strategy.callStatic.syncPrice();
+  const price2 = await strategy.getPrice();
   console.log('price2:', price2.toString());
   // TODO: Add price check
 
@@ -121,7 +121,7 @@ export async function testStrategyDODOV1(
   )
     .to.emit(strategy, 'Buy')
     .to.emit(strategy, 'Sell');
-  const price3 = await strategy.callStatic.syncPrice();
+  const price3 = await strategy.getPrice();
   console.log('price3:', price3.toString());
   // TODO: Add price check
 
@@ -139,7 +139,7 @@ export async function testStrategyDODOV1(
       .transfer(strategy.address, parseEther('0.05'))
   ).wait();
   await strategy.harvest();
-  const price4 = await strategy.callStatic.syncPrice();
+  const price4 = await strategy.getPrice();
   console.log('price4:', price4.toString());
   // TODO: Add price check
 }

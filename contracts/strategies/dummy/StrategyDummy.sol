@@ -56,6 +56,20 @@ contract StrategyDummy is IStrategy, Ownable {
         return asset;
     }
 
+    function getAssetAmount() external view override returns (uint256) {
+        return assetAmount;
+    }
+
+    function getPrice() external view override returns (uint256) {
+        if (shares == 0) {
+            if (assetAmount == 0) {
+                return 1e18;
+            }
+            return MAX_INT;
+        }
+        return (assetAmount * 1e18) / shares;
+    }
+
     function aggregateOrders(
         uint256 _buyAmount,
         uint256 _sellShares,
@@ -96,20 +110,12 @@ contract StrategyDummy is IStrategy, Ownable {
         return (sharesFromBuy, amountFromSell);
     }
 
-    function syncPrice() external view override returns (uint256) {
-        if (shares == 0) {
-            if (assetAmount == 0) {
-                return 1e18;
-            }
-            return MAX_INT;
-        }
-        return (assetAmount * 1e18) / shares;
-    }
-
     function harvest() external override onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), harvestGain);
         assetAmount += harvestGain;
     }
+
+    function adjust() external override {}
 
     function increaseBalance(uint256 _amount) external onlyOwnerOrController {
         IERC20(asset).safeTransferFrom(funder, address(this), _amount);
