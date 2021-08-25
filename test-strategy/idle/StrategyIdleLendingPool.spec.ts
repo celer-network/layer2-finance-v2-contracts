@@ -116,7 +116,7 @@ export async function testStrategyIdleLendingPool(
     const assetAddress = getAddress(await strategy.getAssetAddress());
     console.log('----- asset address', assetAddress);
     expect(assetAddress).to.equal(getAddress(supplyTokenAddress));
-    const price = await strategy.callStatic.syncPrice();
+    const price = await strategy.getPrice();
     console.log('----- price after contract deployment', price.toString());
     expect(price).to.equal(parseEther('1'));
 
@@ -144,7 +144,7 @@ export async function testStrategyIdleLendingPool(
         .to.not.emit(strategy, 'Sell');
     const shares2 = await strategy.shares();
     console.log('----- shares =', shares2.toString());
-    const price2 = await strategy.callStatic.syncPrice();
+    const price2 = await strategy.getPrice();
     console.log('----- price =', price2.toString());
     const assetAmount2 = price2.mul(shares2).div(BigNumber.from(10).pow(18));
     expect(assetAmount2).to.gte(p('499.9')).to.lte(p('501'));
@@ -159,7 +159,7 @@ export async function testStrategyIdleLendingPool(
         .to.not.emit(strategy, 'Buy');
     const shares3 = await strategy.shares();
     console.log('----- shares =', shares3.toString());
-    const price3 = await strategy.callStatic.syncPrice();
+    const price3 = await strategy.getPrice();
     console.log('----- price =', price3.toString());
     const assetAmount3 = price3.mul(shares3).div(BigNumber.from(10).pow(18));
     expect(assetAmount3).to.gte(p('249.9')).to.lte(p('251'));
@@ -174,7 +174,7 @@ export async function testStrategyIdleLendingPool(
         .to.emit(strategy, 'Sell');
     const shares4 = await strategy.shares();
     console.log('----- shares =', shares4.toString());
-    const price4 = await strategy.callStatic.syncPrice();
+    const price4 = await strategy.getPrice();
     console.log('----- price =', price4.toString());
     const assetAmount4 = price4.mul(shares4).div(BigNumber.from(10).pow(18));
     expect(assetAmount4).to.gte(p('399.9')).to.lt(p('400.1'));
@@ -207,7 +207,7 @@ export async function testStrategyIdleLendingPool(
     const harvestTx = await strategy.harvest();
     const receipt = await harvestTx.wait();
     console.log('---- gas used =', receipt.gasUsed.toString());
-    const price5 = await strategy.callStatic.syncPrice();
+    const price5 = await strategy.getPrice();
     const shares5 = await strategy.shares();
     const assetAmount5 = price5.mul(shares4).div(BigNumber.from(10).pow(18));
     console.log('---- shares =', shares5.toString());
@@ -221,7 +221,7 @@ export async function testStrategyIdleLendingPool(
     const harvestTx2 = await strategy.harvest({ gasLimit: 2000000 });
     const receipt2 = await harvestTx2.wait();
     console.log('---- gas used =', receipt2.gasUsed.toString());
-    const price6 = await strategy.callStatic.syncPrice();
+    const price6 = await strategy.getPrice();
     const shares6 = await strategy.shares();
     const assetAmount6 = price6.mul(shares6).div(BigNumber.from(10).pow(18));
     console.log('---- shares =', shares6.toString());
@@ -247,7 +247,7 @@ export async function testStrategyIdleLendingPool(
     const harvestTx3 = await strategy.harvest({ gasLimit: 2000000 });
     const receipt3 = await harvestTx3.wait();
     console.log('---- gas used =', receipt3.gasUsed.toString());
-    const price7 = await strategy.callStatic.syncPrice();
+    const price7 = await strategy.getPrice();
     const shares7 = await strategy.shares();
     const assetAmount7 = price7.mul(shares7).div(BigNumber.from(10).pow(18));
     console.log('---- shares =', shares7.toString());

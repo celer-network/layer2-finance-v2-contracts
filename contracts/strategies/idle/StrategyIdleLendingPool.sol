@@ -21,7 +21,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     GovTokenRegistry govTokenRegistry;
 
     // The address of Idle Lending Pool(e.g. IdleDAI, IdleUSDC)
-    address public iToken;
+    address public immutable iToken;
 
     // Info of supplying erc20 token to Aave lending pool
     // The symbol of the supplying token
@@ -29,10 +29,10 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     uint256 public supplyTokenDecimal;
 
     // The address of Aave StakedAave contract
-    address public stakedAave;
+    address public immutable stakedAave;
 
-    address public weth;
-    address public sushiswap;
+    address public immutable weth;
+    address public immutable sushiswap;
 
     uint256 constant public FULL_ALLOC = 100000;
 
@@ -49,7 +49,6 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     ) AbstractStrategy(_controller, _supplyToken) {
         iToken = _iToken;
         symbol = _symbol;
-        supplyToken = _supplyToken;
         supplyTokenDecimal = _supplyTokenDecimal;
         govTokenRegistry = GovTokenRegistry(_govTokenRegistryAddress);
         stakedAave = _stakedAave;
@@ -57,36 +56,50 @@ contract StrategyIdleLendingPool is AbstractStrategy {
         sushiswap = _sushiswap;
     }
 
-    function getAssetAmount() internal view override returns (uint256) {
+    /**
+     * @dev Require that the caller must be an EOA account to avoid flash loans.
+     */
+    modifier onlyEOA() {
+        require(msg.sender == tx.origin, "Not EOA");
+        _;
+    }
+
+    function getAssetAmount() public view override returns (uint256) {
         uint256 iTokenBalance = IERC20(iToken).balanceOf(address(this));
         return ((iTokenBalance * tokenPriceWithFee()) / (10**supplyTokenDecimal)) / (10**(18 - supplyTokenDecimal));
     }
 
     function buy(uint256 _buyAmount) internal override returns (uint256) {
+        uint256 originalAssetAmount = getAssetAmount();
+
         // Pull supply token from Controller
         IERC20(supplyToken).safeTransferFrom(msg.sender, address(this), _buyAmount);
 
         // Deposit supply token to Idle Lending Pool
         IERC20(supplyToken).safeIncreaseAllowance(iToken, _buyAmount);
-        uint256 iTokenMintedAmount = IIdleToken(iToken).mintIdleToken(_buyAmount, false, address(0));
-        uint256 obtainedUnderlyingAsset = ((iTokenMintedAmount * IIdleToken(iToken).tokenPrice()) / (10**supplyTokenDecimal)) / (10**(18 - supplyTokenDecimal));
-        return obtainedUnderlyingAsset;
+        IIdleToken(iToken).mintIdleToken(_buyAmount, false, address(0));
+
+        uint256 newAssetAmount = getAssetAmount();
+
+        return newAssetAmount - originalAssetAmount;
     }
 
     function sell(uint256 _sellAmount) internal override returns (uint256) {
+        uint256 balanceBeforeSell = IERC20(supplyToken).balanceOf(address(this));
+
         // Redeem supply token amount + interests and claim governance tokens
         // When `harvest` function is called, this contract lend obtained governance token to save gas
         uint256 iTokenBurnAmount = ((_sellAmount * (10**supplyTokenDecimal)) / tokenPriceWithFee()) * (10**(18 - supplyTokenDecimal));
         IIdleToken(iToken).redeemIdleToken(iTokenBurnAmount);
 
         // Transfer supply token to Controller
-        uint256 obtainedSupplyTokenAmount = IERC20(supplyToken).balanceOf(address(this));
-        IERC20(supplyToken).safeTransfer(msg.sender, obtainedSupplyTokenAmount);
+        uint256 balanceAfterSell = IERC20(supplyToken).balanceOf(address(this));
+        IERC20(supplyToken).safeTransfer(msg.sender, balanceAfterSell);
 
-        return obtainedSupplyTokenAmount;
+        return balanceAfterSell - balanceBeforeSell;
     }
 
-    function harvest() external override onlyOwnerOrController {
+    function harvest() external override onlyEOA {
         // Claim governance tokens without redeeming supply token
         IIdleToken(iToken).redeemIdleToken(uint256(0));
 
@@ -97,6 +110,17 @@ contract StrategyIdleLendingPool is AbstractStrategy {
         uint256 obtainedSupplyTokenAmount = IERC20(supplyToken).balanceOf(address(this));
         IERC20(supplyToken).safeIncreaseAllowance(iToken, obtainedSupplyTokenAmount);
         IIdleToken(iToken).mintIdleToken(obtainedSupplyTokenAmount, false, address(0));
+    }
+
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory govTokens = govTokenRegistry.getGovTokens();
+        uint govTokensLength = govTokenRegistry.getGovTokensLength();
+        address[] memory protected = new address[](govTokensLength + 1);
+        protected[0] = iToken;
+        for (uint32 i = 0; i < govTokensLength; i++) {
+          protected[i+1] = govTokens[i];
+        }
+        return protected;
     }
 
     // Refer to IdleTokenGovernance.sol (https://github.com/Idle-Labs/idle-contracts/blob/develop/contracts/IdleTokenGovernance.sol#L340)
@@ -137,9 +161,9 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     }
 
     function swapGovTokensToSupplyToken() private {
-        uint govTokenLength = govTokenRegistry.getGovTokensLength();
+        uint govTokensLength = govTokenRegistry.getGovTokensLength();
         address[] memory govTokens = govTokenRegistry.getGovTokens();
-        for(uint32 i = 0; i < govTokenLength; i++) {
+        for(uint32 i = 0; i < govTokensLength; i++) {
             uint256 govTokenBalance = IERC20(govTokens[i]).balanceOf(address(this));
             if (govTokenBalance > 0) {
                 IERC20(govTokens[i]).safeIncreaseAllowance(sushiswap, govTokenBalance);
