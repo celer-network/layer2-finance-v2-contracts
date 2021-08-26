@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
 
 import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
 import "../aave/interfaces/IStakedAave.sol";
@@ -18,7 +18,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     using Address for address;
 
     // Governance token registry
-    GovTokenRegistry govTokenRegistry;
+    GovTokenRegistry public immutable govTokenRegistry;
 
     // The address of Idle Lending Pool(e.g. IdleDAI, IdleUSDC)
     address public immutable iToken;
@@ -26,7 +26,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     // Info of supplying erc20 token to Aave lending pool
     // The symbol of the supplying token
     string public symbol;
-    uint256 public supplyTokenDecimal;
+    uint256 public immutable supplyTokenDecimal;
 
     // The address of Aave StakedAave contract
     address public immutable stakedAave;
@@ -34,7 +34,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
     address public immutable weth;
     address public immutable sushiswap;
 
-    uint256 constant public FULL_ALLOC = 100000;
+    uint256 public constant FULL_ALLOC = 100000;
 
     constructor(
         address _iToken,
@@ -89,7 +89,8 @@ contract StrategyIdleLendingPool is AbstractStrategy {
 
         // Redeem supply token amount + interests and claim governance tokens
         // When `harvest` function is called, this contract lend obtained governance token to save gas
-        uint256 iTokenBurnAmount = ((_sellAmount * (10**supplyTokenDecimal)) / tokenPriceWithFee()) * (10**(18 - supplyTokenDecimal));
+        uint256 iTokenBurnAmount = ((_sellAmount * (10**supplyTokenDecimal)) / tokenPriceWithFee()) *
+            (10**(18 - supplyTokenDecimal));
         IIdleToken(iToken).redeemIdleToken(iTokenBurnAmount);
 
         // Transfer supply token to Controller
@@ -114,11 +115,11 @@ contract StrategyIdleLendingPool is AbstractStrategy {
 
     function protectedTokens() internal view override returns (address[] memory) {
         address[] memory govTokens = govTokenRegistry.getGovTokens();
-        uint govTokensLength = govTokenRegistry.getGovTokensLength();
+        uint256 govTokensLength = govTokens.length;
         address[] memory protected = new address[](govTokensLength + 1);
         protected[0] = iToken;
         for (uint32 i = 0; i < govTokensLength; i++) {
-          protected[i+1] = govTokens[i];
+            protected[i + 1] = govTokens[i];
         }
         return protected;
     }
@@ -154,16 +155,17 @@ contract StrategyIdleLendingPool is AbstractStrategy {
             stakedAaveBalance > 0 &&
             block.timestamp > cooldownStartTimestamp + IStakedAave(stakedAave).COOLDOWN_SECONDS() &&
             block.timestamp <=
-            cooldownStartTimestamp + IStakedAave(stakedAave).COOLDOWN_SECONDS() + IStakedAave(stakedAave).UNSTAKE_WINDOW()
+            cooldownStartTimestamp +
+                IStakedAave(stakedAave).COOLDOWN_SECONDS() +
+                IStakedAave(stakedAave).UNSTAKE_WINDOW()
         ) {
             IStakedAave(stakedAave).redeem(address(this), stakedAaveBalance);
         }
     }
 
     function swapGovTokensToSupplyToken() private {
-        uint govTokensLength = govTokenRegistry.getGovTokensLength();
         address[] memory govTokens = govTokenRegistry.getGovTokens();
-        for(uint32 i = 0; i < govTokensLength; i++) {
+        for (uint32 i = 0; i < govTokens.length; i++) {
             uint256 govTokenBalance = IERC20(govTokens[i]).balanceOf(address(this));
             if (govTokenBalance > 0) {
                 IERC20(govTokens[i]).safeIncreaseAllowance(sushiswap, govTokenBalance);
@@ -175,7 +177,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
 
                     IUniswapV2Router02(sushiswap).swapExactTokensForTokens(
                         govTokenBalance,
-                        uint(0),
+                        uint256(0),
                         paths,
                         address(this),
                         block.timestamp + 1800
@@ -187,7 +189,7 @@ contract StrategyIdleLendingPool is AbstractStrategy {
 
                     IUniswapV2Router02(sushiswap).swapExactTokensForTokens(
                         govTokenBalance,
-                        uint(0),
+                        uint256(0),
                         paths,
                         address(this),
                         block.timestamp + 1800

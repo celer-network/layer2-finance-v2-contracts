@@ -41,7 +41,7 @@ async function deployStrategyCompoundCreamLendingPool(
         creamSupplyTokenAddress,
         process.env.COMPOUND_COMPTROLLER as string,
         process.env.CREAM_COMPTROLLER as string,
-        process.env.COMPOUND_COMP as string,
+        process.env.COMP as string,
         process.env.CREAM_CREAM as string,
         process.env.UNISWAP_V2_ROUTER as string,
         process.env.WETH as string,
@@ -195,14 +195,14 @@ export async function testStrategyCompoundCreamLendingPool(
   console.log('===== harvest, and price should be updated =====');
   try {
     // Send some COMP to the strategy
-    const comp = ERC20__factory.connect(process.env.COMPOUND_COMP as string, deployerSigner);
+    const comp = ERC20__factory.connect(process.env.COMP as string, deployerSigner);
     await network.provider.request({
       method: 'hardhat_impersonateAccount',
-      params: [process.env.COMPOUND_COMP_FUNDER]
+      params: [process.env.COMP_FUNDER]
     });
     await (
       await comp
-        .connect(await ethers.getSigner(process.env.COMPOUND_COMP_FUNDER as string))
+        .connect(await ethers.getSigner(process.env.COMP_FUNDER as string))
         .transfer(strategy.address, parseEther('0.01'))
     ).wait();
     console.log('===== harvesting =====');

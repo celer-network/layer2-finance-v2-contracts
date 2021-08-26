@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.6;
 
 interface IIdleToken {
@@ -38,14 +39,18 @@ interface IIdleToken {
      * NOTE 2: this method can be paused
      * This method use GasTokens of this contract (if present) to get a gas discount
      *
-     * @param _amount : amount of underlying token to be lended
+     * @param _amount : amount of underlying token to be lent
      * @param _referral : referral address
      * @return mintedTokens : amount of IdleTokens minted
      */
-    function mintIdleToken(uint256 _amount, bool _skipRebalance, address _referral) external returns (uint256 mintedTokens);
+    function mintIdleToken(
+        uint256 _amount,
+        bool _skipRebalance,
+        address _referral
+    ) external returns (uint256 mintedTokens);
 
     /**
-      * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
+     * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
      *
      * @param _amount : amount of IdleTokens to be burned
      * @return redeemedTokens : amount of underlying tokens redeemed
