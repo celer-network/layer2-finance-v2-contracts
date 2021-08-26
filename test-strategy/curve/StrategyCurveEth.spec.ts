@@ -48,7 +48,7 @@ async function deployStrategyCurveEth(
       poolAddress,
       gaugeAddress,
       process.env.CURVE_MINTR as string,
-      process.env.CURVE_CRV as string,
+      process.env.CRV as string,
       process.env.UNISWAP_V2_ROUTER as string
     );
     strategy = await strategyCurveEthFactory
@@ -61,7 +61,7 @@ async function deployStrategyCurveEth(
         poolAddress,
         gaugeAddress,
         process.env.CURVE_MINTR as string,
-        process.env.CURVE_CRV as string,
+        process.env.CRV as string,
         process.env.UNISWAP_V2_ROUTER as string
       );
     await strategy.deployed();

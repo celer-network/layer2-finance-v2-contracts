@@ -48,7 +48,7 @@ async function deploy(
       poolAddress + '\n',
       gaugeAddress + '\n',
       (process.env.CURVE_MINTR as string) + '\n',
-      (process.env.CURVE_CRV as string) + '\n',
+      (process.env.CRV as string) + '\n',
       (process.env.WETH as string) + '\n',
       (process.env.UNISWAP_V2_ROUTER as string) + '\n'
     );
@@ -62,7 +62,7 @@ async function deploy(
         poolAddress,
         gaugeAddress,
         process.env.CURVE_MINTR as string,
-        process.env.CURVE_CRV as string,
+        process.env.CRV as string,
         process.env.WETH as string,
         process.env.UNISWAP_V2_ROUTER as string,
         supplyTokenDecimal

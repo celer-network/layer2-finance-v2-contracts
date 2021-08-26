@@ -40,7 +40,7 @@ async function deployStrategyAaveLendingPool(
         deployerSigner.address,
         process.env.AAVE_INCENTIVES_CONTROLLER as string,
         process.env.AAVE_STAKED_AAVE as string,
-        process.env.AAVE_AAVE as string,
+        process.env.AAVE as string,
         process.env.UNISWAP_V2_ROUTER as string,
         process.env.WETH as string
       );
@@ -128,14 +128,14 @@ export async function testStrategyAaveLendingPool(
   console.log('===== harvest, and price should be updated =====');
   try {
     // Send some AAVE to the strategy
-    const aave = ERC20__factory.connect(process.env.AAVE_AAVE as string, deployerSigner);
+    const aave = ERC20__factory.connect(process.env.AAVE as string, deployerSigner);
     await network.provider.request({
       method: 'hardhat_impersonateAccount',
-      params: [process.env.AAVE_AAVE_FUNDER]
+      params: [process.env.AAVE_FUNDER]
     });
     await (
       await aave
-        .connect(await ethers.getSigner(process.env.AAVE_AAVE_FUNDER as string))
+        .connect(await ethers.getSigner(process.env.AAVE_FUNDER as string))
         .transfer(strategy.address, parseEther('0.01'))
     ).wait();
     console.log('===== Sent AAVE to the strategy, harvesting =====');
