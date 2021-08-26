@@ -2,7 +2,6 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { keccak256 as solidityKeccak256 } from '@ethersproject/solidity';
-import { BigNumber } from '@ethersproject/bignumber';
 import { parseEther } from '@ethersproject/units';
 import { Wallet } from '@ethersproject/wallet';
 
@@ -92,8 +91,8 @@ describe('DepositWithdraw', function () {
 
     balanceBefore = await ethers.provider.getBalance(users[0].address);
     const withdrawTx = await rollupChain.connect(users[0]).withdrawETH(users[0].address, weth.address);
-    const gasPrice = BigNumber.from(withdrawTx.gasPrice);
-    const gasSpent = (await withdrawTx.wait()).gasUsed.mul(gasPrice);
+    const receipt = await withdrawTx.wait();
+    const gasSpent = receipt.gasUsed.mul(receipt.effectiveGasPrice);
     balanceAfter = await ethers.provider.getBalance(users[0].address);
     expect(balanceAfter.sub(balanceBefore).add(gasSpent)).to.equal(withdrawAmount);
   });
