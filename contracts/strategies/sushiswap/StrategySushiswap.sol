@@ -154,7 +154,7 @@ contract StrategySushiswap is AbstractStrategy {
         return x <= y ? x : y;
     }
 
-    function adjust() external override {
+    function adjust() external override onlyEOA {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         address _sushiswap = sushiswap;

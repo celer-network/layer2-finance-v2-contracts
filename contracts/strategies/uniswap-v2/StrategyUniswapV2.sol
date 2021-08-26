@@ -133,7 +133,7 @@ contract StrategyUniswapV2 is AbstractStrategy {
         return x <= y ? x : y;
     }
 
-    function adjust() external override {
+    function adjust() external override onlyEOA {
         address _supplyToken = supplyToken;
         address _pairToken = pairToken;
         address _uniswap = uniswap;
