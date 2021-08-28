@@ -4,6 +4,14 @@ pragma solidity 0.8.6;
 
 // Common interface for the Trove Manager.
 interface ITroveManager {
+    enum Status {
+        nonExistent,
+        active,
+        closedByOwner,
+        closedByLiquidation,
+        closedByRedemption
+    }
+
     function getTroveOwnersCount() external view returns (uint256);
 
     function getTroveFromTroveOwnersArray(uint256 _index) external view returns (address);
@@ -69,6 +77,8 @@ interface ITroveManager {
 
     function getBorrowingFee(uint256 LUSDDebt) external view returns (uint256);
 
+    function getBorrowingFeeWithDecay(uint256 LUSDDebt) external view returns (uint256);
+
     function decayBaseRateFromBorrowing() external;
 
     function getTroveStatus(address _borrower) external view returns (uint256);
@@ -92,4 +102,9 @@ interface ITroveManager {
     function getTCR(uint256 _price) external view returns (uint256);
 
     function checkRecoveryMode(uint256 _price) external view returns (bool);
+
+    // Minimum amount of net LUSD debt a trove must have
+    function MIN_NET_DEBT() external view returns (uint256);
+
+    function LUSD_GAS_COMPENSATION() external view returns (uint256);
 }

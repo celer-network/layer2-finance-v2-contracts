@@ -8,7 +8,7 @@ interface IHintHelpers {
 
     Note: The output address is worst-case O(n) positions away from the correct insert position, however, the function
     is probabilistic. Input can be tuned to guarantee results to a high degree of confidence, e.g:
-    Submitting numTrials = k * sqrt(length), with k = 15 makes it very, very likely that the ouput address will
+    Submitting numTrials = k * sqrt(length), with k = 15 makes it very, very likely that the output address will
     be <= sqrt(length) positions away from the correct insert position.
     */
     function getApproxHint(
