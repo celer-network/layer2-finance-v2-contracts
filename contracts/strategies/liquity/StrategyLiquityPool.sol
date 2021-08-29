@@ -8,10 +8,13 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+
 import "../../interfaces/IWETH.sol";
 import "../base/AbstractStrategy.sol";
-import "../uniswap-v2/interfaces/IUniswapV2Router02.sol";
 import "./interfaces/IBorrowerOperations.sol";
+import "./interfaces/IHintHelpers.sol";
 import "./interfaces/IPriceFeed.sol";
 import "./interfaces/ISortedTroves.sol";
 import "./interfaces/IStabilityPool.sol";
@@ -24,8 +27,13 @@ contract StrategyLiquityPool is AbstractStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public immutable uniswap;
-    address public lqty;
+    // The address of the Uniswap V3 router
+    address public immutable swapRouter;
+
+    // The address of the LQTY token
+    address public immutable lqty;
+    // The address of the LUSD token
+    address public immutable lusd;
 
     // Liquity contracts
     address public immutable borrowerOperations;
@@ -35,20 +43,33 @@ contract StrategyLiquityPool is AbstractStrategy {
     address public immutable troveManager;
     address public immutable priceFeed;
 
+    // Params for Individual Collateralization Ratio (ICR)
     uint256 public icrInitial; // e.g. 3 * 1e18
     uint256 public icrUpperLimit; // e.g. 3.2 * 1e18
     uint256 public icrLowerLimit; // e.g. 2.5 * 1e18
-    // in the Liquity operations, the max fee percentage we are willing to accept in case of a fee slippage
+
+    // In Liquity operations, the max fee percentage we are willing to accept in case of a fee slippage
     uint256 public maxFeePercentage;
 
+    // Params for Hints
+    uint256 public maxNumHintTrials = 100;
+    bool public useManualHints;
+    address public manualUpperHint;
+    address public manualLowerHint;
+
+    // Debt used to calculate NICR when opening a Trove
+    bool public useManualOpenDebt;
+    uint256 public manualOpenDebt;
+
     uint256 internal constant NICR_PRECISION = 1e20;
-    // Minimum amount of net LUSD debt a trove must have
-    uint256 internal constant MIN_NET_DEBT = 1950e18;
+    uint256 internal constant HINT_K = 15;
+    uint24 internal constant SWAP_FEE = 3000;
 
     constructor(
         address _controller,
-        address _weth, // weth as supply token
-        address _uniswap,
+        address _swapRouter,
+        address _weth, // WETH as supply token
+        address _lusd,
         address _lqty,
         address[6] memory _liquityContracts,
         uint256 _icrInitial,
@@ -56,8 +77,9 @@ contract StrategyLiquityPool is AbstractStrategy {
         uint256 _icrLowerLimit,
         uint256 _maxFeePercentage
     ) AbstractStrategy(_controller, _weth) onlyValidICR(_icrInitial, _icrUpperLimit, _icrLowerLimit) {
-        uniswap = _uniswap;
+        swapRouter = _swapRouter;
         lqty = _lqty;
+        lusd = _lusd;
         borrowerOperations = _liquityContracts[0];
         stabilityPool = _liquityContracts[1];
         hintHelpers = _liquityContracts[2];
@@ -103,21 +125,34 @@ contract StrategyLiquityPool is AbstractStrategy {
         IWETH(supplyToken).withdraw(_buyAmount);
 
         uint256 originalAssetAmount = getAssetAmount();
-        if (ITroveManager(troveManager).getTroveStatus(address(this)) != 1) {
-            (address upperHint, address lowerHint) = _getHints(MAX_INT);
+        if (ITroveManager(troveManager).getTroveStatus(address(this)) != uint256(ITroveManager.Status.active)) {
+            uint256 minNetDebt = ITroveManager(troveManager).MIN_NET_DEBT();
+            uint256 expectedDebt;
+            if (useManualOpenDebt) {
+                expectedDebt = manualOpenDebt;
+            } else {
+                // Call deployed TroveManager contract to read the liquidation reserve and latest borrowing fee
+                uint256 liquidationReserve = ITroveManager(troveManager).LUSD_GAS_COMPENSATION();
+                uint256 expectedFee = ITroveManager(troveManager).getBorrowingFeeWithDecay(minNetDebt);
+                // Total debt of the new trove = LUSD amount drawn, plus fee, plus the liquidation reserve
+                expectedDebt = minNetDebt + expectedFee + liquidationReserve;
+            }
+            // Get the nominal NICR of the new trove
+            uint256 nicr = (_buyAmount * NICR_PRECISION) / expectedDebt;
+            (address upperHint, address lowerHint) = _getHints(nicr);
             // Borrow allowed minimum LUSD, CR will be adjusted later.
             IBorrowerOperations(borrowerOperations).openTrove{value: _buyAmount}(
                 maxFeePercentage,
-                MIN_NET_DEBT,
+                minNetDebt,
                 upperHint,
                 lowerHint
             );
         } else {
             (uint256 debt, uint256 coll, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-            uint256 nicr = MAX_INT;
-            if (debt != 0) {
-                nicr = ((coll + _buyAmount) * NICR_PRECISION) / debt;
+            if (debt == 0) {
+                debt = ITroveManager(troveManager).MIN_NET_DEBT();
             }
+            uint256 nicr = ((coll + _buyAmount) * NICR_PRECISION) / debt;
             (address upperHint, address lowerHint) = _getHints(nicr);
             IBorrowerOperations(borrowerOperations).addColl{value: _buyAmount}(upperHint, lowerHint);
         }
@@ -131,10 +166,10 @@ contract StrategyLiquityPool is AbstractStrategy {
     function sell(uint256 _sellAmount) internal override returns (uint256) {
         // here just withdrawal collateral, CR will be adjusted later
         (uint256 debt, uint256 coll, , ) = ITroveManager(troveManager).getEntireDebtAndColl(address(this));
-        uint256 nicr = MAX_INT;
-        if (debt != 0) {
-            nicr = ((coll - _sellAmount) * NICR_PRECISION) / debt;
+        if (debt == 0) {
+            debt = ITroveManager(troveManager).MIN_NET_DEBT();
         }
+        uint256 nicr = ((coll - _sellAmount) * NICR_PRECISION) / debt;
         (address upperHint, address lowerHint) = _getHints(nicr);
 
         uint256 balanceBeforeSell = address(this).balance;
@@ -151,12 +186,17 @@ contract StrategyLiquityPool is AbstractStrategy {
         return balanceAfterSell - balanceBeforeSell;
     }
 
-    function _getHints(uint256 _ncr) private view returns (address, address) {
-        return (address(this), address(this));
-        // uint256 numTroves = ISortedTroves(sortedTroves).getSize();
-        // uint256 numTrials = numTroves.mul(15);
-        // (address approxHint,,) = IHintHelpers(hintHelpers).getApproxHint(_ncr, numTrials, 42);
-        // return ISortedTroves(sortedTroves).findInsertPosition(_ncr, approxHint, approxHint);
+    function _getHints(uint256 _nicr) private view returns (address, address) {
+        if (useManualHints) {
+            return (manualUpperHint, manualLowerHint);
+        }
+        uint256 numTroves = ISortedTroves(sortedTroves).getSize();
+        uint256 numTrials = HINT_K * numTroves;
+        if (numTrials > maxNumHintTrials) {
+            numTrials = maxNumHintTrials;
+        }
+        (address approxHint, , ) = IHintHelpers(hintHelpers).getApproxHint(_nicr, numTrials, block.timestamp);
+        return ISortedTroves(sortedTroves).findInsertPosition(_nicr, approxHint, approxHint);
     }
 
     /*
@@ -196,31 +236,41 @@ contract StrategyLiquityPool is AbstractStrategy {
 
     function harvest() external override onlyEOA {
         (address upperHint, address lowerHint) = _getHints(ITroveManager(troveManager).getNominalICR(address(this)));
-        IStabilityPool(stabilityPool).withdrawETHGainToTrove(upperHint, lowerHint);
+        uint256 ethGain = IStabilityPool(stabilityPool).getDepositorETHGain(address(this));
+        if (ethGain > 0) {
+            IStabilityPool(stabilityPool).withdrawETHGainToTrove(upperHint, lowerHint);
+        }
 
-        // Sell LQTY that was rewarded each time when deposit/withdrawal or timebased etc.
+        // Sell LQTY that was rewarded each time when deposit / withdrawal or time-based etc.
         uint256 lqtyBalance = IERC20(lqty).balanceOf(address(this));
         if (lqtyBalance > 0) {
-            IERC20(lqty).safeIncreaseAllowance(uniswap, lqtyBalance);
-
-            address[] memory paths = new address[](2);
-            paths[0] = lqty;
-            paths[1] = supplyToken;
-
+            address tokenIn = lqty;
+            address tokenOut = supplyToken;
+            uint256 amountIn = lqtyBalance;
             // TODO: Check price
-            IUniswapV2Router02(uniswap).swapExactTokensForETH(
-                lqtyBalance,
-                uint256(0),
-                paths,
-                address(this),
-                block.timestamp + 1800
-            );
+            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: SWAP_FEE,
+                recipient: address(this),
+                deadline: block.timestamp + 1800,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+            IERC20(tokenIn).safeIncreaseAllowance(swapRouter, amountIn);
+            ISwapRouter(swapRouter).exactInputSingle(params);
+            uint256 obtainedEthAmount = IERC20(supplyToken).balanceOf(address(this));
+            IWETH(supplyToken).withdraw(obtainedEthAmount);
 
-            // add ETH to trove
-            uint256 obtainedEthAmount = address(this).balance;
+            // Add ETH to trove
             IBorrowerOperations(borrowerOperations).addColl{value: obtainedEthAmount}(upperHint, lowerHint);
         }
 
+        _monitorAndAdjustCR();
+    }
+
+    function adjust() external override onlyEOA {
         _monitorAndAdjustCR();
     }
 
@@ -238,9 +288,29 @@ contract StrategyLiquityPool is AbstractStrategy {
         maxFeePercentage = _maxFeePercentage;
     }
 
+    function setMaxNumHintTrials(uint256 _maxNumHintTrials) external onlyOwner {
+        maxNumHintTrials = _maxNumHintTrials;
+    }
+
+    function setManualHints(
+        bool _useManualHints,
+        address _manualUpperHint,
+        address _manualLowerHint
+    ) external onlyOwner {
+        useManualHints = _useManualHints;
+        manualUpperHint = _manualUpperHint;
+        manualLowerHint = _manualLowerHint;
+    }
+
+    function setManualOpenDebt(bool _useManualOpenDebt, uint256 _manualOpenDebt) external onlyOwner {
+        useManualOpenDebt = _useManualOpenDebt;
+        manualOpenDebt = _manualOpenDebt;
+    }
+
     function protectedTokens() internal view override returns (address[] memory) {
-        address[] memory protected = new address[](1);
-        protected[0] = lqty;
+        address[] memory protected = new address[](2);
+        protected[0] = lusd;
+        protected[1] = lqty;
         return protected;
     }
 
